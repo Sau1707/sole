@@ -1,0 +1,18 @@
+import core
+
+
+# Store token text, kinds, source locations, and the parser cursor.
+class Tokens:
+    text: str[]
+    kind: int32[]
+    line: int64[]
+    position: int64
+    files: str[]
+
+
+# Append a token and its source-location fields.
+def token_add(tokens: Tokens, text: str, kind: int32, line: int64) -> void:
+    core.append(tokens.text, text)
+    core.append(tokens.kind, kind)
+    core.append(tokens.line, line)
+    core.append(tokens.files, "")

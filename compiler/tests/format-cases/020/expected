@@ -1,0 +1,54 @@
+
+# Module comment.
+
+# Another comment.
+import core # Inline comment.
+
+
+extern def external() -> void
+
+
+class Box:
+    value: int32
+    def read(
+        self
+
+        # Signature comment.
+    ) -> int32: # Header comment.
+
+        # Body comment.
+        """TODO: Document this function."""
+        return self.value # Keep inline.
+
+
+def single() -> void:
+
+    # Before an existing docstring.
+    'Existing documentation.'
+    pass
+
+
+def multiple() -> void:
+    '''Existing documentation.
+# This is literal text.
+def fake() -> void:
+    pass
+'''
+    pass
+
+
+def main() -> int32:
+    """TODO: Document this function."""
+    values: int32[] = [
+
+        # First value.
+        1,
+
+        # Second value.
+        2
+    ]
+
+    # First body comment.
+
+    # Second body comment.
+    return values[0]

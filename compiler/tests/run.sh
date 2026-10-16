@@ -138,34 +138,32 @@ for case in "$root"/compiler/tests/cases/*; do
         fi
         log="$temporary/run.log"
         case "$mode" in
-            run)
+            run|trap|exit)
                 status=0
-                SOLE_MODULE_TEST="$module_env" bounded "$run_timeout" \
-                    "$work/program" > "$temporary/actual" 2> "$log" || status=$?
+                if [ "$mode" = run ]; then
+                    SOLE_MODULE_TEST="$module_env" bounded "$run_timeout" \
+                        "$work/program" > "$temporary/actual" 2> "$log" || status=$?
+                else
+                    bounded "$run_timeout" \
+                        "$work/program" > "$temporary/actual" 2> "$log" || status=$?
+                fi
                 check_deadline "$status" program "$run_timeout"
-                [ "$status" -eq 0 ] || fail "program exited with status $status, expected 0"
+                ;;
+        esac
+        case "$mode" in
+            run|exit)
+                expected_status=0
+                if [ "$mode" = exit ]; then expected_status=$(cat "$case/status"); fi
+                [ "$status" -eq "$expected_status" ] || fail "program exited with status $status, expected $expected_status"
                 compare_output
                 ;;
             trap)
-                status=0
-                bounded "$run_timeout" \
-                    "$work/program" > "$temporary/actual" 2> "$log" || status=$?
-                check_deadline "$status" program "$run_timeout"
                 [ "$status" -gt 128 ] || fail "expected a trap signal, got status $status"
                 signal=$(kill -l "$status" 2>/dev/null || :)
                 case "$signal" in
                     ILL|SIGILL|TRAP|SIGTRAP) ;;
                     *) fail "expected a trap signal, got status $status" ;;
                 esac
-                ;;
-            exit)
-                status=0
-                bounded "$run_timeout" \
-                    "$work/program" > "$temporary/actual" 2> "$log" || status=$?
-                check_deadline "$status" program "$run_timeout"
-                expected_status=$(cat "$case/status")
-                [ "$status" -eq "$expected_status" ] || fail "program exited with status $status, expected $expected_status"
-                compare_output
                 ;;
         esac
         count=$((count + 1))

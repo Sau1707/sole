@@ -51,12 +51,14 @@ import core
 class Box:
     value: int32
     def read(self) -> int32:
+        """Read the stored value."""
         return self.value
 
 
 def first(
     value: int32
 ) -> str:
+    """Return text containing declaration-like lines."""
     return """literal text
 def fake() -> void:
 
@@ -73,8 +75,8 @@ formatter --check "$temporary/strings.sole"
 formatter "$temporary/strings.sole"
 cmp "$temporary/strings.sole" "$temporary/original.sole"
 
-printf 'import core\r\ndef main() -> void:\r\n    pass' > "$temporary/crlf.sole"
-printf 'import core\r\n\r\n\r\ndef main() -> void:\r\n    pass' > "$temporary/crlf-expected.sole"
+printf 'import core\r\ndef main() -> void:\r\n    # Body comment.\r\n    pass' > "$temporary/crlf.sole"
+printf 'import core\r\n\r\n\r\ndef main() -> void:\r\n\r\n    # Body comment.\r\n    """TODO: Document this function."""\r\n    pass' > "$temporary/crlf-expected.sole"
 formatter "$temporary/crlf.sole"
 cmp "$temporary/crlf.sole" "$temporary/crlf-expected.sole"
 formatter --check "$temporary/input.sole" "$temporary/strings.sole" "$temporary/crlf.sole"
@@ -105,12 +107,14 @@ import frontend.lexer as lexer
 
 import env
 import strings
+
 # Separate group.
 import files
 import statistics
 
 
 def main() -> str:
+    """TODO: Document this function."""
     return """import statistics
 import os
 """
@@ -134,12 +138,12 @@ for malformed in '"""unterminated' 'def broken(' 'def broken([)]'; do
 done
 
 awk 'BEGIN {
-    print "import core\n\n\ndef first() -> void:"
+    print "import core\n\n\ndef first() -> void:\n    \"\"\"Print a nested expression.\"\"\""
     printf "    core.print("
     for (i = 0; i < 256; i++) printf "("
     printf "1"
     for (i = 0; i < 256; i++) printf ")"
-    print ")\n    values: int32[] = [1]\n\n\ndef second() -> void:\n    pass"
+    print ")\n    values: int32[] = [1]\n\n\ndef second() -> void:\n    \"\"\"Do nothing.\"\"\"\n    pass"
 }' > "$temporary/nested.sole"
 cp "$temporary/nested.sole" "$temporary/original.sole"
 formatter --check "$temporary/nested.sole"
@@ -171,4 +175,25 @@ for case in "$root"/compiler/tests/format-cases/*; do
     fi
     count=$((count + 1))
 done
+
+cat > "$temporary/executable.sole" <<'EOF'
+import core
+class Box:
+    value: int32
+    def read(self) -> int32:
+        # Read the value.
+        return self.value
+def main() -> int32:
+    box: Box = Box(42)
+    # Print the result.
+    core.print(box.read())
+    return 0
+EOF
+formatter "$temporary/executable.sole" > "$temporary/log"
+formatter --check "$temporary/executable.sole"
+"$compiler" build "$temporary/executable.sole" -o "$temporary/executable" > "$temporary/log"
+"$temporary/executable" > "$temporary/output"
+printf '42\n' > "$temporary/expected-output"
+cmp "$temporary/expected-output" "$temporary/output"
+
 echo "Passed native formatter checks and $count migrated formatter cases."

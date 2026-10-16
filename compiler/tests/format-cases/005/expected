@@ -1,2 +1,3 @@
 def main() -> void:
+    """TODO: Document this function."""
     pass

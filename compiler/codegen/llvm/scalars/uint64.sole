@@ -1,0 +1,6 @@
+import codegen.llvm.scalars.definition as scalar_definition
+
+
+class uint64:
+    def definition(self) -> scalar_definition.Type:
+        return scalar_definition.Type("uint64", "i64", 64, "integer", true)

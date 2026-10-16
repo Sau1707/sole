@@ -1,0 +1,98 @@
+import core
+import codegen.llvm.ir as ir
+import codegen.llvm.locals as locals
+import codegen.llvm.types as llvm_types
+import diagnostics.report as diagnostics
+import codegen.llvm.context as context
+import semantic.model as model
+import codegen.llvm.statements as statements
+import semantic.resolve.symbols as symbols
+
+
+# Collect native runtime declarations as the foreign ABI registry.
+def runtime_declarations(source: str) -> str[]:
+    declarations: str[] = []
+    start: int64 = 0
+    end: int64 = 0
+    while end <= core.len(source):
+        if end == core.len(source) || source[end] == 10:
+            line: str = core.slice(source, start, end)
+            if core.len(line) >= 8 && core.slice(line, 0, 8) == "declare ":
+                core.append(declarations, line)
+            start = end + 1
+        end = end + 1
+    return declarations
+
+
+# Emit a foreign declaration or compile a function's parameters and body.
+def compile_function(state: context.State, fn: model.FunctionInfo, runtime: str[]) -> void:
+    parameter_parts: str[] = []
+    i: int64 = 0
+    while i < core.len(fn.types):
+        if i > 0:
+            core.append(parameter_parts, ", ")
+        core.append(parameter_parts, llvm_types.llvm_type(state, fn.types[i]))
+        if not fn.external:
+            core.append(parameter_parts, " %arg" + str(i))
+        i = i + 1
+    prefix: str = "define "
+    if fn.external:
+        prefix = "declare "
+    header: str = prefix + llvm_types.llvm_type(state, fn.result) + " @" + ir.function_symbol(fn) + "(" + core.join(parameter_parts) + ")"
+    if fn.external:
+        state.tokens.position = fn.body
+        native: int64 = 0
+        while native < core.len(runtime):
+            declaration: str = runtime[native]
+            symbol_start: int64 = 0
+            while symbol_start < core.len(declaration) && declaration[symbol_start] != 64:
+                symbol_start = symbol_start + 1
+            symbol_end: int64 = symbol_start
+            while symbol_end < core.len(declaration) && declaration[symbol_end] != 40:
+                symbol_end = symbol_end + 1
+            if core.slice(declaration, symbol_start, symbol_end) == "@" + ir.function_symbol(fn):
+                if declaration != header:
+                    diagnostics.fail_at(state, "conflicting external declaration: " + symbols.foreign_name(fn.name))
+                return
+            native = native + 1
+        # Reuse compatible declarations of the same foreign symbol.
+        previous: int64 = 0
+        while previous < core.len(state.functions):
+            other: model.FunctionInfo = state.functions[previous]
+            if other.name == fn.name:
+                break
+            if other.external && symbols.foreign_name(other.name) == symbols.foreign_name(fn.name):
+                if llvm_types.llvm_type(state, other.result) != llvm_types.llvm_type(state, fn.result) || core.len(other.types) != core.len(fn.types):
+                    diagnostics.fail_at(state, "conflicting external declaration: " + symbols.foreign_name(fn.name))
+                p: int64 = 0
+                while p < core.len(fn.types):
+                    if llvm_types.llvm_type(state, other.types[p]) != llvm_types.llvm_type(state, fn.types[p]):
+                        diagnostics.fail_at(state, "conflicting external declaration: " + symbols.foreign_name(fn.name))
+                    p = p + 1
+                return
+            previous = previous + 1
+        core.append(state.definitions, header + " nobuiltin\n")
+        return
+    # Reset per-function state before declaring parameters and compiling blocks.
+    state.tokens.position = fn.body
+    state.code = []
+    state.slots = []
+    state.names = []
+    state.types = []
+    state.pointers = []
+    state.depths = []
+    state.loops = []
+    state.serial = 0
+    state.depth = 0
+    state.ended = false
+    state.result = fn.result
+    j: int64 = 0
+    while j < core.len(fn.types):
+        locals.declare_local(state, fn.names[j], fn.types[j], context.Value(fn.types[j], "%arg" + str(j), ""))
+        j = j + 1
+    statements.compile_block(state)
+    if not state.ended:
+        if fn.result != "void":
+            diagnostics.fail_at(state, "function must return on every checked path: " + fn.name)
+        ir.emit(state, "ret void")
+    core.append(state.definitions, header + " nobuiltin {\nentry:\n" + core.join(state.slots) + "  br label %body\nbody:\n" + core.join(state.code) + "}\n")

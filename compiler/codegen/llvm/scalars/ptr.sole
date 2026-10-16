@@ -1,0 +1,6 @@
+import codegen.llvm.scalars.definition as scalar_definition
+
+
+class ptr:
+    def definition(self) -> scalar_definition.Type:
+        return scalar_definition.Type("ptr", "ptr", 0, "ptr", false)

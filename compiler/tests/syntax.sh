@@ -8,7 +8,7 @@ temporary=$(mktemp -d "$temp_root/sole-syntax-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
 syntax() {
-    SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" "$@"
+    SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$@"
 }
 
 if [ "$#" -gt 0 ]; then
@@ -33,13 +33,13 @@ fi
 grep -q 'expected a .sole file' "$temporary/error"
 
 find "$root/compiler" "$root/lib" -path "$root/compiler/tests" -prune -o -type f -name '*.sole' \
-    -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
+    -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" {} +
 if [ -d "$root/examples" ]; then
-    find "$root/examples" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
+    find "$root/examples" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" {} +
 fi
 for fixture in "$root"/compiler/tests/cases/*; do
     case $(cat "$fixture/mode") in reject-*) continue ;; esac
-    find "$fixture" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
+    find "$fixture" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" {} +
 done
 
 reject() {

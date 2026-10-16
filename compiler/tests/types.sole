@@ -1,7 +1,7 @@
 import core
-import types.definition
-import types.int16
-import types.registry
+import codegen.llvm.scalars.definition as scalar_definition
+import codegen.llvm.scalars.int16 as scalar_int16
+import codegen.llvm.scalars.registry as registry
 
 
 def require(condition: bool, description: str) -> void:
@@ -11,7 +11,7 @@ def require(condition: bool, description: str) -> void:
 
 
 def check_integer(name: str, llvm: str, bits: int64, unsigned: bool) -> void:
-    definition: types.definition.Type = types.registry.lookup(name)
+    definition: scalar_definition.Type = registry.lookup(name)
     require(definition.name == name && definition.llvm == llvm, name + " representation")
     require(definition.integer() && not definition.floating(), name + " category")
     require(definition.bits == bits && definition.unsigned == unsigned, name + " width and signedness")
@@ -47,16 +47,16 @@ def main() -> int32:
     check_integer("uint16", "i16", 16, true)
     check_integer("uint32", "i32", 32, true)
     check_integer("uint64", "i64", 64, true)
-    signed: types.definition.Type = types.int16.int16().definition()
-    unsigned: types.definition.Type = types.registry.lookup("uint16")
-    wide: types.definition.Type = types.registry.lookup("int64")
-    narrow: types.definition.Type = types.registry.lookup("int8")
-    real: types.definition.Type = types.registry.lookup("float32")
-    double: types.definition.Type = types.registry.lookup("float64")
-    boolean: types.definition.Type = types.registry.lookup("bool")
-    pointer: types.definition.Type = types.registry.lookup("ptr")
-    text: types.definition.Type = types.registry.lookup("str")
-    nothing: types.definition.Type = types.registry.lookup("void")
+    signed: scalar_definition.Type = scalar_int16.int16().definition()
+    unsigned: scalar_definition.Type = registry.lookup("uint16")
+    wide: scalar_definition.Type = registry.lookup("int64")
+    narrow: scalar_definition.Type = registry.lookup("int8")
+    real: scalar_definition.Type = registry.lookup("float32")
+    double: scalar_definition.Type = registry.lookup("float64")
+    boolean: scalar_definition.Type = registry.lookup("bool")
+    pointer: scalar_definition.Type = registry.lookup("ptr")
+    text: scalar_definition.Type = registry.lookup("str")
+    nothing: scalar_definition.Type = registry.lookup("void")
     require(signed.conversion(unsigned) == "identity", "equal-width conversion")
     require(signed.conversion(wide) == "sext", "signed extension")
     require(unsigned.conversion(wide) == "zext", "unsigned extension")
@@ -85,12 +85,12 @@ def main() -> int32:
     require(nothing.llvm == "void", "void representation")
     require(boolean.arithmetic("+") == "" && pointer.comparison("<") == "", "invalid scalar operations")
     require(text.comparison("==") == "", "strings use runtime equality")
-    require(types.registry.lookup("int").llvm == "", "unknown type")
-    require(types.registry.lookup("int16[]").llvm == "", "arrays are not primitive types")
+    require(registry.lookup("int").llvm == "", "unknown type")
+    require(registry.lookup("int16[]").llvm == "", "arrays are not primitive types")
     require(signed.lower_bound() == "-32768" && signed.upper_bound() == "32768", "int16 bounds")
     require(unsigned.maximum(false) == uint64(65535), "uint16 maximum")
     require(wide.lower_bound() == "-9223372036854775808", "int64 minimum")
-    require(types.registry.lookup("uint64").upper_bound() == "18446744073709551616", "uint64 exclusive upper bound")
-    require(types.registry.lookup("uint64").maximum(false) == uint64(18446744073709551615), "uint64 maximum")
+    require(registry.lookup("uint64").upper_bound() == "18446744073709551616", "uint64 exclusive upper bound")
+    require(registry.lookup("uint64").maximum(false) == uint64(18446744073709551615), "uint64 maximum")
     core.print("Passed compiler type implementation checks.")
     return 0

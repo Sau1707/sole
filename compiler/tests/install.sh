@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.5
+version=0.0.6
 archive="sole-$version-linux-x86_64"
 mkdir -p "$temporary/$archive/bin" "$temporary/$archive/lib/sole" "$temporary/$archive/share/sole"
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
@@ -16,8 +16,8 @@ if [ -d "$compiler_prefix/lib/sole" ]; then
     cp -R "$compiler_prefix/lib/sole/." "$temporary/$archive/lib/sole/"
 fi
 cp -R "$root/lib" "$temporary/$archive/share/sole/"
-mkdir -p "$temporary/$archive/share/sole/compiler"
-cp "$root/compiler/sole.ebnf" "$temporary/$archive/share/sole/compiler/"
+mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
+cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
 printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
 mkdir "$temporary/downloads" "$temporary/tools"
 tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
@@ -50,7 +50,7 @@ PATH="$temporary/tools:$PATH" sh "$root/install.sh" "$temporary/installed" > "$t
 test "$("$temporary/installed/bin/sole" --version)" = "sole $version (self-hosted)"
 test -f "$temporary/installed/share/sole/lib/core.sole"
 test -f "$temporary/installed/share/sole/lib/runtime/system.c"
-test -f "$temporary/installed/share/sole/compiler/sole.ebnf"
+test -f "$temporary/installed/share/sole/compiler/syntax/parser/sole.ebnf"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
     test -f "$temporary/installed/lib/sole/libLLVM.so.21.1"
     test -f "$temporary/installed/share/sole/licenses/common-licenses/Apache-2.0"

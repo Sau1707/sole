@@ -1,0 +1,45 @@
+import codegen.llvm.ir as ir
+import codegen.llvm.literals as literals
+import codegen.llvm.types as llvm_types
+import diagnostics.report as diagnostics
+import codegen.llvm.context as context
+import semantic.types.query as type_query
+import codegen.llvm.scalars.definition as scalar_definition
+import codegen.llvm.scalars.registry as registry
+
+
+# Emit explicit numeric or pointer conversions with required range checks.
+def cast_value(state: context.State, value: context.Value, destination: str) -> context.Value:
+    # Resolve literal types before selecting a conversion instruction.
+    if value.typ == "integer" || value.typ == "real":
+        literal_context: str = ""
+        if value.typ == "integer" && (type_query.integer_type(destination) || type_query.float_type(destination)) || value.typ == "real" && type_query.float_type(destination):
+            literal_context = destination
+        value = literals.coerce(state, value, literal_context)
+    source_type: str = value.typ
+    if source_type == destination:
+        return value
+    source_ir: str = llvm_types.llvm_type(state, source_type)
+    dest_ir: str = llvm_types.llvm_type(state, destination)
+    source_definition: scalar_definition.Type = registry.lookup(source_type)
+    dest_definition: scalar_definition.Type = registry.lookup(destination)
+    operation: str = source_definition.conversion(dest_definition)
+    if operation == "identity":
+        return context.Value(destination, value.value, "")
+    if operation == "fcmp une" || operation == "icmp ne":
+        zero: str = "0"
+        if source_definition.floating():
+            zero = "0.0"
+        return context.Value("bool", ir.instruction(state, operation + " " + ir.typed(state, value) + ", " + zero), "")
+    if operation == "fptosi" || operation == "fptoui":
+        # Guard float-to-integer conversions against NaN and range overflow.
+        low_text: str = dest_definition.lower_bound()
+        high_text: str = dest_definition.upper_bound()
+        low_value: context.Value = literals.float_literal(state, low_text, source_type)
+        high_value: context.Value = literals.float_literal(state, high_text, source_type)
+        above: str = ir.instruction(state, "fcmp oge " + ir.typed(state, value) + ", " + low_value.value)
+        below: str = ir.instruction(state, "fcmp olt " + ir.typed(state, value) + ", " + high_value.value)
+        ir.checked(state, ir.instruction(state, "and i1 " + above + ", " + below))
+    if operation == "":
+        diagnostics.fail_at(state, "cannot cast " + source_type + " to " + destination)
+    return context.Value(destination, ir.instruction(state, operation + " " + source_ir + " " + value.value + " to " + dest_ir), "")

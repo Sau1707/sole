@@ -1,6 +1,0 @@
-import types.definition
-
-
-class int8:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("int8", "i8", 8, "integer", false)

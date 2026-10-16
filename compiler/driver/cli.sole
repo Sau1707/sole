@@ -1,12 +1,12 @@
 import core
-import pipeline
+import driver.pipeline as pipeline
 import driver.format
 import driver.syntax
 import driver.linker
 import wrappers.libc
-import backend.target
+import codegen.llvm.target as target
 import wrappers.system
-import frontend.diagnostics
+import diagnostics.report as diagnostics
 
 
 def output_error(output: str, inputs: str[]) -> str:
@@ -29,7 +29,7 @@ def cleanup(temporary: str) -> void:
 # Parse command-line options and dispatch compilation, linking, or execution.
 def main() -> int32:
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.5 (self-hosted)")
+        core.print("sole 0.0.6 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -43,7 +43,7 @@ def main() -> int32:
     # Read the command, source path, and compilation options.
     command: str = core.arg(1)
     if command != "build" && command != "check" && command != "run":
-        frontend.diagnostics.die("unknown command: " + command)
+        diagnostics.die("unknown command: " + command)
     filename: str = core.arg(2)
     output: str = ""
     emission: str = "binary"
@@ -56,34 +56,34 @@ def main() -> int32:
             level = int32(option[2] - 48)
         else:
             if i + 1 >= core.arg_count():
-                frontend.diagnostics.die("missing value for " + option)
+                diagnostics.die("missing value for " + option)
             value: str = core.arg(i + 1)
             if option == "-o" || option == "--output":
                 output = value
             elif option == "--target":
                 if value != "native":
-                    frontend.diagnostics.die("unknown target: " + value)
+                    diagnostics.die("unknown target: " + value)
             elif option == "--emit":
                 if value != "binary" && value != "llvm" && value != "object":
-                    frontend.diagnostics.die("unknown emission: " + value)
+                    diagnostics.die("unknown emission: " + value)
                 emission = value
             elif option == "--link":
                 core.append(libraries, value)
             else:
-                frontend.diagnostics.die("unknown option: " + option)
+                diagnostics.die("unknown option: " + option)
             i = i + 1
         i = i + 1
     if command == "run" && emission != "binary":
-        frontend.diagnostics.die("run requires binary emission")
+        diagnostics.die("run requires binary emission")
     # Generate LLVM IR and handle validation-only requests.
     home: str = core.from_cstr(wrappers.system.sole_rt_home())
     contents: str = core.read_file(filename)
     compiled: pipeline.Compilation = pipeline.generate(filename, contents, home)
     ir_text: str = compiled.ir
     if command == "check":
-        check_error: str = backend.target.llvm_object(ir_text, "", 0, true)
+        check_error: str = target.llvm_object(ir_text, "", 0, true)
         if check_error != "":
-            frontend.diagnostics.die(check_error)
+            diagnostics.die(check_error)
         core.print(filename + ": OK")
         return 0
     # Select an output path without overwriting the input source.
@@ -96,17 +96,17 @@ def main() -> int32:
         output = driver.linker.default_output(filename, suffix)
     protection_error: str = output_error(output, compiled.inputs)
     if protection_error != "":
-        frontend.diagnostics.die(protection_error)
+        diagnostics.die(protection_error)
     # Emit IR or an object directly, or link a native executable.
     if emission == "llvm":
-        ir_error: str = backend.target.llvm_object(ir_text, "", 0, true)
+        ir_error: str = target.llvm_object(ir_text, "", 0, true)
         if ir_error != "":
-            frontend.diagnostics.die(ir_error)
+            diagnostics.die(ir_error)
         core.write_file(output, ir_text)
     elif emission == "object":
-        object_error: str = backend.target.llvm_object(ir_text, output, level, false)
+        object_error: str = target.llvm_object(ir_text, output, level, false)
         if object_error != "":
-            frontend.diagnostics.die(object_error)
+            diagnostics.die(object_error)
     else:
         destination: str = output
         temporary: str = ""
@@ -116,14 +116,14 @@ def main() -> int32:
             destination = core.from_cstr(wrappers.system.sole_rt_output_path(core.cstr(output)))
             protection_error = output_error(destination, compiled.inputs)
             if protection_error != "":
-                frontend.diagnostics.die(protection_error)
+                diagnostics.die(protection_error)
             temporary = core.from_cstr(wrappers.system.sole_rt_output_dir(core.cstr(destination)))
         object_path: str = temporary + "/program.o"
         program_path: str = temporary + "/program"
-        native_error: str = backend.target.llvm_object(ir_text, object_path, level, false)
+        native_error: str = target.llvm_object(ir_text, object_path, level, false)
         if native_error != "":
             cleanup(temporary)
-            frontend.diagnostics.die(native_error)
+            diagnostics.die(native_error)
         runtime_path: str = home + "/lib/runtime/system.c"
         link_command: str = driver.linker.native_linker() + " " + driver.linker.shell_quote(object_path) + " " + driver.linker.shell_quote(runtime_path) + " -lm"
         l: int64 = 0
@@ -134,7 +134,7 @@ def main() -> int32:
         status: int32 = wrappers.libc.system(core.cstr(link_command))
         if status != 0:
             cleanup(temporary)
-            frontend.diagnostics.die("linking failed")
+            diagnostics.die("linking failed")
         if command == "run":
             # Run the temporary executable and preserve its exit status.
             run_command: str = driver.linker.shell_quote(program_path)
@@ -146,10 +146,10 @@ def main() -> int32:
         protection_error = output_error(destination, compiled.inputs)
         if protection_error != "":
             cleanup(temporary)
-            frontend.diagnostics.die(protection_error)
+            diagnostics.die(protection_error)
         if wrappers.libc.rename(core.cstr(program_path), core.cstr(destination)) != 0:
             cleanup(temporary)
-            frontend.diagnostics.die("cannot publish executable: " + output)
+            diagnostics.die("cannot publish executable: " + output)
         cleanup(temporary)
     core.print("Built " + output)
     return 0

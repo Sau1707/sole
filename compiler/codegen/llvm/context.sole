@@ -1,0 +1,41 @@
+import semantic.model as model
+import syntax.lexer.tokens as token_model
+
+
+struct LoopTargets:
+    continue_target: str
+    break_target: str
+
+
+# Share declarations, local scopes, and emitted IR during compilation.
+class State:
+    tokens: token_model.Tokens
+    sums: model.SumInfo[]
+    records: model.RecordInfo[]
+    functions: model.FunctionInfo[]
+    globals: str[]
+    definitions: str[]
+    code: str[]
+    slots: str[]
+    names: str[]
+    types: str[]
+    pointers: str[]
+    depths: int32[]
+    loops: LoopTargets[]
+    serial: int64
+    depth: int32
+    ended: bool
+    result: str
+    filename: str
+
+
+# Carry an expression's type, LLVM value, and optional storage address.
+class Value:
+    typ: str
+    value: str
+    pointer: str
+
+
+struct Expression:
+    value: Value
+    is_call: bool

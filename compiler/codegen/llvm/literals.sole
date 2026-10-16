@@ -1,0 +1,115 @@
+import core
+import codegen.llvm.ir as ir
+import wrappers.libc
+import codegen.llvm.context as context
+import semantic.types.query as type_query
+import codegen.llvm.scalars.registry as registry
+import wrappers.system
+import codegen.llvm.scalars.definition as scalar_definition
+import syntax.lexer.characters as characters
+import diagnostics.report as diagnostics
+
+
+# Encode string bytes as an LLVM global and return its string view.
+def string_constant(state: context.State, text: str) -> context.Value:
+    digits: str = "0123456789ABCDEF"
+    pieces: str[] = []
+    i: int64 = 0
+    while i < core.len(text):
+        byte: uint8 = text[i]
+        high: int64 = int64(byte / 16)
+        low: int64 = int64(byte % 16)
+        core.append(pieces, "\\" + core.slice(digits, high, high + 1) + core.slice(digits, low, low + 1))
+        i = i + 1
+    symbol: str = "@_sole.string." + str(core.len(state.globals))
+    core.append(state.globals, symbol + " = private constant [" + str(core.len(text) + 1) + " x i8] c\"" + core.join(pieces) + "\\00\"\n")
+    return context.Value("str", "{ptr " + symbol + ", i64 " + str(core.len(text)) + "}", "")
+
+
+# Parse an integer literal and check it against its contextual type.
+def number_literal(state: context.State, text: str, typ: str) -> context.Value:
+    negative: bool = core.len(text) > 0 && text[0] == 45
+    offset: int64 = 0
+    if negative:
+        offset = 1
+    base: uint64 = 10
+    if core.len(text) > offset + 2 && text[offset] == 48:
+        prefix: uint8 = text[offset + 1]
+        if prefix == 120 || prefix == 88:
+            base = 16
+            offset = offset + 2
+        elif prefix == 98 || prefix == 66:
+            base = 2
+            offset = offset + 2
+        elif prefix == 111 || prefix == 79:
+            base = 8
+            offset = offset + 2
+    magnitude: uint64 = 0
+    has_digit: bool = false
+    while offset < core.len(text):
+        byte: uint8 = text[offset]
+        if byte != 95:
+            d: uint64 = 255
+            if characters.digit(byte):
+                d = uint64(byte - 48)
+            elif byte >= 97 && byte <= 102:
+                d = uint64(byte - 97 + 10)
+            elif byte >= 65 && byte <= 70:
+                d = uint64(byte - 65 + 10)
+            if d >= base || magnitude > (uint64(18446744073709551615) - d) / base:
+                diagnostics.fail_at(state, "integer literal is invalid or too large")
+            magnitude = magnitude * base + d
+            has_digit = true
+        offset = offset + 1
+    if not has_digit:
+        diagnostics.fail_at(state, "integer literal requires at least one digit")
+    if type_query.float_type(typ):
+        signed_value: str = str(magnitude)
+        if negative:
+            signed_value = "-" + signed_value
+        return float_literal(state, signed_value, typ)
+    definition: scalar_definition.Type = registry.lookup(typ)
+    maximum: uint64 = definition.maximum(negative)
+    if magnitude > maximum || negative && definition.unsigned:
+        diagnostics.fail_at(state, "integer literal does not fit " + typ)
+    output_number: str = str(magnitude)
+    if negative:
+        output_number = "-" + output_number
+    return context.Value(typ, output_number, "")
+
+
+# Encode floating-point literals with exact LLVM bit patterns.
+def float_literal(state: context.State, text: str, typ: str) -> context.Value:
+    start: ptr = core.cstr(text)
+    end: ptr = ptr(0)
+    real_value: float64 = wrappers.libc.strtod(start, core.address(end))
+    if end == start || wrappers.libc.strlen(end) != 0:
+        diagnostics.fail_at(state, "invalid floating-point literal")
+    bits: uint64 = wrappers.system.sole_rt_f64_bits(real_value)
+    digits: str = "0123456789ABCDEF"
+    hex: str = "0x"
+    i: int64 = 60
+    while i >= 0:
+        index: int64 = int64((bits >> uint64(i)) & 15)
+        hex = hex + core.slice(digits, index, index + 1)
+        i = i - 4
+    if typ == "float32":
+        return context.Value(typ, ir.instruction(state, "fptrunc double " + hex + " to float"), "")
+    return context.Value("float64", hex, "")
+
+
+# Resolve literal types and require explicit casts for typed mismatches.
+def coerce(state: context.State, value: context.Value, expected: str) -> context.Value:
+    if value.typ == "integer":
+        destination: str = expected
+        if not type_query.integer_type(destination) && not type_query.float_type(destination):
+            destination = "int64"
+        value = number_literal(state, value.value, destination)
+    if value.typ == "real":
+        destination_float: str = "float64"
+        if type_query.float_type(expected):
+            destination_float = expected
+        value = float_literal(state, value.value, destination_float)
+    if expected != "" && value.typ != expected:
+        diagnostics.fail_at(state, "expected " + expected + ", got " + value.typ + "; use an explicit cast")
+    return value

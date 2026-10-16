@@ -1,0 +1,452 @@
+import core
+import codegen.llvm.casts as casts
+import codegen.llvm.ir as ir
+import codegen.llvm.literals as literals
+import codegen.llvm.operators as llvm_operators
+import codegen.llvm.output as output
+import codegen.llvm.types as llvm_types
+import semantic.resolve.builtins as builtins
+import diagnostics.report as report
+import codegen.llvm.context as context
+import semantic.model as model
+import syntax.parser.operators as operators
+import semantic.resolve.symbols as symbols
+import semantic.resolve.variants as variants
+import codegen.llvm.sumtypes as sumtypes
+import syntax.parser.tokens as tokens
+import semantic.types.query as type_query
+
+
+# Parse positional arguments using the expected parameter types.
+def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
+    values: context.Value[] = []
+    tokens.expect(state, "(")
+    while tokens.peek(state) != ")":
+        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+            report.fail_at(state, "named arguments are only supported for record constructors")
+        expected: str = ""
+        if core.len(values) < core.len(types):
+            expected = types[core.len(values)]
+        item: context.Value = expression(state, 0, expected)
+        core.append(values, literals.coerce(state, item, expected))
+        if not tokens.accept(state, ","):
+            break
+    tokens.expect(state, ")")
+    return values
+
+
+def parse_constructor_arguments(state: context.State, record: model.RecordInfo) -> context.Value[]:
+    values: context.Value[] = []
+    assigned: bool[] = []
+    i: int64 = 0
+    while i < core.len(record.names):
+        core.append(values, context.Value("void", "", ""))
+        core.append(assigned, false)
+        i = i + 1
+    tokens.expect(state, "(")
+    positional: int64 = 0
+    named: bool = false
+    while tokens.peek(state) != ")":
+        field_index: int64 = positional
+        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+            named = true
+            field_name: str = tokens.identifier(state)
+            tokens.expect(state, "=")
+            field_index = 0
+            while field_index < core.len(record.names) && record.names[field_index] != field_name:
+                field_index = field_index + 1
+            if field_index == core.len(record.names):
+                report.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
+        else:
+            if named:
+                report.fail_at(state, "positional argument cannot follow named constructor arguments")
+            if field_index >= core.len(record.names):
+                report.fail_at(state, "wrong number of constructor fields for " + record.name)
+            positional = positional + 1
+        if assigned[field_index]:
+            report.fail_at(state, "duplicate constructor field '" + record.names[field_index] + "'")
+        expected: str = record.types[field_index]
+        item: context.Value = expression(state, 0, expected)
+        values[field_index] = literals.coerce(state, item, expected)
+        assigned[field_index] = true
+        if not tokens.accept(state, ","):
+            break
+    tokens.expect(state, ")")
+    i = 0
+    while i < core.len(record.names):
+        if not assigned[i]:
+            report.fail_at(state, "missing constructor field '" + record.names[i] + "' for " + record.name)
+        i = i + 1
+    return values
+
+
+# Validate intrinsic arguments and emit their runtime operations.
+def call_builtin(state: context.State, name: str) -> context.Value:
+    # Infer an appended value's type from the destination array.
+    if name == "append":
+        tokens.expect(state, "(")
+        array_value: context.Value = expression(state, 0, "")
+        if not type_query.dynamic_type(array_value.typ):
+            report.fail_at(state, "append requires a growable array")
+        tokens.expect(state, ",")
+        element: str = type_query.element_type(array_value.typ)
+        next_item: context.Value = literals.coerce(state, expression(state, 0, element), element)
+        tokens.expect(state, ")")
+        ir.append_ir(state, array_value, next_item)
+        return context.Value("void", "", "")
+    # Check ordinary intrinsic argument types and counts.
+    types: str[] = []
+    if name == "arg" || name == "exit":
+        if name == "arg":
+            core.append(types, "int64")
+        else:
+            core.append(types, "int32")
+    elif name == "slice":
+        types = ["str", "int64", "int64"]
+    elif name == "read_file" || name == "cstr":
+        types = ["str"]
+    elif name == "write_file":
+        types = ["str", "str"]
+    elif name == "from_cstr":
+        types = ["ptr"]
+    values: context.Value[] = parse_arguments(state, types)
+    expected_count: int64 = 1
+    if name == "arg_count":
+        expected_count = 0
+    elif name == "write_file":
+        expected_count = 2
+    elif name == "slice":
+        expected_count = 3
+    if core.len(values) != expected_count:
+        report.fail_at(state, name + " expects " + str(expected_count) + " arguments")
+    if name == "arg_count":
+        return context.Value("int64", ir.instruction(state, "call i64 @sole_rt_arg_count()"), "")
+    value: context.Value = values[0]
+    if name == "print":
+        output.print_ir(state, value)
+        return context.Value("void", "", "")
+    if name == "len":
+        if value.typ == "str":
+            return context.Value("int64", ir.extract(state, value, 1), "")
+        if type_query.dynamic_type(value.typ):
+            return context.Value("int64", ir.array_length(state, value), "")
+        if type_query.array_type(value.typ):
+            return context.Value("int64", str(type_query.fixed_length(value.typ)), "")
+        report.fail_at(state, "len requires a string or array")
+    elif name == "join":
+        if value.typ != "str[]":
+            report.fail_at(state, "join requires str[]")
+        return context.Value("str", ir.instruction(state, "call {ptr, i64} @_sole.join(ptr " + value.value + ")"), "")
+    elif name == "address":
+        if value.pointer == "":
+            report.fail_at(state, "address requires a variable or field")
+        return context.Value("ptr", value.pointer, "")
+    elif name == "cstr":
+        return context.Value("ptr", ir.c_string(state, value), "")
+    elif name == "from_cstr":
+        ir.checked(state, ir.instruction(state, "icmp ne ptr " + value.value + ", null"))
+        count: str = ir.instruction(state, "call i64 @_sole.cstrlen(ptr " + value.value + ")")
+        return ir.make_string(state, value.value, count)
+    elif name == "slice":
+        data_slice: str = ir.extract(state, value, 0)
+        total: str = ir.extract(state, value, 1)
+        start: str = values[1].value
+        stop: str = values[2].value
+        ordered: str = ir.instruction(state, "icmp ule i64 " + start + ", " + stop)
+        bounded: str = ir.instruction(state, "icmp ule i64 " + stop + ", " + total)
+        ir.checked(state, ir.instruction(state, "and i1 " + ordered + ", " + bounded))
+        begin: str = ir.instruction(state, "getelementptr i8, ptr " + data_slice + ", i64 " + start)
+        count_slice: str = ir.instruction(state, "sub i64 " + stop + ", " + start)
+        return ir.make_string(state, begin, count_slice)
+    if name == "arg":
+        argument: str = ir.instruction(state, "call ptr @sole_rt_arg(i64 " + value.value + ")")
+        arg_len: str = ir.instruction(state, "call i64 @_sole.cstrlen(ptr " + argument + ")")
+        return ir.make_string(state, argument, arg_len)
+    elif name == "exit":
+        ir.emit(state, "call void @exit(i32 " + value.value + ")")
+        return context.Value("void", "", "")
+    # Convert file paths to C strings before calling native I/O helpers.
+    path: str = ir.c_string(state, value)
+    if name == "read_file":
+        out_size: str = ir.slot(state, "int64")
+        contents: str = ir.instruction(state, "call ptr @sole_rt_read_file(ptr " + path + ", ptr " + out_size + ")")
+        file_size: str = ir.instruction(state, "load i64, ptr " + out_size)
+        return ir.make_string(state, contents, file_size)
+    if name == "write_file":
+        content_data: str = ir.extract(state, values[1], 0)
+        content_size: str = ir.extract(state, values[1], 1)
+        ir.emit(state, "call void @sole_rt_write_file(ptr " + path + ", ptr " + content_data + ", i64 " + content_size + ")")
+        return context.Value("void", "", "")
+    report.fail_at(state, "unknown builtin " + name)
+    return context.Value("void", "", "")
+
+
+# Resolve intrinsic calls, casts, constructors, functions, and methods.
+def named_call(state: context.State, name: str, receiver: context.Value[]) -> context.Value:
+    if core.len(receiver) == 0 && core.len(name) > 17 && core.slice(name, 0, 17) == "__sole_intrinsic_":
+        return call_builtin(state, core.slice(name, 17, core.len(name)))
+    if core.len(receiver) == 0 && (type_query.integer_type(name) || type_query.float_type(name) || name == "bool" || name == "ptr" || name == "str"):
+        tokens.expect(state, "(")
+        argument: context.Value = expression(state, 0, name)
+        tokens.expect(state, ")")
+        if name == "str":
+            argument = literals.coerce(state, argument, "")
+            if not type_query.integer_type(argument.typ):
+                report.fail_at(state, "str conversion requires an integer")
+            wide: context.Value = casts.cast_value(state, argument, "int64")
+            negative: str = "false"
+            if not type_query.unsigned_type(argument.typ):
+                negative = ir.instruction(state, "icmp slt i64 " + wide.value + ", 0")
+            return context.Value("str", ir.instruction(state, "call {ptr, i64} @_sole.number_str(i64 " + wide.value + ", i1 " + negative + ")"), "")
+        return casts.cast_value(state, argument, name)
+    ri: int64 = symbols.record_index(state, name)
+    if core.len(receiver) == 0 && ri >= 0:
+        record: model.RecordInfo = state.records[ri]
+        arguments: context.Value[] = parse_constructor_arguments(state, record)
+        aggregate: str = "poison"
+        pointer: str = ""
+        if record.kind == "class":
+            end: str = ir.instruction(state, "getelementptr %" + name + ", ptr null, i32 1")
+            size: str = ir.instruction(state, "ptrtoint ptr " + end + " to i64")
+            pointer = ir.instruction(state, "call ptr @_sole.alloc64(i64 " + size + ")")
+        i: int64 = 0
+        while i < core.len(arguments):
+            if record.kind == "class":
+                field: str = ir.instruction(state, "getelementptr %" + name + ", ptr " + pointer + ", i32 0, i32 " + str(i))
+                ir.emit(state, "store " + ir.typed(state, arguments[i]) + ", ptr " + field)
+            else:
+                aggregate = ir.instruction(state, "insertvalue %" + name + " " + aggregate + ", " + ir.typed(state, arguments[i]) + ", " + str(i))
+            i = i + 1
+        if record.kind == "class":
+            return context.Value(name, pointer, "")
+        if core.len(arguments) == 0:
+            aggregate = "zeroinitializer"
+        return context.Value(name, aggregate, "")
+    fi: int64 = symbols.function_index(state, name)
+    if fi < 0:
+        report.fail_at(state, "unknown function '" + name + "'")
+    fn: model.FunctionInfo = state.functions[fi]
+    parameter_types: str[] = fn.types
+    if core.len(receiver) > 0:
+        parameter_types = []
+        j: int64 = core.len(receiver)
+        while j < core.len(fn.types):
+            core.append(parameter_types, fn.types[j])
+            j = j + 1
+    values: context.Value[] = parse_arguments(state, parameter_types)
+    if core.len(values) + core.len(receiver) != core.len(fn.types):
+        report.fail_at(state, "wrong number of arguments for " + name)
+    parts: str[] = []
+    if core.len(receiver) > 0:
+        core.append(parts, ir.typed(state, receiver[0]))
+    k: int64 = 0
+    while k < core.len(values):
+        if core.len(parts) > 0:
+            core.append(parts, ", ")
+        core.append(parts, ir.typed(state, values[k]))
+        k = k + 1
+    call_text: str = "call " + llvm_types.llvm_type(state, fn.result) + " @" + ir.function_symbol(fn) + "(" + core.join(parts) + ")"
+    if fn.result == "void":
+        ir.emit(state, call_text)
+        return context.Value("void", "", "")
+    return context.Value(fn.result, ir.instruction(state, call_text), "")
+
+
+def expression(state: context.State, minimum: int32, expected: str) -> context.Value:
+    return parse_expression(state, minimum, expected).value
+
+
+# Parse and lower an expression using operator precedence.
+def parse_expression(state: context.State, minimum: int32, expected: str) -> context.Expression:
+    # Read the initial literal, unary operation, grouped value, or name.
+    kind: int32 = state.tokens.kind[state.tokens.position]
+    text: str = tokens.take(state)
+    left: context.Value = context.Value("void", "", "")
+    is_call: bool = false
+    if kind == 3:
+        left = literals.string_constant(state, text)
+    elif kind == 8:
+        left = context.Value("uint8", str(text[0]), "")
+    elif text == "-" || text == "~" || text == "not":
+        direct_number: bool = state.tokens.kind[state.tokens.position] == 2
+        level: int32 = 10
+        if text == "not":
+            level = 3
+        operand: context.Value = expression(state, level, expected)
+        if text == "-" && operand.typ == "integer" && direct_number:
+            left = context.Value("integer", "-" + operand.value, "")
+        else:
+            operand_context: str = ""
+            if type_query.integer_type(expected) || type_query.float_type(expected):
+                operand_context = expected
+            operand = literals.coerce(state, operand, operand_context)
+            if text == "not":
+                operand = literals.coerce(state, operand, "bool")
+                left = context.Value("bool", ir.instruction(state, "xor i1 " + operand.value + ", true"), "")
+            elif text == "~" && type_query.integer_type(operand.typ):
+                left = context.Value(operand.typ, ir.instruction(state, "xor " + ir.typed(state, operand) + ", -1"), "")
+            elif text == "-" && type_query.float_type(operand.typ):
+                left = context.Value(operand.typ, ir.instruction(state, "fneg " + ir.typed(state, operand)), "")
+            elif text == "-" && type_query.integer_type(operand.typ):
+                left = context.Value(operand.typ, ir.instruction(state, "sub " + llvm_types.llvm_type(state, operand.typ) + " 0, " + operand.value), "")
+            else:
+                report.fail_at(state, "invalid unary operator")
+    elif text == "(":
+        grouped: context.Expression = parse_expression(state, 0, expected)
+        left = grouped.value
+        is_call = grouped.is_call
+        tokens.expect(state, ")")
+    elif text == "[":
+        if not type_query.array_type(expected):
+            report.fail_at(state, "array literals need an array type")
+        element: str = type_query.element_type(expected)
+        left = context.Value(expected, "poison", "")
+        if type_query.dynamic_type(expected):
+            left.value = ir.instruction(state, "call ptr @_sole.array_new()")
+        count: int64 = 0
+        while tokens.peek(state) != "]":
+            item: context.Value = literals.coerce(state, expression(state, 0, element), element)
+            if type_query.dynamic_type(expected):
+                ir.append_ir(state, left, item)
+            else:
+                if count >= type_query.fixed_length(expected):
+                    report.fail_at(state, "too many array elements")
+                left.value = ir.instruction(state, "insertvalue " + llvm_types.llvm_type(state, expected) + " " + left.value + ", " + ir.typed(state, item) + ", " + str(count))
+            count = count + 1
+            if not tokens.accept(state, ","):
+                break
+        tokens.expect(state, "]")
+        if not type_query.dynamic_type(expected) && count != type_query.fixed_length(expected):
+            report.fail_at(state, "wrong number of array elements")
+    elif text == "true" || text == "false":
+        left = context.Value("bool", text, "")
+    elif kind == 2:
+        number_kind: str = "integer"
+        hex_number: bool = core.len(text) > 1 && text[0] == 48 && (text[1] == 120 || text[1] == 88)
+        n: int64 = 0
+        while n < core.len(text):
+            if text[n] == 46 || not hex_number && (text[n] == 101 || text[n] == 69):
+                number_kind = "real"
+            n = n + 1
+        left = context.Value(number_kind, text, "")
+    elif kind == 1:
+        si: int64 = symbols.sum_index(state, text)
+        if si >= 0:
+            info: model.SumInfo = state.sums[si]
+            tokens.expect(state, ".")
+            variant: int64 = variants.variant_index(state, info, tokens.identifier(state))
+            if info.kind == "enum":
+                left = context.Value(info.name, str(variant), "")
+            else:
+                values: context.Value[] = parse_arguments(state, info.variants[variant].types)
+                left = sumtypes.construct(state, info, variant, values)
+                is_call = true
+        elif tokens.peek(state) == "(":
+            left = named_call(state, text, [])
+            is_call = true
+        else:
+            li: int64 = symbols.local_index(state, text)
+            if li < 0:
+                report.fail_at(state, "unknown variable '" + text + "'")
+            variable_type: str = state.types[li]
+            variable_pointer: str = state.pointers[li]
+            loaded: str = ir.instruction(state, "load " + llvm_types.llvm_type(state, variable_type) + ", ptr " + variable_pointer)
+            left = context.Value(variable_type, loaded, variable_pointer)
+    else:
+        report.fail_at(state, "expected an expression, got '" + text + "'")
+    while true:
+        # Extend the value with members, indexes, or binary operators.
+        if tokens.accept(state, "."):
+            member: str = tokens.identifier(state)
+            if tokens.peek(state) == "(":
+                receivers: context.Value[] = [left]
+                left = named_call(state, left.typ + "." + member, receivers)
+                is_call = true
+            else:
+                is_call = false
+                record_id: int64 = symbols.record_index(state, left.typ)
+                if record_id < 0:
+                    report.fail_at(state, "this value has no fields")
+                info: model.RecordInfo = state.records[record_id]
+                field_index: int64 = 0
+                while field_index < core.len(info.names) && info.names[field_index] != member:
+                    field_index = field_index + 1
+                if field_index == core.len(info.names):
+                    report.fail_at(state, "unknown field '" + member + "'")
+                field_type: str = info.types[field_index]
+                base_pointer: str = left.pointer
+                if info.kind == "class":
+                    base_pointer = left.value
+                if base_pointer != "":
+                    field_pointer: str = ir.instruction(state, "getelementptr %" + info.name + ", ptr " + base_pointer + ", i32 0, i32 " + str(field_index))
+                    field_value: str = ir.instruction(state, "load " + llvm_types.llvm_type(state, field_type) + ", ptr " + field_pointer)
+                    left = context.Value(field_type, field_value, field_pointer)
+                else:
+                    left = context.Value(field_type, ir.extract(state, left, field_index), "")
+        elif tokens.accept(state, "["):
+            is_call = false
+            index_value: context.Value = literals.coerce(state, expression(state, 0, ""), "")
+            if not type_query.integer_type(index_value.typ):
+                report.fail_at(state, "an index must be an integer")
+            wide_index: context.Value = casts.cast_value(state, index_value, "int64")
+            tokens.expect(state, "]")
+            length: str = ""
+            data: str = ""
+            elem: str = ""
+            if left.typ == "str":
+                length = ir.extract(state, left, 1)
+                data = ir.extract(state, left, 0)
+                elem = "uint8"
+            elif type_query.dynamic_type(left.typ):
+                length = ir.array_length(state, left)
+                data = ir.instruction(state, "load ptr, ptr " + left.value)
+                elem = type_query.element_type(left.typ)
+            elif type_query.array_type(left.typ):
+                length = str(type_query.fixed_length(left.typ))
+                elem = type_query.element_type(left.typ)
+                data = left.pointer
+                if data == "":
+                    data = ir.slot(state, left.typ)
+                    ir.emit(state, "store " + ir.typed(state, left) + ", ptr " + data)
+                data = ir.instruction(state, "getelementptr " + llvm_types.llvm_type(state, left.typ) + ", ptr " + data + ", i32 0, i32 0")
+            else:
+                report.fail_at(state, "only arrays and strings can be indexed")
+            ir.checked(state, ir.instruction(state, "icmp ult i64 " + wide_index.value + ", " + length))
+            item_pointer: str = ir.instruction(state, "getelementptr " + llvm_types.llvm_type(state, elem) + ", ptr " + data + ", i64 " + wide_index.value)
+            item_value: str = ir.instruction(state, "load " + llvm_types.llvm_type(state, elem) + ", ptr " + item_pointer)
+            address_value: str = item_pointer
+            if left.typ == "str":
+                address_value = ""
+            left = context.Value(elem, item_value, address_value)
+        else:
+            operator: str = tokens.peek(state)
+            power: int32 = operators.precedence(operator)
+            if power < minimum:
+                break
+            is_call = false
+            tokens.take(state)
+            if operator == "&&" || operator == "||":
+                left = literals.coerce(state, left, "bool")
+                rhs_label: str = ir.fresh(state)
+                short_label: str = ir.fresh(state)
+                end_label: str = ir.fresh(state)
+                bool_slot: str = ir.slot(state, "bool")
+                if operator == "&&":
+                    ir.emit(state, "br i1 " + left.value + ", label %" + rhs_label + ", label %" + short_label)
+                else:
+                    ir.emit(state, "br i1 " + left.value + ", label %" + short_label + ", label %" + rhs_label)
+                ir.block_label(state, short_label)
+                ir.emit(state, "store i1 " + left.value + ", ptr " + bool_slot)
+                ir.emit(state, "br label %" + end_label)
+                ir.block_label(state, rhs_label)
+                rhs_bool: context.Value = literals.coerce(state, expression(state, power + 1, "bool"), "bool")
+                ir.emit(state, "store i1 " + rhs_bool.value + ", ptr " + bool_slot)
+                ir.emit(state, "br label %" + end_label)
+                ir.block_label(state, end_label)
+                left = context.Value("bool", ir.instruction(state, "load i1, ptr " + bool_slot), "")
+            else:
+                right: context.Value = expression(state, power + 1, expected)
+                left = llvm_operators.binary_ir(state, operator, left, right, expected)
+                if power == 3 && operators.precedence(tokens.peek(state)) == 3:
+                    report.fail_at(state, "chained comparisons are not supported")
+    return context.Expression(left, is_call)

@@ -110,7 +110,7 @@ def main() -> int32:
     return 0
 EOF
 
-"$compiler" syntax --grammar "$root/compiler/sole.ebnf" "$temporary/loops.sole"
+"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/loops.sole"
 "$compiler" check "$temporary/loops.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/loops.sole" "$optimize" -o "$temporary/program"
@@ -137,6 +137,16 @@ def main() -> int32:
         pass
     return int32(i)
 EOF
+for keyword in break continue; do
+    reject "$keyword requires a loop" <<EOF
+def main() -> int32:
+    for outer in range(2):
+        while false:
+            pass
+    $keyword
+    return 0
+EOF
+done
 reject 'shadowing is forbidden' <<'EOF'
 def main() -> int32:
     i: int64 = 0

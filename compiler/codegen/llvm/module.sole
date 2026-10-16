@@ -1,0 +1,31 @@
+import core
+import codegen.llvm.context as context
+import codegen.llvm.functions as functions
+import codegen.llvm.types as llvm_types
+import diagnostics.report as diagnostics
+import semantic.model as model
+import semantic.resolve.symbols as symbols
+
+
+def emit(state: context.State, home: str) -> str:
+    record_definitions: str = llvm_types.layouts(state)
+    prologue: str = core.read_file(home + "/lib/runtime/native.ll")
+    runtime_declarations: str[] = functions.runtime_declarations(prologue)
+    f: int64 = 0
+    while f < core.len(state.functions):
+        functions.compile_function(state, state.functions[f], runtime_declarations)
+        f = f + 1
+    main_index: int64 = symbols.function_index(state, "main")
+    if main_index >= 0:
+        main_fn: model.FunctionInfo = state.functions[main_index]
+        if core.len(main_fn.types) != 0 || main_fn.result != "int32" && main_fn.result != "void" || main_fn.external:
+            diagnostics.die("main must take no parameters and return int32 or void")
+        wrapper: str = "define i32 @main(i32 %argc, ptr %argv) {\nentry:\n  call void @sole_rt_init(i32 %argc, ptr %argv)\n"
+        if main_fn.result == "void":
+            wrapper = wrapper + "  call void @_sole.fn.main()\n  ret i32 0\n}\n"
+        else:
+            wrapper = wrapper + "  %result = call i32 @_sole.fn.main()\n  ret i32 %result\n}\n"
+        core.append(state.definitions, wrapper)
+    runtime_core: str = core.read_file(home + "/lib/runtime/core.ll")
+    runtime_core = core.slice(runtime_core, core.len("declare ptr @_sole.alloc64(i64)\n"), core.len(runtime_core))
+    return prologue + runtime_core + record_definitions + core.join(state.globals) + core.join(state.definitions)

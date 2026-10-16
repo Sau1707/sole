@@ -111,11 +111,15 @@ def main() -> int32:
         case Item.Data(values, kinds, other):
             return 3
         case Item.Number(value):
-            if value != 42:
+            if value == 42:
+                scoped: int64 = value + 1
+                value = scoped
+            if value != 43:
                 return 4
             value = 5
     value: int64 = 8
-    if trace.calls != 1 || value != 8:
+    scoped: int64 = 9
+    if trace.calls != 1 || value != 8 || scoped != 9:
         return 5
     if Kind.Number != Kind.Number || Kind.Number == Kind.Text:
         return 6
@@ -255,6 +259,29 @@ def main() -> int32:
         case Item.Data(n):
             pass
     return int32(n)
+EOF
+
+reject "unknown variable 'local'" <<'EOF'
+union Item:
+    First()
+    Second()
+def main() -> int32:
+    match Item.First():
+        case Item.First():
+            local: int64 = 1
+        case Item.Second():
+            return int32(local)
+    return 0
+EOF
+
+reject "unknown variable 'local'" <<'EOF'
+union Item:
+    Only(n: int64)
+def main() -> int32:
+    match Item.Only(1):
+        case Item.Only(n):
+            local: int64 = n
+    return int32(local)
 EOF
 
 reject 'this type does not support comparison' <<'EOF'

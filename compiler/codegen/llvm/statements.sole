@@ -1,0 +1,215 @@
+import core
+import codegen.llvm.ir as ir
+import codegen.llvm.literals as literals
+import codegen.llvm.locals as locals
+import codegen.llvm.operators as llvm_operators
+import codegen.llvm.types as llvm_types
+import semantic.resolve.declarations as declarations
+import diagnostics.report as report
+import codegen.llvm.expressions as expressions
+import codegen.llvm.matching as matching
+import codegen.llvm.context as context
+import semantic.resolve.symbols as symbols
+import syntax.parser.tokens as tokens
+import semantic.types.query as type_query
+
+
+# Compile an indented block and expire its local declarations.
+def compile_block(state: context.State) -> void:
+    tokens.expect(state, ":")
+    tokens.expect(state, "<newline>")
+    tokens.expect(state, "<indent>")
+    tokens.skip_docstring(state)
+    state.depth = state.depth + 1
+    while tokens.peek(state) != "<dedent>":
+        if state.ended:
+            report.fail_at(state, "unreachable statement")
+        statement(state)
+    tokens.expect(state, "<dedent>")
+    symbols.end_scope(state)
+
+
+# Emit conditional branches and track whether every branch terminates.
+def compile_if(state: context.State) -> void:
+    condition: context.Value = literals.coerce(state, expressions.expression(state, 0, "bool"), "bool")
+    yes: str = ir.fresh(state)
+    no: str = ir.fresh(state)
+    end: str = ir.fresh(state)
+    ir.emit(state, "br i1 " + condition.value + ", label %" + yes + ", label %" + no)
+    ir.block_label(state, yes)
+    compile_block(state)
+    yes_ended: bool = state.ended
+    if not yes_ended:
+        ir.emit(state, "br label %" + end)
+    ir.block_label(state, no)
+    if tokens.accept(state, "elif"):
+        compile_if(state)
+    elif tokens.accept(state, "else"):
+        compile_block(state)
+    no_ended: bool = state.ended
+    if not no_ended:
+        ir.emit(state, "br label %" + end)
+    ir.block_label(state, end)
+    if yes_ended && no_ended:
+        ir.emit(state, "unreachable")
+        state.ended = true
+
+
+# Copy a loop-target stack without its final entry.
+def without_last(items: context.LoopTargets[]) -> context.LoopTargets[]:
+    result_items: context.LoopTargets[] = []
+    i: int64 = 0
+    while i + 1 < core.len(items):
+        core.append(result_items, items[i])
+        i = i + 1
+    return result_items
+
+
+# Lower signed, half-open ranges with an independent induction variable.
+def compile_for(state: context.State) -> void:
+    name: str = tokens.identifier(state)
+    tokens.expect(state, "in")
+    tokens.expect(state, "range")
+    tokens.expect(state, "(")
+    first: context.Value = literals.coerce(state, expressions.expression(state, 0, "int64"), "int64")
+    start: context.Value = context.Value("int64", "0", "")
+    stop: context.Value = first
+    if tokens.accept(state, ","):
+        if tokens.peek(state) != ")":
+            start = first
+            stop = literals.coerce(state, expressions.expression(state, 0, "int64"), "int64")
+            tokens.accept(state, ",")
+    tokens.expect(state, ")")
+    counter: str = ir.slot(state, "int64")
+    ir.emit(state, "store i64 " + start.value + ", ptr " + counter)
+    test_label: str = ir.fresh(state)
+    body_label: str = ir.fresh(state)
+    increment_label: str = ir.fresh(state)
+    end_label: str = ir.fresh(state)
+    ir.emit(state, "br label %" + test_label)
+    ir.block_label(state, test_label)
+    current: str = ir.instruction(state, "load i64, ptr " + counter)
+    condition: str = ir.instruction(state, "icmp slt i64 " + current + ", " + stop.value)
+    ir.emit(state, "br i1 " + condition + ", label %" + body_label + ", label %" + end_label)
+    ir.block_label(state, body_label)
+    state.depth = state.depth + 1
+    locals.declare_local(state, name, "int64", context.Value("int64", current, ""))
+    state.depth = state.depth - 1
+    core.append(state.loops, context.LoopTargets(increment_label, end_label))
+    compile_block(state)
+    state.loops = without_last(state.loops)
+    if not state.ended:
+        ir.emit(state, "br label %" + increment_label)
+    ir.block_label(state, increment_label)
+    previous: str = ir.instruction(state, "load i64, ptr " + counter)
+    next_value: str = ir.instruction(state, "add i64 " + previous + ", 1")
+    ir.emit(state, "store i64 " + next_value + ", ptr " + counter)
+    ir.emit(state, "br label %" + test_label)
+    ir.block_label(state, end_label)
+
+
+def has_augmented_assignment(state: context.State) -> bool:
+    position: int64 = state.tokens.position
+    while state.tokens.kind[position] != 0 && state.tokens.kind[position] != 4:
+        if state.tokens.text[position] == "+=" && state.tokens.kind[position] != 3 && state.tokens.kind[position] != 8:
+            return true
+        position = position + 1
+    return false
+
+
+def compile_augmented_assignment(state: context.State) -> void:
+    if tokens.peek(state) == "self":
+        report.fail_at(state, "+= requires a numeric local identifier")
+    name: str = tokens.identifier(state)
+    if not tokens.accept(state, "+="):
+        report.fail_at(state, "+= requires a numeric local identifier")
+    local: int64 = symbols.local_index(state, name)
+    if local < 0:
+        report.fail_at(state, "unknown variable '" + name + "'")
+    typ: str = state.types[local]
+    if not type_query.integer_type(typ) && not type_query.float_type(typ):
+        report.fail_at(state, "+= requires a numeric local identifier")
+    pointer: str = state.pointers[local]
+    left: context.Value = context.Value(typ, ir.instruction(state, "load " + llvm_types.llvm_type(state, typ) + ", ptr " + pointer), pointer)
+    right: context.Value = literals.coerce(state, expressions.expression(state, 0, typ), typ)
+    result: context.Value = literals.coerce(state, llvm_operators.binary_ir(state, "+", left, right, typ), typ)
+    ir.emit(state, "store " + ir.typed(state, result) + ", ptr " + pointer)
+    tokens.expect(state, "<newline>")
+
+
+# Parse and lower control flow, declarations, assignments, and calls.
+def statement(state: context.State) -> void:
+    if tokens.accept(state, "if"):
+        compile_if(state)
+    elif tokens.accept(state, "match"):
+        subject: context.Value = expressions.expression(state, 0, "")
+        plan: matching.MatchInfo = matching.begin(state, subject)
+        while tokens.peek(state) != "<dedent>":
+            matching.begin_arm(state, plan)
+            compile_block(state)
+            matching.end_arm(state, plan)
+        matching.finish(state, plan)
+    elif tokens.accept(state, "for"):
+        compile_for(state)
+    elif tokens.accept(state, "while"):
+        test_label: str = ir.fresh(state)
+        body_label: str = ir.fresh(state)
+        end_label: str = ir.fresh(state)
+        ir.emit(state, "br label %" + test_label)
+        ir.block_label(state, test_label)
+        condition: context.Value = literals.coerce(state, expressions.expression(state, 0, "bool"), "bool")
+        ir.emit(state, "br i1 " + condition.value + ", label %" + body_label + ", label %" + end_label)
+        ir.block_label(state, body_label)
+        core.append(state.loops, context.LoopTargets(test_label, end_label))
+        compile_block(state)
+        state.loops = without_last(state.loops)
+        if not state.ended:
+            ir.emit(state, "br label %" + test_label)
+        ir.block_label(state, end_label)
+    elif tokens.accept(state, "return"):
+        if tokens.peek(state) == "<newline>":
+            if state.result != "void":
+                report.fail_at(state, "return requires a value")
+            ir.emit(state, "ret void")
+        else:
+            if state.result == "void":
+                report.fail_at(state, "a void function cannot return a value")
+            returned: context.Value = literals.coerce(state, expressions.expression(state, 0, state.result), state.result)
+            ir.emit(state, "ret " + ir.typed(state, returned))
+        state.ended = true
+        tokens.expect(state, "<newline>")
+    elif tokens.peek(state) == "break" || tokens.peek(state) == "continue":
+        keyword: str = tokens.take(state)
+        if core.len(state.loops) == 0:
+            report.fail_at(state, keyword + " requires a loop")
+        targets: context.LoopTargets = state.loops[core.len(state.loops) - 1]
+        target: str = targets.break_target
+        if keyword == "continue":
+            target = targets.continue_target
+        ir.emit(state, "br label %" + target)
+        state.ended = true
+        tokens.expect(state, "<newline>")
+    elif tokens.accept(state, "pass"):
+        tokens.expect(state, "<newline>")
+    elif has_augmented_assignment(state):
+        compile_augmented_assignment(state)
+    elif state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == ":":
+        name: str = tokens.identifier(state)
+        tokens.expect(state, ":")
+        local_type: str = declarations.parse_type(state)
+        tokens.expect(state, "=")
+        initializer: context.Value = expressions.expression(state, 0, local_type)
+        locals.declare_local(state, name, local_type, initializer)
+        tokens.expect(state, "<newline>")
+    else:
+        parsed: context.Expression = expressions.parse_expression(state, 0, "")
+        left: context.Value = parsed.value
+        if tokens.accept(state, "="):
+            receiver: int64 = symbols.local_index(state, "self")
+            if left.pointer == "" || receiver >= 0 && left.pointer == state.pointers[receiver]:
+                report.fail_at(state, "assignment requires mutable storage")
+            right: context.Value = literals.coerce(state, expressions.expression(state, 0, left.typ), left.typ)
+            ir.emit(state, "store " + ir.typed(state, right) + ", ptr " + left.pointer)
+        elif not parsed.is_call:
+            report.fail_at(state, "only calls can be expression statements")
+        tokens.expect(state, "<newline>")

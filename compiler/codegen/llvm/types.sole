@@ -1,0 +1,68 @@
+import core
+import diagnostics.report as diagnostics
+import codegen.llvm.context as context
+import semantic.model as model
+import semantic.resolve.symbols as symbols
+import semantic.types.query as type_query
+import codegen.llvm.scalars.definition as scalar_definition
+import codegen.llvm.scalars.registry as registry
+
+
+# Map a Sole type to its LLVM representation and validate array sizes.
+def llvm_type(state: context.State, typ: str) -> str:
+    definition: scalar_definition.Type = registry.lookup(typ)
+    if definition.llvm != "":
+        return definition.llvm
+    if type_query.dynamic_type(typ):
+        element: str = type_query.element_type(typ)
+        if element == "void":
+            diagnostics.fail_at(state, "void cannot be an array element type")
+        llvm_type(state, element)
+        return "ptr"
+    if type_query.array_type(typ):
+        length: int64 = type_query.fixed_length(typ)
+        if length < 1 || length > 1000000:
+            diagnostics.fail_at(state, "array size must be between 1 and 1000000")
+        return "[" + str(length) + " x " + llvm_type(state, type_query.element_type(typ)) + "]"
+    si: int64 = symbols.sum_index(state, typ)
+    if si >= 0:
+        if state.sums[si].kind == "enum":
+            return "i32"
+        return "%" + typ
+    idx: int64 = symbols.record_index(state, typ)
+    if idx < 0:
+        diagnostics.fail_at(state, "unknown type '" + typ + "'")
+    if state.records[idx].kind == "class":
+        return "ptr"
+    return "%" + typ
+
+
+def layouts(state: context.State) -> str:
+    definitions: str[] = []
+    r: int64 = 0
+    while r < core.len(state.records):
+        info: model.RecordInfo = state.records[r]
+        fields: str[] = []
+        i: int64 = 0
+        while i < core.len(info.types):
+            if i > 0:
+                core.append(fields, ", ")
+            core.append(fields, llvm_type(state, info.types[i]))
+            i = i + 1
+        core.append(definitions, "%" + info.name + " = type {" + core.join(fields) + "}\n")
+        r = r + 1
+    s: int64 = 0
+    while s < core.len(state.sums):
+        sum: model.SumInfo = state.sums[s]
+        if sum.kind == "union":
+            layout: str = "%" + sum.name + " = type {i32"
+            v: int64 = 0
+            while v < core.len(sum.variants):
+                p: int64 = 0
+                while p < core.len(sum.variants[v].types):
+                    layout = layout + ", " + llvm_type(state, sum.variants[v].types[p])
+                    p = p + 1
+                v = v + 1
+            core.append(definitions, layout + "}\n")
+        s = s + 1
+    return core.join(definitions)

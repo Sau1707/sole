@@ -1,0 +1,83 @@
+import codegen.llvm.ir as ir
+import codegen.llvm.literals as literals
+import diagnostics.report as diagnostics
+import codegen.llvm.context as llvm_context
+import syntax.parser.operators as operators
+import semantic.resolve.symbols as symbols
+import semantic.types.query as type_query
+import codegen.llvm.scalars.definition as scalar_definition
+import codegen.llvm.scalars.registry as registry
+
+
+# Type-check operands and lower a binary operation to LLVM.
+def binary_ir(state: llvm_context.State, operator: str, left: llvm_context.Value, right: llvm_context.Value, expected: str) -> llvm_context.Value:
+    # Give literals a shared numeric context before checking operand types.
+    context: str = ""
+    if type_query.integer_type(expected) || type_query.float_type(expected):
+        context = expected
+    if left.typ != "integer" && left.typ != "real":
+        context = left.typ
+    elif right.typ != "integer" && right.typ != "real":
+        context = right.typ
+    elif left.typ == "real" || right.typ == "real":
+        if not type_query.float_type(context):
+            context = "float64"
+    left = literals.coerce(state, left, context)
+    right = literals.coerce(state, right, left.typ)
+    typ: str = left.typ
+    definition: scalar_definition.Type = registry.lookup(typ)
+    # Route string concatenation and equality through runtime helpers.
+    if typ == "str":
+        ap: str = ir.extract(state, left, 0)
+        al: str = ir.extract(state, left, 1)
+        bp: str = ir.extract(state, right, 0)
+        bl: str = ir.extract(state, right, 1)
+        arguments: str = "ptr " + ap + ", i64 " + al + ", ptr " + bp + ", i64 " + bl
+        if operator == "+":
+            data: str = ir.instruction(state, "call ptr @_sole.concat(" + arguments + ")")
+            count: str = ir.instruction(state, "add i64 " + al + ", " + bl)
+            return ir.make_string(state, data, count)
+        if operator == "==" || operator == "!=":
+            equality: str = ir.instruction(state, "call i1 @_sole.str_eq(" + arguments + ")")
+            if operator == "!=":
+                equality = ir.instruction(state, "xor i1 " + equality + ", true")
+            return llvm_context.Value("bool", equality, "")
+        diagnostics.fail_at(state, "unsupported string operator")
+    # Select signed, unsigned, or floating-point comparison predicates.
+    comparison: bool = operators.precedence(operator) == 3
+    operation: str = ""
+    if comparison:
+        operation = definition.comparison(operator)
+        if operation == "":
+            if operator != "==" && operator != "!=":
+                diagnostics.fail_at(state, "only numbers support ordering")
+            ri: int64 = symbols.record_index(state, typ)
+            si: int64 = symbols.sum_index(state, typ)
+            enum_type: bool = si >= 0 && state.sums[si].kind == "enum"
+            if not enum_type && (ri < 0 || state.records[ri].kind != "class"):
+                diagnostics.fail_at(state, "this type does not support comparison")
+            operation = "icmp eq"
+            if operator == "!=":
+                operation = "icmp ne"
+        return llvm_context.Value("bool", ir.instruction(state, operation + " " + ir.typed(state, left) + ", " + right.value), "")
+    # Choose the arithmetic or bitwise instruction for the numeric operands.
+    if not definition.numeric():
+        diagnostics.fail_at(state, "arithmetic requires numeric operands")
+    operation = definition.arithmetic(operator)
+    if operation == "":
+        diagnostics.fail_at(state, "bitwise operators require integers")
+    if definition.integer():
+        # Reject integer division by zero, signed overflow, and invalid shifts.
+        if operator == "/" || operator == "%":
+            valid: str = ir.instruction(state, "icmp ne " + ir.typed(state, right) + ", 0")
+            if not definition.unsigned:
+                minimum: str = definition.lower_bound()
+                a_min: str = ir.instruction(state, "icmp eq " + ir.typed(state, left) + ", " + minimum)
+                b_minus: str = ir.instruction(state, "icmp eq " + ir.typed(state, right) + ", -1")
+                overflow: str = ir.instruction(state, "and i1 " + a_min + ", " + b_minus)
+                not_overflow: str = ir.instruction(state, "xor i1 " + overflow + ", true")
+                valid = ir.instruction(state, "and i1 " + valid + ", " + not_overflow)
+            ir.checked(state, valid)
+        if operator == "<<" || operator == ">>":
+            ir.checked(state, ir.instruction(state, "icmp ult " + ir.typed(state, right) + ", " + str(definition.bits)))
+    return llvm_context.Value(typ, ir.instruction(state, operation + " " + ir.typed(state, left) + ", " + right.value), "")

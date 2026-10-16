@@ -1,0 +1,202 @@
+import core
+import diagnostics.report as diagnostics
+import syntax.lexer.scanner as lexer
+import syntax.lexer.tokens as lexical_tokens
+import syntax.parser.tokens as tokens
+
+
+class Grammar:
+    source: lexical_tokens.Tokens
+    kinds: int32[]
+    values: str[]
+    children: int64[]
+    siblings: int64[]
+    names: str[]
+    roots: int64[]
+    furthest: int64
+
+
+def node(grammar: Grammar, kind: int32, value: str, child: int64) -> int64:
+    index: int64 = core.len(grammar.kinds)
+    core.append(grammar.kinds, kind)
+    core.append(grammar.values, value)
+    core.append(grammar.children, child)
+    core.append(grammar.siblings, -1)
+    return index
+
+
+def expect(grammar: Grammar, text: str) -> void:
+    position: int64 = grammar.source.position
+    if grammar.source.text[position] != text || grammar.source.kind[position] == 0:
+        diagnostics.die("grammar line " + str(grammar.source.line[position]) + ": expected " + text)
+    grammar.source.position = position + 1
+
+
+def term(grammar: Grammar) -> int64:
+    position: int64 = grammar.source.position
+    kind: int32 = grammar.source.kind[position]
+    text: str = grammar.source.text[position]
+    grammar.source.position = position + 1
+    if kind == 3:
+        return node(grammar, 0, text, -1)
+    if kind == 1:
+        return node(grammar, 1, text, -1)
+    if text == "(" || text == "[" || text == "{":
+        child: int64 = choice(grammar)
+        if text == "(":
+            expect(grammar, ")")
+            return child
+        if text == "[":
+            expect(grammar, "]")
+            return node(grammar, 4, "", child)
+        expect(grammar, "}")
+        return node(grammar, 5, "", child)
+    diagnostics.die("grammar line " + str(grammar.source.line[position]) + ": expected a term")
+    return -1
+
+
+def sequence(grammar: Grammar) -> int64:
+    first: int64 = term(grammar)
+    last: int64 = first
+    while grammar.source.text[grammar.source.position] == ",":
+        expect(grammar, ",")
+        next_node: int64 = term(grammar)
+        grammar.siblings[last] = next_node
+        last = next_node
+    return node(grammar, 2, "", first)
+
+
+def choice(grammar: Grammar) -> int64:
+    first: int64 = sequence(grammar)
+    last: int64 = first
+    while grammar.source.text[grammar.source.position] == "|":
+        expect(grammar, "|")
+        next_node: int64 = sequence(grammar)
+        grammar.siblings[last] = next_node
+        last = next_node
+    return node(grammar, 3, "", first)
+
+
+def rule_index(grammar: Grammar, name: str) -> int64:
+    i: int64 = 0
+    while i < core.len(grammar.names):
+        if grammar.names[i] == name:
+            return i
+        i = i + 1
+    return -1
+
+
+def token_kind(name: str) -> int32:
+    if name == "EOF":
+        return 0
+    if name == "IDENTIFIER":
+        return 1
+    if name == "NUMBER":
+        return 2
+    if name == "STRING":
+        return 3
+    if name == "NEWLINE":
+        return 4
+    if name == "INDENT":
+        return 5
+    if name == "DEDENT":
+        return 6
+    if name == "BYTE":
+        return 8
+    return -1
+
+
+def load(path: str) -> Grammar:
+    raw: lexical_tokens.Tokens = lexer.lex(core.read_file(path))
+    source: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], 0, [])
+    i: int64 = 0
+    while i < core.len(raw.kind):
+        if raw.kind[i] < 4 || raw.kind[i] == 7:
+            lexical_tokens.token_add(source, raw.text[i], raw.kind[i], raw.line[i])
+        i = i + 1
+    grammar: Grammar = Grammar(source, [], [], [], [], [], [], 0)
+    while source.kind[source.position] != 0:
+        if source.kind[source.position] != 1:
+            diagnostics.die("expected a grammar rule name")
+        name: str = source.text[source.position]
+        if rule_index(grammar, name) >= 0 || token_kind(name) >= 0:
+            diagnostics.die("duplicate or reserved grammar rule " + name)
+        core.append(grammar.names, name)
+        source.position = source.position + 1
+        expect(grammar, "=")
+        core.append(grammar.roots, choice(grammar))
+        expect(grammar, ";")
+    if rule_index(grammar, "program") < 0:
+        diagnostics.die("grammar requires a program rule")
+    i = 0
+    while i < core.len(grammar.kinds):
+        if grammar.kinds[i] == 1:
+            name: str = grammar.values[i]
+            target: int64 = rule_index(grammar, name)
+            if target >= 0:
+                grammar.children[i] = grammar.roots[target]
+            elif token_kind(name) < 0:
+                diagnostics.die("unknown grammar rule " + name)
+        i = i + 1
+    return grammar
+
+
+# Choices try alternatives in order; repetitions consume greedily.
+def match_node(grammar: Grammar, source: lexical_tokens.Tokens, index: int64, position: int64) -> int64:
+    kind: int32 = grammar.kinds[index]
+    child: int64 = grammar.children[index]
+    if kind == 0 || kind == 1 && child < 0:
+        if position > grammar.furthest:
+            grammar.furthest = position
+        if position >= core.len(source.kind):
+            return -1
+        if kind == 0:
+            if source.kind[position] != 2 && source.kind[position] != 3 && source.kind[position] != 8 && source.text[position] == grammar.values[index]:
+                return position + 1
+        else:
+            expected: int32 = token_kind(grammar.values[index])
+            if source.kind[position] == expected:
+                if expected != 1 || not tokens.reserved_keyword(source.text[position]):
+                    return position + 1
+        return -1
+    if kind == 1:
+        return match_node(grammar, source, child, position)
+    if kind == 2:
+        while child >= 0:
+            position = match_node(grammar, source, child, position)
+            if position < 0:
+                return -1
+            child = grammar.siblings[child]
+        return position
+    if kind == 3:
+        while child >= 0:
+            result: int64 = match_node(grammar, source, child, position)
+            if result >= 0:
+                return result
+            child = grammar.siblings[child]
+        return -1
+    if kind == 4:
+        result: int64 = match_node(grammar, source, child, position)
+        if result >= 0:
+            return result
+        return position
+    while true:
+        result: int64 = match_node(grammar, source, child, position)
+        if result < 0:
+            return position
+        if result == position:
+            diagnostics.die("grammar repetition must consume a token")
+        position = result
+    return position
+
+
+def check_file(grammar: Grammar, grammar_path: str, path: str) -> void:
+    root: int64 = grammar.roots[rule_index(grammar, "program")]
+    source: lexical_tokens.Tokens = lexer.lex(core.read_file(path))
+    grammar.furthest = 0
+    end: int64 = match_node(grammar, source, root, 0)
+    if end != core.len(source.kind):
+        position: int64 = grammar.furthest
+        if position >= core.len(source.kind):
+            position = core.len(source.kind) - 1
+        diagnostics.die(path + ":" + str(source.line[position]) + ": syntax does not match " + grammar_path)

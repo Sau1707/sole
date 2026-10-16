@@ -1,6 +1,6 @@
 import core
 import pure.strings
-import backend.target
+import codegen.llvm.target as target
 
 
 def require(condition: bool, description: str) -> void:
@@ -17,17 +17,17 @@ def main() -> int32:
         level = 2
     valid: str = "define i32 @answer() { ret i32 42 }\n"
     invalid: str = "define i32 @broken() { entry: br label %entry }\n"
-    parse_error: str = backend.target.llvm_object("not LLVM IR", output, level, false)
+    parse_error: str = target.llvm_object("not LLVM IR", output, level, false)
     require(parse_error != "", "parse failure returns an error")
-    verify_error: str = backend.target.llvm_object(invalid, output, level, true)
+    verify_error: str = target.llvm_object(invalid, output, level, true)
     require(verify_error != "", "verification failure returns an error")
-    emit_error: str = backend.target.llvm_object(valid, missing, level, false)
+    emit_error: str = target.llvm_object(valid, missing, level, false)
     require(emit_error != "", "emission failure returns an error")
-    pass_error: str = backend.target.llvm_object(valid, output, 4, false)
+    pass_error: str = target.llvm_object(valid, output, 4, false)
     require(pass_error != "", "invalid optimization pipeline returns an error")
-    require(backend.target.llvm_object(valid, missing, level, true) == "", "check-only succeeds without emitting")
-    require(backend.target.llvm_object(valid, output, level, false) == "", "object emission returns empty on success")
-    require(backend.target.llvm_object(valid, output, level, true) == "", "check succeeds after failures")
+    require(target.llvm_object(valid, missing, level, true) == "", "check-only succeeds without emitting")
+    require(target.llvm_object(valid, output, level, false) == "", "object emission returns empty on success")
+    require(target.llvm_object(valid, output, level, true) == "", "check succeeds after failures")
     require(pure.strings.contains(parse_error, "expected"), "parse message survives LLVM disposal")
     require(pure.strings.contains(verify_error, "Entry block"), "verification message survives LLVM disposal")
     require(pure.strings.contains(emit_error, "No such file"), "emission message survives LLVM disposal")

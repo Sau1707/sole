@@ -9,8 +9,10 @@ struct Point:
 class Box:
     value: int32
     def read(self) -> int32:
+        """TODO: Document this function."""
         return self.value
 
 
 def main() -> void:
+    """TODO: Document this function."""
     pass

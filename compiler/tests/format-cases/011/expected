@@ -3,8 +3,10 @@ import core
 
 # Entry point.
 def first() -> void:
+    """TODO: Document this function."""
     pass
 
 
 def second() -> void:
+    """TODO: Document this function."""
     pass

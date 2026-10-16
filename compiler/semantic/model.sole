@@ -1,0 +1,30 @@
+# Describe the fields and kind of a struct or class.
+class RecordInfo:
+    name: str
+    kind: str
+    names: str[]
+    types: str[]
+
+
+# Describe a function's signature and body location.
+class FunctionInfo:
+    name: str
+    names: str[]
+    types: str[]
+    result: str
+    body: int64
+    external: bool
+
+
+class VariantInfo:
+    name: str
+    names: str[]
+    types: str[]
+    position: int64
+
+
+class SumInfo:
+    name: str
+    kind: str
+    variants: VariantInfo[]
+    position: int64

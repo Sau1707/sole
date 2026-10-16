@@ -1,0 +1,14 @@
+import syntax.lexer.tokens as token_model
+
+
+# Track a module's declarations, imports, and loading state.
+class ModuleInfo:
+    path: str
+    prefix: str
+    tokens: token_model.Tokens
+    names: str[]
+    aliases: str[]
+    dependencies: int64[]
+    removed: bool[]
+    active: bool
+    intrinsics: str[]

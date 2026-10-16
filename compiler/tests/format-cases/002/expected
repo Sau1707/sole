@@ -5,6 +5,7 @@ import core
 def first(
     value: int32
 ) -> str:
+    """TODO: Document this function."""
     return """text
 def fake() -> void:
 
@@ -14,4 +15,5 @@ class Fake:
 
 
 def second() -> void:
+    """TODO: Document this function."""
     pass

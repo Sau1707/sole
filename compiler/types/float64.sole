@@ -1,6 +1,0 @@
-import types.definition
-
-
-class float64:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("float64", "double", 64, "float", false)

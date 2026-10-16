@@ -122,9 +122,17 @@ while [ "$#" -gt 0 ]; do
         shift
         cat > "$1" <<'PROGRAM'
 #!/bin/sh
+if [ "${SOLE_HARNESS_EXPECTED_MODULE+x}" = x ]; then
+    printf 'runtime invocation\n' >> "$SOLE_HARNESS_CALLS"
+    if [ "${SOLE_MODULE_TEST:-}" != "$SOLE_HARNESS_EXPECTED_MODULE" ]; then
+        printf 'unexpected runtime module environment\n' >&2
+        exit 99
+    fi
+fi
 printf 'actual output\n'
 printf 'runtime stderr marker\n' >&2
 case "${SOLE_HARNESS_RUNTIME_STATUS:-0}" in
+    signal) kill -ILL "$$" ;;
     hang|ignore-term)
         if [ "$SOLE_HARNESS_RUNTIME_STATUS" = ignore-term ]; then trap '' TERM; fi
         while :; do sleep 1; done
@@ -187,6 +195,36 @@ for mode in run exit; do
     grep -Fq '+actual output' "$temporary/log"
     grep -Fq 'runtime stderr marker' "$temporary/log"
 done
+
+printf 'fixture value\n' > "$fixture/module-env"
+printf 'actual output\n' > "$fixture/expected"
+for mode in run exit trap; do
+    printf '%s\n' "$mode" > "$fixture/mode"
+    printf '0\n' > "$fixture/status"
+    runtime_status=0
+    expected_module='parent value'
+    if [ "$mode" = run ]; then expected_module='fixture value'; fi
+    if [ "$mode" = trap ]; then runtime_status=signal; fi
+    : > "$SOLE_HARNESS_CALLS"
+    if ! SOLE_MODULE_TEST='parent value' SOLE_HARNESS_EXPECTED_MODULE="$expected_module" \
+        SOLE_COMPILER="$temporary/runtime-compiler" SOLE_HARNESS_RUNTIME_STATUS="$runtime_status" \
+        sh "$tests/run.sh" > "$temporary/log" 2>&1; then
+        cat "$temporary/log" >&2
+        echo "FAIL: $mode runtime environment or signal handling changed" >&2
+        exit 1
+    fi
+    test "$(wc -l < "$SOLE_HARNESS_CALLS")" -eq 1
+    grep -Fq 'Passed 1 fixture runs.' "$temporary/log"
+done
+for status in 0 1 139; do
+    if SOLE_COMPILER="$temporary/runtime-compiler" SOLE_HARNESS_RUNTIME_STATUS="$status" \
+        sh "$tests/run.sh" > "$temporary/log" 2>&1; then
+        echo "FAIL: harness accepted trap mode with status $status" >&2
+        exit 1
+    fi
+    grep -Fq 'expected a trap signal' "$temporary/log"
+done
+rm "$fixture/module-env"
 
 cat > "$temporary/library-compiler" <<'EOF'
 #!/bin/sh

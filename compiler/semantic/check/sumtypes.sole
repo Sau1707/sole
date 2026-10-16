@@ -1,0 +1,86 @@
+import core
+import codegen.llvm.types as llvm_types
+import codegen.llvm.context as context
+import semantic.model as model
+import semantic.types.query as type_query
+import semantic.resolve.symbols as symbols
+import semantic.resolve.builtins as builtins
+import diagnostics.report as report
+
+
+def validate(state: context.State) -> void:
+    saved_position: int64 = state.tokens.position
+    i: int64 = 0
+    while i < core.len(state.sums):
+        info: model.SumInfo = state.sums[i]
+        state.tokens.position = info.position
+        if symbols.sum_index(state, info.name) != i || symbols.record_index(state, info.name) >= 0 || symbols.function_index(state, info.name) >= 0 || builtins.reserved_type_name(info.name):
+            report.fail_at(state, "duplicate or reserved type: " + info.name)
+        if core.len(info.variants) == 0:
+            report.fail_at(state, "sum type must have at least one member")
+        v: int64 = 0
+        while v < core.len(info.variants):
+            variant: model.VariantInfo = info.variants[v]
+            state.tokens.position = variant.position
+            previous: int64 = 0
+            while previous < v:
+                if info.variants[previous].name == variant.name:
+                    report.fail_at(state, "duplicate member: " + variant.name)
+                previous = previous + 1
+            p: int64 = 0
+            while p < core.len(variant.types):
+                typ: str = variant.types[p]
+                if type_query.element_type(typ) == "void":
+                    report.fail_at(state, "void cannot be a payload type")
+                llvm_types.llvm_type(state, typ)
+                q: int64 = 0
+                while q < p:
+                    if variant.names[q] == variant.names[p]:
+                        report.fail_at(state, "duplicate payload field: " + variant.names[p])
+                    q = q + 1
+                p = p + 1
+            v = v + 1
+        i = i + 1
+    state.tokens.position = saved_position
+
+
+def check_layout(state: context.State, typ: str, path: str[]) -> void:
+    saved_position: int64 = state.tokens.position
+    if type_query.dynamic_type(typ):
+        return
+    typ = type_query.element_type(typ)
+    ri: int64 = symbols.record_index(state, typ)
+    si: int64 = symbols.sum_index(state, typ)
+    if si >= 0:
+        state.tokens.position = state.sums[si].position
+    if ri >= 0 && state.records[ri].kind == "class":
+        return
+    if ri < 0 && (si < 0 || state.sums[si].kind == "enum"):
+        state.tokens.position = saved_position
+        return
+    i: int64 = 0
+    while i < core.len(path):
+        if path[i] == typ:
+            report.fail_at(state, "recursive value layout: " + typ)
+        i = i + 1
+    next_path: str[] = []
+    i = 0
+    while i < core.len(path):
+        core.append(next_path, path[i])
+        i = i + 1
+    core.append(next_path, typ)
+    if ri >= 0:
+        f: int64 = 0
+        while f < core.len(state.records[ri].types):
+            check_layout(state, state.records[ri].types[f], next_path)
+            f = f + 1
+    else:
+        v: int64 = 0
+        while v < core.len(state.sums[si].variants):
+            p: int64 = 0
+            while p < core.len(state.sums[si].variants[v].types):
+                state.tokens.position = state.sums[si].variants[v].position
+                check_layout(state, state.sums[si].variants[v].types[p], next_path)
+                p = p + 1
+            v = v + 1
+    state.tokens.position = saved_position

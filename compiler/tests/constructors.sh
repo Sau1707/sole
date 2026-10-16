@@ -101,7 +101,7 @@ def main() -> int32:
     return 0
 EOF
 
-"$compiler" syntax --grammar "$root/compiler/sole.ebnf" "$temporary/main.sole"
+"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole"
 "$compiler" check "$temporary/main.sole"
 printf 'constructors passed\n' > "$temporary/expected"
 for optimize in -O0 -O2; do

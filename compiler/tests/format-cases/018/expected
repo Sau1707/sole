@@ -2,6 +2,7 @@ import core
 
 
 def main() -> str:
+    """TODO: Document this function."""
     return """text
 def fake():
 

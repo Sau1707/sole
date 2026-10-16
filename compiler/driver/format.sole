@@ -1,9 +1,10 @@
 import core
-import formatter
+import syntax.formatter as formatter
 import wrappers.system
 
 
 def main() -> int32:
+    """Format source files or check them without writing changes."""
     if core.arg_count() < 3:
         core.print("Usage: sole format [--check] file.sole ...")
         return 1

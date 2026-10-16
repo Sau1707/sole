@@ -1,6 +1,0 @@
-import types.definition
-
-
-class int32:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("int32", "i32", 32, "integer", false)

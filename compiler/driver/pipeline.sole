@@ -1,0 +1,27 @@
+import core
+import codegen.llvm.module as llvm_module
+import codegen.llvm.context as context
+import semantic.resolve.declarations as declarations
+import modules.loader as modules
+import semantic.check.declarations as validation
+import syntax.lexer.tokens as tokens
+
+
+struct Compilation:
+    ir: str
+    inputs: str[]
+
+
+# Coordinate source loading, semantic checks, and LLVM module assembly.
+def generate(filename: str, source: str, home: str) -> Compilation:
+    # Load dependencies and collect validated declarations.
+    inputs: str[] = []
+    loaded: tokens.Tokens = modules.load_imports(filename, source, inputs)
+    state: context.State = context.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [], 0, 0, false, "", filename)
+    declarations.scan(state)
+    validation.validate(state)
+    ir: str = llvm_module.emit(state, home)
+    core.append(inputs, home + "/lib/runtime/native.ll")
+    core.append(inputs, home + "/lib/runtime/core.ll")
+    core.append(inputs, home + "/lib/runtime/system.c")
+    return Compilation(ir, inputs)

@@ -13,10 +13,12 @@ import core
 
 
 def identity(value: uint8) -> uint8:
+    """Return the byte without changing its value."""
     return value
 
 
 def main() -> int32:
+    """Check byte literals, escapes, and numeric operations."""
     b: uint8 = b'A'
     bytes: uint8[] = [b' ', b'\n', b'\r', b'\t', b'\0', b'\\', b'\'', b'"', b"\"", b"'", b'\"']
     expected: uint8[] = [32, 10, 13, 9, 0, 92, 39, 34, 34, 39, 34]
@@ -40,7 +42,7 @@ def main() -> int32:
     core.print(b)
     return 0
 EOF
-"$compiler" syntax --grammar "$root/compiler/sole.ebnf" "$temporary/bytes.sole"
+"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/bytes.sole"
 "$compiler" check "$temporary/bytes.sole"
 printf '65\n' > "$temporary/expected"
 for optimize in -O0 -O2; do

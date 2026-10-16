@@ -1,6 +1,0 @@
-import types.definition
-
-
-class bool:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("bool", "i1", 1, "bool", true)

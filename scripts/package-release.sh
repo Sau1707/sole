@@ -17,11 +17,11 @@ test ! -e "$package" || { echo "$package already exists; use a clean packaging d
 mkdir -p "$package/bin" "$package/lib/sole" "$package/share/sole/licenses"
 install -m 755 .build/sole "$package/bin/sole"
 cp -R lib "$package/share/sole/"
-mkdir -p "$package/share/sole/compiler"
-cp compiler/sole.ebnf "$package/share/sole/compiler/"
+mkdir -p "$package/share/sole/compiler/syntax/parser"
+cp compiler/syntax/parser/sole.ebnf "$package/share/sole/compiler/syntax/parser/"
 cp -R /usr/share/common-licenses "$package/share/sole/licenses/"
 cp README.md .build/bootstrap-proof.txt "$package/"
-cp -R docs "$package/"
+cp compiler/README.md "$package/COMPILER.md"
 ldd .build/sole > "$package/dependencies.txt"
 if grep -q 'not found' "$package/dependencies.txt"; then
     cat "$package/dependencies.txt" >&2

@@ -8,7 +8,7 @@ temporary=$(mktemp -d "$temp_root/sole-backend-errors-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
 cp "$root/compiler/tests/backend-errors.sole" "$temporary/main.sole"
-ln -s "$root/compiler/backend" "$temporary/backend"
+ln -s "$root/compiler/codegen" "$temporary/codegen"
 SOLE_HOME="$root" SOLE_LIB="$root/lib" "$compiler" build "$temporary/main.sole" --link LLVM-21 -o "$temporary/backend-errors"
 for optimize in 0 2; do
     "$temporary/backend-errors" "$temporary/output-$optimize.o" "$temporary/missing/output.o" "$optimize"

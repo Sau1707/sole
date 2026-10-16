@@ -14,6 +14,7 @@ struct Pair:
 
 
 def main() -> int32:
+    """TODO: Document this function."""
     pair: Pair = Pair(second=2, first=1)
     total: int64 = 0
     for i in range(pair.second):

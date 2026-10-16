@@ -16,7 +16,7 @@ grep -q 'dangling output symlink' "$temporary/runtime.log"
 
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
 printf 'import core\ndef main() -> void:\n    pass\n' > "$temporary/target"
-printf 'import core\n\n\ndef main() -> void:\n    pass\n' > "$temporary/expected"
+printf 'import core\n\n\ndef main() -> void:\n    """TODO: Document this function."""\n    pass\n' > "$temporary/expected"
 chmod 640 "$temporary/target"
 ln -s target "$temporary/input.sole"
 "$compiler" format "$temporary/input.sole"

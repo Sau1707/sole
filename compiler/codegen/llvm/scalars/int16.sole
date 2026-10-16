@@ -1,0 +1,6 @@
+import codegen.llvm.scalars.definition as scalar_definition
+
+
+class int16:
+    def definition(self) -> scalar_definition.Type:
+        return scalar_definition.Type("int16", "i16", 16, "integer", false)

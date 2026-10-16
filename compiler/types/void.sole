@@ -1,6 +1,0 @@
-import types.definition
-
-
-class void:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("void", "void", 0, "void", false)

@@ -1,6 +1,0 @@
-import types.definition
-
-
-class float32:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("float32", "float", 32, "float", false)

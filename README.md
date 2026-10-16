@@ -41,12 +41,8 @@ make up             # Setup the local development
 make down           # Cleanup the local enviroment
 ```
 
-Local development uses the published compiler at `~/.local/bin/sole`, never a
-locally built compiler. `make install` installs the release;
-`make format` uses it without rebuilding the compiler.
-CI bootstraps source releases separately.
+### Formatting
 
-`sole syntax file.sole ...` validates syntax without type checking or linking,
-using the bundled EBNF grammar. `--grammar path.ebnf` selects another grammar.
+Run `sole format file.sole` to format a file, or `sole format --check file.sole` to check without modifying it.
 
-See [language features](docs/language-features.md) for additions available in source builds.
+The formatter inserts `"""TODO: Document this function."""` in functions and methods that lack a docstring. Existing docstrings and bodyless `extern` declarations are preserved. Every standalone `#` comment must have a blank line before it; inline comments and comment-like text inside strings are unchanged.

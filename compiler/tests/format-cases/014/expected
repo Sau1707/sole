@@ -3,4 +3,5 @@ import core
 
 # Entry point.
 def main() -> void:
+    """TODO: Document this function."""
     pass

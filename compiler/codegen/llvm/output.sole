@@ -1,0 +1,28 @@
+import codegen.llvm.casts as casts
+import codegen.llvm.ir as ir
+import codegen.llvm.literals as literals
+import diagnostics.report as diagnostics
+import codegen.llvm.context as context
+import semantic.types.query as type_query
+
+
+# Select the runtime print helper for a scalar or string value.
+def print_ir(state: context.State, value: context.Value) -> void:
+    value = literals.coerce(state, value, "")
+    if value.typ == "str":
+        data: str = ir.extract(state, value, 0)
+        length: str = ir.extract(state, value, 1)
+        ir.emit(state, "call void @_sole.print_str(ptr " + data + ", i64 " + length + ")")
+    elif value.typ == "bool":
+        ir.emit(state, "call void @_sole.print_bool(i1 " + value.value + ")")
+    elif type_query.float_type(value.typ):
+        converted: context.Value = casts.cast_value(state, value, "float64")
+        ir.emit(state, "call void @_sole.print_float(double " + converted.value + ")")
+    elif type_query.integer_type(value.typ):
+        widened: context.Value = casts.cast_value(state, value, "int64")
+        signed: str = "true"
+        if type_query.unsigned_type(value.typ):
+            signed = "false"
+        ir.emit(state, "call void @_sole.print_int(i64 " + widened.value + ", i1 " + signed + ")")
+    else:
+        diagnostics.fail_at(state, "print requires a scalar or string")

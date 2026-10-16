@@ -1,0 +1,124 @@
+import core
+import diagnostics.report as report
+import codegen.llvm.context as context
+import semantic.model as model
+import syntax.parser.tokens as tokens
+
+
+# Parse a type name with optional array brackets.
+def parse_type(state: context.State) -> str:
+    name: str = tokens.identifier(state)
+    if tokens.accept(state, "["):
+        name = name + "["
+        if tokens.peek(state) != "]":
+            if state.tokens.kind[state.tokens.position] != 2:
+                report.fail_at(state, "expected a numeric array length")
+            name = name + tokens.take(state)
+        tokens.expect(state, "]")
+        name = name + "]"
+    return name
+
+
+# Skip a complete indented body while collecting declarations.
+def skip_body(state: context.State) -> void:
+    tokens.expect(state, ":")
+    tokens.expect(state, "<newline>")
+    tokens.expect(state, "<indent>")
+    depth: int32 = 1
+    while depth > 0:
+        kind: int32 = state.tokens.kind[state.tokens.position]
+        tokens.take(state)
+        if kind == 5:
+            depth = depth + 1
+        elif kind == 6:
+            depth = depth - 1
+
+
+# Collect a function signature and remember where its body starts.
+def scan_function(state: context.State, owner: str, external: bool) -> void:
+    tokens.expect(state, "def")
+    name: str = tokens.identifier(state)
+    if owner != "":
+        name = owner + "." + name
+    names: str[] = []
+    types: str[] = []
+    tokens.expect(state, "(")
+    if owner != "":
+        tokens.expect(state, "self")
+        core.append(names, "self")
+        core.append(types, owner)
+        if tokens.peek(state) != ")":
+            tokens.expect(state, ",")
+    while tokens.peek(state) != ")":
+        core.append(names, tokens.identifier(state))
+        tokens.expect(state, ":")
+        core.append(types, parse_type(state))
+        if not tokens.accept(state, ","):
+            break
+    tokens.expect(state, ")")
+    tokens.expect(state, "->")
+    result_type: str = parse_type(state)
+    core.append(state.functions, model.FunctionInfo(name, names, types, result_type, state.tokens.position, external))
+    if external:
+        tokens.expect(state, "<newline>")
+    else:
+        skip_body(state)
+
+
+# Collect module-level functions, records, and class members.
+def scan(state: context.State) -> void:
+    while tokens.peek(state) != "<end>":
+        if tokens.accept(state, "<newline>"):
+            pass
+        elif tokens.peek(state) == "def":
+            scan_function(state, "", false)
+        elif tokens.accept(state, "extern"):
+            scan_function(state, "", true)
+        elif tokens.peek(state) == "enum" || tokens.peek(state) == "union":
+            sum_kind: str = tokens.take(state)
+            sum_name: str = tokens.identifier(state)
+            info: model.SumInfo = model.SumInfo(sum_name, sum_kind, [], state.tokens.position - 1)
+            core.append(state.sums, info)
+            tokens.expect(state, ":")
+            tokens.expect(state, "<newline>")
+            tokens.expect(state, "<indent>")
+            tokens.skip_docstring(state)
+            while tokens.peek(state) != "<dedent>":
+                member_position: int64 = state.tokens.position
+                variant: model.VariantInfo = model.VariantInfo(tokens.identifier(state), [], [], member_position)
+                if sum_kind == "union":
+                    tokens.expect(state, "(")
+                    while tokens.peek(state) != ")":
+                        core.append(variant.names, tokens.identifier(state))
+                        tokens.expect(state, ":")
+                        core.append(variant.types, parse_type(state))
+                        if not tokens.accept(state, ","):
+                            break
+                    tokens.expect(state, ")")
+                tokens.expect(state, "<newline>")
+                core.append(info.variants, variant)
+            tokens.expect(state, "<dedent>")
+        elif tokens.peek(state) == "class" || tokens.peek(state) == "struct":
+            record_kind: str = tokens.take(state)
+            record_name: str = tokens.identifier(state)
+            record: model.RecordInfo = model.RecordInfo(record_name, record_kind, [], [])
+            core.append(state.records, record)
+            tokens.expect(state, ":")
+            tokens.expect(state, "<newline>")
+            tokens.expect(state, "<indent>")
+            tokens.skip_docstring(state)
+            while tokens.peek(state) != "<dedent>":
+                if tokens.peek(state) == "def":
+                    if record_kind == "struct":
+                        report.fail_at(state, "structs cannot contain methods")
+                    scan_function(state, record_name, false)
+                elif tokens.accept(state, "pass"):
+                    tokens.expect(state, "<newline>")
+                else:
+                    core.append(record.names, tokens.identifier(state))
+                    tokens.expect(state, ":")
+                    core.append(record.types, parse_type(state))
+                    tokens.expect(state, "<newline>")
+            tokens.expect(state, "<dedent>")
+        else:
+            report.fail_at(state, "expected a function, struct, or class declaration")

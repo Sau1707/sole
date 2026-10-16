@@ -1,11 +1,11 @@
 import core
-import grammar
+import syntax.parser.grammar as grammar
 import wrappers.system
 
 
 def main() -> int32:
     first: int64 = 2
-    grammar_path: str = core.from_cstr(wrappers.system.sole_rt_home()) + "/compiler/sole.ebnf"
+    grammar_path: str = core.from_cstr(wrappers.system.sole_rt_home()) + "/compiler/syntax/parser/sole.ebnf"
     if core.arg_count() > 2 && core.arg(2) == "--grammar":
         if core.arg_count() < 5:
             core.print("Usage: sole syntax [--grammar GRAMMAR.ebnf] file.sole ...")

@@ -1,6 +1,0 @@
-import types.definition
-
-
-class uint16:
-    def definition(self) -> types.definition.Type:
-        return types.definition.Type("uint16", "i16", 16, "integer", true)

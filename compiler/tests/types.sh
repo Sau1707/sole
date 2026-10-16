@@ -8,6 +8,6 @@ temporary=$(mktemp -d "$temp_root/sole-types-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
 cp "$root/compiler/tests/types.sole" "$temporary/main.sole"
-ln -s "$root/compiler/types" "$temporary/types"
+ln -s "$root/compiler/codegen" "$temporary/codegen"
 SOLE_HOME="$root" SOLE_LIB="$root/lib" "$compiler" build "$temporary/main.sole" -o "$temporary/types-test"
 "$temporary/types-test"

@@ -1,0 +1,6 @@
+import codegen.llvm.scalars.definition as scalar_definition
+
+
+class uint8:
+    def definition(self) -> scalar_definition.Type:
+        return scalar_definition.Type("uint8", "i8", 8, "integer", true)
