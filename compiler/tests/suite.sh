@@ -2,6 +2,6 @@
 set -eu
 
 tests=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-for suite in harness syntax types bytes constructors loops sumtypes features run cli backend-errors output-safety atomic-write format install; do
+for suite in harness syntax imports types stdlib-reuse bytes constructors classes loops sumtypes features run cli backend-errors output-safety atomic-write files-helpers process format install; do
     sh "$tests/$suite.sh"
 done

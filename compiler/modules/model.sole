@@ -1,8 +1,16 @@
 import syntax.lexer.tokens as token_model
 
 
+struct NamedImport:
+    module_name: str
+    exported_name: str
+    local_name: str
+    position: int64
+    dependency: int64
+
+
 # Track a module's declarations, imports, and loading state.
-class ModuleInfo:
+struct ModuleInfo:
     path: str
     prefix: str
     tokens: token_model.Tokens
@@ -12,3 +20,4 @@ class ModuleInfo:
     removed: bool[]
     active: bool
     intrinsics: str[]
+    named_imports: NamedImport[]

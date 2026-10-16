@@ -9,10 +9,9 @@ class Tokens:
     position: int64
     files: str[]
 
-
-# Append a token and its source-location fields.
-def token_add(tokens: Tokens, text: str, kind: int32, line: int64) -> void:
-    core.append(tokens.text, text)
-    core.append(tokens.kind, kind)
-    core.append(tokens.line, line)
-    core.append(tokens.files, "")
+    def add(self, text: str, kind: int32, line: int64) -> void:
+        """TODO: Document this function."""
+        core.append(self.text, text)
+        core.append(self.kind, kind)
+        core.append(self.line, line)
+        core.append(self.files, "")

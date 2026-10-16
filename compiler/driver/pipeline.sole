@@ -1,10 +1,10 @@
 import core
-import codegen.llvm.module as llvm_module
-import codegen.llvm.context as context
-import semantic.resolve.declarations as declarations
 import modules.loader as modules
-import semantic.check.declarations as validation
 import syntax.lexer.tokens as tokens
+import codegen.llvm.context as context
+import codegen.llvm.module as llvm_module
+import semantic.check.declarations as validation
+import semantic.resolve.declarations as declarations
 
 
 struct Compilation:
@@ -12,8 +12,9 @@ struct Compilation:
     inputs: str[]
 
 
-# Coordinate source loading, semantic checks, and LLVM module assembly.
 def generate(filename: str, source: str, home: str) -> Compilation:
+    """Coordinate source loading, semantic checks, and LLVM module assembly."""
+
     # Load dependencies and collect validated declarations.
     inputs: str[] = []
     loaded: tokens.Tokens = modules.load_imports(filename, source, inputs)

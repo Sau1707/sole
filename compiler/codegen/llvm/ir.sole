@@ -1,45 +1,39 @@
 import core
-import codegen.llvm.types as llvm_types
-import codegen.llvm.context as context
 import semantic.model as model
+import codegen.llvm.context as context
+import codegen.llvm.types as llvm_types
 import semantic.resolve.symbols as symbols
 
 
-# Allocate a unique name within the current function.
-def fresh(state: context.State) -> str:
-    state.serial = state.serial + 1
-    return "v" + str(state.serial)
-
-
-# Append an instruction to the current function body.
 def emit(state: context.State, text: str) -> void:
+    """Append an instruction to the current function body."""
     core.append(state.code, "  " + text + "\n")
 
 
-# Emit an instruction and return its result name.
 def instruction(state: context.State, text: str) -> str:
-    result_name: str = "%" + fresh(state)
+    """Emit an instruction and return its result name."""
+    result_name: str = "%" + state.fresh()
     emit(state, result_name + " = " + text)
     return result_name
 
 
-# Start a basic block that can receive new instructions.
 def block_label(state: context.State, name: str) -> void:
+    """Start a basic block that can receive new instructions."""
     core.append(state.code, name + ":\n")
     state.ended = false
 
 
-# Reserve typed storage in the function's entry block.
 def slot(state: context.State, typ: str) -> str:
-    result_name: str = "%" + fresh(state)
+    """Reserve typed storage in the function's entry block."""
+    result_name: str = "%" + state.fresh()
     core.append(state.slots, "  " + result_name + " = alloca " + llvm_types.llvm_type(state, typ) + "\n")
     return result_name
 
 
-# Trap when a runtime safety condition fails.
 def checked(state: context.State, condition: str) -> void:
-    ok: str = fresh(state)
-    bad: str = fresh(state)
+    """Trap when a runtime safety condition fails."""
+    ok: str = state.fresh()
+    bad: str = state.fresh()
     emit(state, "br i1 " + condition + ", label %" + ok + ", label %" + bad)
     block_label(state, bad)
     emit(state, "call void @llvm.trap()")
@@ -47,51 +41,52 @@ def checked(state: context.State, condition: str) -> void:
     block_label(state, ok)
 
 
-# Choose a function's native symbol, preserving foreign C names.
 def function_symbol(fn: model.FunctionInfo) -> str:
+    """Choose a function's native symbol, preserving foreign C names."""
     if fn.external:
         return symbols.foreign_name(fn.name)
     return "_sole.fn." + fn.name
 
 
-# Format an LLVM value together with its type.
 def typed(state: context.State, value: context.Value) -> str:
+    """Format an LLVM value together with its type."""
     return llvm_types.llvm_type(state, value.typ) + " " + value.value
 
 
-# Read a field from an LLVM aggregate value.
 def extract(state: context.State, value: context.Value, index: int64) -> str:
+    """Read a field from an LLVM aggregate value."""
     return instruction(state, "extractvalue " + typed(state, value) + ", " + str(index))
 
 
 def c_string(state: context.State, value: context.Value) -> str:
+    """TODO: Document this function."""
     data: str = extract(state, value, 0)
     length: str = extract(state, value, 1)
     return instruction(state, "call ptr @_sole.cstr(ptr " + data + ", i64 " + length + ")")
 
 
-# Build a string value from a byte pointer and length.
 def make_string(state: context.State, data: str, size: str) -> context.Value:
+    """Build a string value from a byte pointer and length."""
     first: str = instruction(state, "insertvalue {ptr, i64} poison, ptr " + data + ", 0")
     result_value: str = instruction(state, "insertvalue {ptr, i64} " + first + ", i64 " + size + ", 1")
     return context.Value("str", result_value, "")
 
 
-# Compute a type's byte size using LLVM's target layout.
 def size_of(state: context.State, typ: str) -> str:
+    """Compute a type's byte size using LLVM's target layout."""
     end: str = instruction(state, "getelementptr " + llvm_types.llvm_type(state, typ) + ", ptr null, i32 1")
     return instruction(state, "ptrtoint ptr " + end + " to i64")
 
 
-# Store an item temporarily and append it through the array runtime.
 def append_ir(state: context.State, array: context.Value, item: context.Value) -> void:
+    """Store an item temporarily and append it through the array runtime."""
     storage: str = slot(state, item.typ)
     emit(state, "store " + typed(state, item) + ", ptr " + storage)
     amount: str = size_of(state, item.typ)
     emit(state, "call void @_sole.append(ptr " + array.value + ", ptr " + storage + ", i64 " + amount + ")")
 
 
-# Load the element count from a growable array's header.
 def array_length(state: context.State, value: context.Value) -> str:
+    """Load the element count from a growable array's header."""
     pointer: str = instruction(state, "getelementptr {ptr, i64, i64}, ptr " + value.value + ", i32 0, i32 1")
     return instruction(state, "load i64, ptr " + pointer)

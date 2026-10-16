@@ -2,14 +2,16 @@ import core
 import wrappers.llvm
 
 
-# Verify LLVM IR and optionally optimize it into a native object file.
 def llvm_object(text: str, output: str, level: int32, check_only: bool) -> str:
+    """Verify LLVM IR and optionally optimize it into a native object file."""
+
     # Parse and verify the generated module before target-specific work.
     context: ptr = wrappers.llvm.LLVMContextCreate()
     buffer: ptr = wrappers.llvm.LLVMCreateMemoryBufferWithMemoryRangeCopy(core.cstr(text), uint64(core.len(text)), core.cstr("sole"))
     module_handle: ptr = ptr(0)
     error_message: ptr = ptr(0)
     error: str = ""
+
     # LLVMParseIRInContext consumes the memory buffer on both outcomes.
     if wrappers.llvm.LLVMParseIRInContext(context, buffer, core.address(module_handle), core.address(error_message)) != 0:
         error = "" + core.from_cstr(error_message)
@@ -25,6 +27,7 @@ def llvm_object(text: str, output: str, level: int32, check_only: bool) -> str:
         wrappers.llvm.LLVMDisposeModule(module_handle)
         wrappers.llvm.LLVMContextDispose(context)
         return error
+
     # Create the native target machine and apply its memory layout.
     wrappers.llvm.LLVMInitializeX86TargetInfo()
     wrappers.llvm.LLVMInitializeX86Target()
@@ -53,6 +56,7 @@ def llvm_object(text: str, output: str, level: int32, check_only: bool) -> str:
     wrappers.llvm.LLVMSetDataLayout(module_handle, layout)
     wrappers.llvm.LLVMDisposeMessage(layout)
     wrappers.llvm.LLVMDisposeTargetData(layout_handle)
+
     # Apply the requested LLVM optimization pipeline.
     if level > 0:
         passes: str = "default<O" + str(level) + ">"
@@ -64,6 +68,7 @@ def llvm_object(text: str, output: str, level: int32, check_only: bool) -> str:
             error = "" + core.from_cstr(error_message)
             wrappers.llvm.LLVMDisposeErrorMessage(error_message)
             error_message = ptr(0)
+
     # Write the object file and release LLVM resources.
     if error == "":
         if wrappers.llvm.LLVMTargetMachineEmitToFile(machine, module_handle, core.cstr(output), 1, core.address(error_message)) != 0:

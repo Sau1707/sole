@@ -1,14 +1,14 @@
 import core
 import codegen.llvm.ir as ir
-import codegen.llvm.literals as literals
-import semantic.resolve.builtins as builtins
-import diagnostics.report as diagnostics
 import codegen.llvm.context as context
+import codegen.llvm.literals as literals
+import diagnostics.report as diagnostics
 import semantic.resolve.symbols as symbols
+import semantic.resolve.builtins as builtins
 
 
-# Validate a local name, allocate its storage, and initialize its value.
 def declare_local(state: context.State, name: str, typ: str, value: context.Value) -> void:
+    """Validate a local name, allocate its storage, and initialize its value."""
     if symbols.local_index(state, name) >= 0:
         diagnostics.fail_at(state, "variable is already declared; shadowing is forbidden")
     if builtins.reserved_name(name) || symbols.record_index(state, name) >= 0 || symbols.sum_index(state, name) >= 0 || symbols.function_index(state, name) >= 0:

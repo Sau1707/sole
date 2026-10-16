@@ -1,38 +1,56 @@
 import core
+import strings
+
+
+def split(path: str) -> str[]:
+    """Return [directory, basename], retaining the directory's trailing slash without normalization."""
+    i: int64 = core.len(path)
+    while i > 0 && core.slice(path, i - 1, i) != "/":
+        i = i - 1
+    return [core.slice(path, 0, i), core.slice(path, i, core.len(path))]
+
+
+def replace_suffix(path: str, suffix: str, replacement: str) -> str:
+    """Replace a nonempty byte suffix only after a nonempty prefix; otherwise append replacement."""
+    if suffix != "" && core.len(path) > core.len(suffix) && strings.ends_with(path, suffix):
+        return core.slice(path, 0, core.len(path) - core.len(suffix)) + replacement
+    return path + replacement
 
 
 def isabs(path: str) -> bool:
-    return core.len(path) > 0 && core.slice(path, 0, 1) == "/"
+    """TODO: Document this function."""
+    return strings.starts_with(path, "/")
 
 
 def join(a: str, b: str) -> str:
+    """TODO: Document this function."""
     if isabs(b) || core.len(a) == 0:
         return b
-    if core.slice(a, core.len(a) - 1, core.len(a)) == "/":
+    if strings.ends_with(a, "/"):
         return a + b
     return a + "/" + b
 
 
 def basename(path: str) -> str:
-    i: int64 = core.len(path)
-    while i > 0 && core.slice(path, i - 1, i) != "/":
-        i = i - 1
-    return core.slice(path, i, core.len(path))
+    """TODO: Document this function."""
+    parts: str[] = split(path)
+    return parts[1]
 
 
 def dirname(path: str) -> str:
-    i: int64 = core.len(path)
-    while i > 0 && core.slice(path, i - 1, i) != "/":
-        i = i - 1
-    end: int64 = i
-    while end > 0 && core.slice(path, end - 1, end) == "/":
+    """TODO: Document this function."""
+    parts: str[] = split(path)
+    directory: str = parts[0]
+    end: int64 = core.len(directory)
+    while end > 0 && core.slice(directory, end - 1, end) == "/":
         end = end - 1
     if end == 0:
-        return core.slice(path, 0, i)
-    return core.slice(path, 0, end)
+        return directory
+    return core.slice(directory, 0, end)
 
 
 def normpath(path: str) -> str:
+    """TODO: Document this function."""
     prefix: str = ""
     if isabs(path):
         prefix = "/"
@@ -42,8 +60,7 @@ def normpath(path: str) -> str:
     parts: str[] = []
     count: int64 = 0
     start: int64 = 0
-    i: int64 = 0
-    while i <= core.len(path):
+    for i in range(core.len(path) + 1):
         if i == core.len(path) || core.slice(path, i, i + 1) == "/":
             part: str = core.slice(path, start, i)
             if part != "" && part != ".":
@@ -56,14 +73,11 @@ def normpath(path: str) -> str:
                         parts[count] = part
                     count = count + 1
             start = i + 1
-        i = i + 1
     fragments: str[] = [prefix]
-    i = 0
-    while i < count:
+    for i in range(count):
         if i > 0:
             core.append(fragments, "/")
         core.append(fragments, parts[i])
-        i = i + 1
     result: str = core.join(fragments)
     if result == "":
         return "."

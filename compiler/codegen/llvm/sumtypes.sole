@@ -1,26 +1,24 @@
 import core
 import codegen.llvm.ir as ir
-import codegen.llvm.context as context
 import semantic.model as model
 import diagnostics.report as report
+import codegen.llvm.context as context
 
 
 def payload_offset(info: model.SumInfo, variant: int64) -> int64:
+    """TODO: Document this function."""
     offset: int64 = 1
-    i: int64 = 0
-    while i < variant:
+    for i in range(variant):
         offset = offset + core.len(info.variants[i].types)
-        i = i + 1
     return offset
 
 
 def construct(state: context.State, info: model.SumInfo, variant: int64, values: context.Value[]) -> context.Value:
+    """TODO: Document this function."""
     if core.len(values) != core.len(info.variants[variant].types):
         report.fail_at(state, "wrong number of variant payloads")
     aggregate: str = ir.instruction(state, "insertvalue %" + info.name + " zeroinitializer, i32 " + str(variant) + ", 0")
     offset: int64 = payload_offset(info, variant)
-    i: int64 = 0
-    while i < core.len(values):
+    for i in range(core.len(values)):
         aggregate = ir.instruction(state, "insertvalue %" + info.name + " " + aggregate + ", " + ir.typed(state, values[i]) + ", " + str(offset + i))
-        i = i + 1
     return context.Value(info.name, aggregate, "")

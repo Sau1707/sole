@@ -1,21 +1,21 @@
 import core
 import codegen.llvm.ir as ir
-import codegen.llvm.literals as literals
-import codegen.llvm.locals as locals
-import codegen.llvm.operators as llvm_operators
-import codegen.llvm.types as llvm_types
-import semantic.resolve.declarations as declarations
 import diagnostics.report as report
-import codegen.llvm.expressions as expressions
-import codegen.llvm.matching as matching
-import codegen.llvm.context as context
-import semantic.resolve.symbols as symbols
+import codegen.llvm.locals as locals
 import syntax.parser.tokens as tokens
+import codegen.llvm.context as context
+import codegen.llvm.types as llvm_types
+import codegen.llvm.literals as literals
+import codegen.llvm.matching as matching
 import semantic.types.query as type_query
+import semantic.resolve.symbols as symbols
+import codegen.llvm.expressions as expressions
+import codegen.llvm.operators as llvm_operators
+import semantic.resolve.declarations as declarations
 
 
-# Compile an indented block and expire its local declarations.
 def compile_block(state: context.State) -> void:
+    """Compile an indented block and expire its local declarations."""
     tokens.expect(state, ":")
     tokens.expect(state, "<newline>")
     tokens.expect(state, "<indent>")
@@ -29,12 +29,12 @@ def compile_block(state: context.State) -> void:
     symbols.end_scope(state)
 
 
-# Emit conditional branches and track whether every branch terminates.
 def compile_if(state: context.State) -> void:
+    """Emit conditional branches and track whether every branch terminates."""
     condition: context.Value = literals.coerce(state, expressions.expression(state, 0, "bool"), "bool")
-    yes: str = ir.fresh(state)
-    no: str = ir.fresh(state)
-    end: str = ir.fresh(state)
+    yes: str = state.fresh()
+    no: str = state.fresh()
+    end: str = state.fresh()
     ir.emit(state, "br i1 " + condition.value + ", label %" + yes + ", label %" + no)
     ir.block_label(state, yes)
     compile_block(state)
@@ -55,18 +55,16 @@ def compile_if(state: context.State) -> void:
         state.ended = true
 
 
-# Copy a loop-target stack without its final entry.
 def without_last(items: context.LoopTargets[]) -> context.LoopTargets[]:
+    """Copy a loop-target stack without its final entry."""
     result_items: context.LoopTargets[] = []
-    i: int64 = 0
-    while i + 1 < core.len(items):
+    for i in range(core.len(items) - 1):
         core.append(result_items, items[i])
-        i = i + 1
     return result_items
 
 
-# Lower signed, half-open ranges with an independent induction variable.
 def compile_for(state: context.State) -> void:
+    """Lower signed, half-open ranges with an independent induction variable."""
     name: str = tokens.identifier(state)
     tokens.expect(state, "in")
     tokens.expect(state, "range")
@@ -82,10 +80,10 @@ def compile_for(state: context.State) -> void:
     tokens.expect(state, ")")
     counter: str = ir.slot(state, "int64")
     ir.emit(state, "store i64 " + start.value + ", ptr " + counter)
-    test_label: str = ir.fresh(state)
-    body_label: str = ir.fresh(state)
-    increment_label: str = ir.fresh(state)
-    end_label: str = ir.fresh(state)
+    test_label: str = state.fresh()
+    body_label: str = state.fresh()
+    increment_label: str = state.fresh()
+    end_label: str = state.fresh()
     ir.emit(state, "br label %" + test_label)
     ir.block_label(state, test_label)
     current: str = ir.instruction(state, "load i64, ptr " + counter)
@@ -109,6 +107,7 @@ def compile_for(state: context.State) -> void:
 
 
 def has_augmented_assignment(state: context.State) -> bool:
+    """TODO: Document this function."""
     position: int64 = state.tokens.position
     while state.tokens.kind[position] != 0 && state.tokens.kind[position] != 4:
         if state.tokens.text[position] == "+=" && state.tokens.kind[position] != 3 && state.tokens.kind[position] != 8:
@@ -118,6 +117,7 @@ def has_augmented_assignment(state: context.State) -> bool:
 
 
 def compile_augmented_assignment(state: context.State) -> void:
+    """TODO: Document this function."""
     if tokens.peek(state) == "self":
         report.fail_at(state, "+= requires a numeric local identifier")
     name: str = tokens.identifier(state)
@@ -137,24 +137,24 @@ def compile_augmented_assignment(state: context.State) -> void:
     tokens.expect(state, "<newline>")
 
 
-# Parse and lower control flow, declarations, assignments, and calls.
 def statement(state: context.State) -> void:
+    """Parse and lower control flow, declarations, assignments, and calls."""
     if tokens.accept(state, "if"):
         compile_if(state)
     elif tokens.accept(state, "match"):
         subject: context.Value = expressions.expression(state, 0, "")
         plan: matching.MatchInfo = matching.begin(state, subject)
         while tokens.peek(state) != "<dedent>":
-            matching.begin_arm(state, plan)
+            plan = matching.begin_arm(state, plan)
             compile_block(state)
-            matching.end_arm(state, plan)
+            plan = matching.end_arm(state, plan)
         matching.finish(state, plan)
     elif tokens.accept(state, "for"):
         compile_for(state)
     elif tokens.accept(state, "while"):
-        test_label: str = ir.fresh(state)
-        body_label: str = ir.fresh(state)
-        end_label: str = ir.fresh(state)
+        test_label: str = state.fresh()
+        body_label: str = state.fresh()
+        end_label: str = state.fresh()
         ir.emit(state, "br label %" + test_label)
         ir.block_label(state, test_label)
         condition: context.Value = literals.coerce(state, expressions.expression(state, 0, "bool"), "bool")

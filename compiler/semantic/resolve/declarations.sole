@@ -1,12 +1,12 @@
 import core
-import diagnostics.report as report
-import codegen.llvm.context as context
 import semantic.model as model
+import diagnostics.report as report
 import syntax.parser.tokens as tokens
+import codegen.llvm.context as context
 
 
-# Parse a type name with optional array brackets.
 def parse_type(state: context.State) -> str:
+    """Parse a type name with optional array brackets."""
     name: str = tokens.identifier(state)
     if tokens.accept(state, "["):
         name = name + "["
@@ -19,8 +19,8 @@ def parse_type(state: context.State) -> str:
     return name
 
 
-# Skip a complete indented body while collecting declarations.
 def skip_body(state: context.State) -> void:
+    """Skip a complete indented body while collecting declarations."""
     tokens.expect(state, ":")
     tokens.expect(state, "<newline>")
     tokens.expect(state, "<indent>")
@@ -34,8 +34,8 @@ def skip_body(state: context.State) -> void:
             depth = depth - 1
 
 
-# Collect a function signature and remember where its body starts.
 def scan_function(state: context.State, owner: str, external: bool) -> void:
+    """Collect a function signature and remember where its body starts."""
     tokens.expect(state, "def")
     name: str = tokens.identifier(state)
     if owner != "":
@@ -65,8 +65,8 @@ def scan_function(state: context.State, owner: str, external: bool) -> void:
         skip_body(state)
 
 
-# Collect module-level functions, records, and class members.
 def scan(state: context.State) -> void:
+    """Collect module-level functions, records, and class members."""
     while tokens.peek(state) != "<end>":
         if tokens.accept(state, "<newline>"):
             pass
@@ -99,6 +99,7 @@ def scan(state: context.State) -> void:
                 core.append(info.variants, variant)
             tokens.expect(state, "<dedent>")
         elif tokens.peek(state) == "class" || tokens.peek(state) == "struct":
+            record_position: int64 = state.tokens.position
             record_kind: str = tokens.take(state)
             record_name: str = tokens.identifier(state)
             record: model.RecordInfo = model.RecordInfo(record_name, record_kind, [], [])
@@ -107,11 +108,13 @@ def scan(state: context.State) -> void:
             tokens.expect(state, "<newline>")
             tokens.expect(state, "<indent>")
             tokens.skip_docstring(state)
+            has_method: bool = false
             while tokens.peek(state) != "<dedent>":
                 if tokens.peek(state) == "def":
                     if record_kind == "struct":
                         report.fail_at(state, "structs cannot contain methods")
                     scan_function(state, record_name, false)
+                    has_method = true
                 elif tokens.accept(state, "pass"):
                     tokens.expect(state, "<newline>")
                 else:
@@ -120,5 +123,8 @@ def scan(state: context.State) -> void:
                     core.append(record.types, parse_type(state))
                     tokens.expect(state, "<newline>")
             tokens.expect(state, "<dedent>")
+            if record_kind == "class" && not has_method:
+                state.tokens.position = record_position
+                report.fail_at(state, "classes must declare at least one method; use struct for data-only records")
         else:
             report.fail_at(state, "expected a function, struct, or class declaration")

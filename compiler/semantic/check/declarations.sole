@@ -1,66 +1,53 @@
 import core
-import codegen.llvm.types as llvm_types
-import semantic.resolve.builtins as builtins
+import semantic.model as model
 import diagnostics.report as report
 import codegen.llvm.context as context
-import semantic.model as model
+import codegen.llvm.types as llvm_types
+import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
 import semantic.check.sumtypes as sumtypes
-import semantic.types.query as type_query
+import semantic.resolve.builtins as builtins
 
 
-# Check declaration names, field types, signatures, and record layouts.
 def validate(state: context.State) -> void:
+    """Check declaration names, field types, signatures, and record layouts."""
     sumtypes.validate(state)
+
     # Check record names, field types, and conflicting members.
-    i: int64 = 0
-    while i < core.len(state.records):
+    for i in range(core.len(state.records)):
         record: model.RecordInfo = state.records[i]
         if symbols.record_index(state, record.name) != i || builtins.reserved_type_name(record.name):
             report.fail_at(state, "duplicate or reserved type: " + record.name)
-        j: int64 = 0
-        while j < core.len(record.names):
+        for j in range(core.len(record.names)):
             if record.types[j] == "void" || type_query.element_type(record.types[j]) == "void":
                 report.fail_at(state, "void cannot be a field type")
             llvm_types.llvm_type(state, record.types[j])
             if symbols.function_index(state, record.name + "." + record.names[j]) >= 0:
                 report.fail_at(state, "duplicate member: " + record.names[j])
-            k: int64 = 0
-            while k < j:
+            for k in range(j):
                 if record.names[j] == record.names[k]:
                     report.fail_at(state, "duplicate field: " + record.names[j])
-                k = k + 1
-            j = j + 1
-        i = i + 1
+
     # Walk inline record fields to reject infinite-sized value layouts.
-    layout_index: int64 = 0
-    while layout_index < core.len(state.records):
+    for layout_index in range(core.len(state.records)):
         sumtypes.check_layout(state, state.records[layout_index].name, [])
-        layout_index = layout_index + 1
-    sum_layout: int64 = 0
-    while sum_layout < core.len(state.sums):
+    for sum_layout in range(core.len(state.sums)):
         sumtypes.check_layout(state, state.sums[sum_layout].name, [])
-        sum_layout = sum_layout + 1
+
     # Validate function names, return types, parameters, and foreign signatures.
-    f: int64 = 0
-    while f < core.len(state.functions):
+    for f in range(core.len(state.functions)):
         fn: model.FunctionInfo = state.functions[f]
         if symbols.function_index(state, fn.name) != f || not fn.external && builtins.reserved_name(fn.name) || symbols.record_index(state, fn.name) >= 0:
             report.fail_at(state, "duplicate or reserved function: " + fn.name)
         llvm_types.llvm_type(state, fn.result)
         if fn.external && fn.result != "void" && fn.result != "ptr" && fn.result != "bool" && not type_query.integer_type(fn.result) && not type_query.float_type(fn.result):
             report.fail_at(state, "extern results must be scalar, ptr, or void")
-        p: int64 = 0
-        while p < core.len(fn.types):
+        for p in range(core.len(fn.types)):
             if fn.types[p] == "void" || type_query.element_type(fn.types[p]) == "void":
                 report.fail_at(state, "void cannot be a parameter type")
             llvm_types.llvm_type(state, fn.types[p])
-            q: int64 = 0
-            while q < p:
+            for q in range(p):
                 if fn.names[p] == fn.names[q]:
                     report.fail_at(state, "duplicate parameter")
-                q = q + 1
             if fn.external && not type_query.integer_type(fn.types[p]) && not type_query.float_type(fn.types[p]) && fn.types[p] != "ptr" && fn.types[p] != "bool":
                 report.fail_at(state, "extern parameters must be scalar or ptr")
-            p = p + 1
-        f = f + 1

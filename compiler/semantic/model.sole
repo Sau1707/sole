@@ -1,5 +1,6 @@
+
 # Describe the fields and kind of a struct or class.
-class RecordInfo:
+struct RecordInfo:
     name: str
     kind: str
     names: str[]
@@ -7,7 +8,7 @@ class RecordInfo:
 
 
 # Describe a function's signature and body location.
-class FunctionInfo:
+struct FunctionInfo:
     name: str
     names: str[]
     types: str[]
@@ -16,14 +17,14 @@ class FunctionInfo:
     external: bool
 
 
-class VariantInfo:
+struct VariantInfo:
     name: str
     names: str[]
     types: str[]
     position: int64
 
 
-class SumInfo:
+struct SumInfo:
     name: str
     kind: str
     variants: VariantInfo[]

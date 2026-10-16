@@ -1,0 +1,69 @@
+import core
+import strings
+import os.path
+import driver.linker as linker
+import codegen.llvm.context as context
+import syntax.parser.grammar as grammar
+import syntax.lexer.tokens as tokens
+import syntax.lexer.characters as characters
+import codegen.llvm.functions as functions
+import codegen.llvm.statements as statements
+
+
+def main() -> int32:
+    if linker.native_linker() != core.arg(1):
+        return 1
+    for byte in range(256):
+        digit: bool = byte >= 48 && byte <= 57
+        letter: bool = byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte == 95
+        if characters.digit(uint8(byte)) != digit || characters.letter(uint8(byte)) != letter:
+            return 2
+    source: tokens.Tokens = tokens.Tokens([], [], [], 0, [])
+    rules: grammar.Grammar = grammar.Grammar(source, [], [], [], [], [], [], 0)
+    if grammar.rule_index(rules, "missing") != -1:
+        return 3
+    rules.names = ["first", "猫", "last", "first"]
+    if grammar.rule_index(rules, "first") != 0 || grammar.rule_index(rules, "猫") != 1:
+        return 4
+    if grammar.rule_index(rules, "last") != 2 || grammar.rule_index(rules, "missing") != -1:
+        return 5
+    paths: str[] = ["", "file", "/", "//", "a/", "a//b", "/猫/é.sole", "a\0b", "///", "a///", "//a//b", "a\0b/c"]
+    basenames: str[] = ["", "file", "", "", "", "b", "é.sole", "a\0b", "", "", "b", "c"]
+    directories: str[] = ["", "", "/", "//", "a", "a", "/猫", "", "///", "a", "//a", "a\0b"]
+    absolute: bool[] = [false, false, true, true, false, false, true, false, true, false, true, false]
+    for i in range(core.len(paths)):
+        if os.path.basename(paths[i]) != basenames[i]:
+            return 6
+        if os.path.dirname(paths[i]) != directories[i] || os.path.isabs(paths[i]) != absolute[i]:
+            return 7
+    if os.path.join("", "") != "" || os.path.join("", "file") != "file" || os.path.join("a", "") != "a/":
+        return 8
+    if os.path.join("a/", "b") != "a/b" || os.path.join("a//", "b") != "a//b" || os.path.join("a", "b") != "a/b":
+        return 9
+    if os.path.join("a", "/b") != "/b" || os.path.join("a", "//b") != "//b" || os.path.join("猫", "é") != "猫/é":
+        return 10
+    if os.path.join("a\0b", "c") != "a\0b/c":
+        return 11
+    if core.len(functions.runtime_declarations("")) != 0 || core.len(functions.runtime_declarations("\n; comment\n")) != 0:
+        return 12
+    declarations: str[] = functions.runtime_declarations("declare void @first()")
+    if core.len(declarations) != 1 || declarations[0] != "declare void @first()":
+        return 13
+    declarations = functions.runtime_declarations("; comment\ndeclare void @first()\n\ndeclare i64 @last()\n")
+    if core.len(declarations) != 2 || declarations[0] != "declare void @first()" || declarations[1] != "declare i64 @last()":
+        return 14
+    targets: context.LoopTargets[] = []
+    if core.len(statements.without_last(targets)) != 0:
+        return 15
+    core.append(targets, context.LoopTargets("outer-test", "outer-end"))
+    if core.len(statements.without_last(targets)) != 0 || core.len(targets) != 1:
+        return 16
+    core.append(targets, context.LoopTargets("inner-test", "inner-end"))
+    trimmed: context.LoopTargets[] = statements.without_last(targets)
+    if core.len(trimmed) != 1 || trimmed[0].continue_target != "outer-test" || trimmed[0].break_target != "outer-end" || core.len(targets) != 2:
+        return 17
+    if strings.find("", "") != 0 || strings.find("abc", "") != 0 || strings.find("", "a") != -1:
+        return 18
+    if strings.find("abc", "c") != 2 || strings.find("abc", "abc") != 0 || strings.find("abc", "abcd") != -1:
+        return 19
+    return 0

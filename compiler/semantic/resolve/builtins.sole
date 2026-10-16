@@ -2,17 +2,18 @@ import core
 import semantic.types.query as type_query
 
 
-# Recognize the compiler-supported intrinsic names.
 def builtin_name(name: str) -> bool:
+    """Recognize the compiler-supported intrinsic names."""
     return name == "print" || name == "len" || name == "append" || name == "join" || name == "slice" || name == "cstr" || name == "from_cstr" || name == "address" || name == "arg_count" || name == "arg" || name == "read_file" || name == "write_file" || name == "exit"
 
 
-# Protect builtin types and runtime symbols from conflicting declarations.
 def reserved_name(name: str) -> bool:
+    """Protect builtin types and runtime symbols from conflicting declarations."""
     if core.len(name) >= 5 && core.slice(name, 0, 5) == "_sole":
         return true
     return type_query.builtin_type(name) || name == "malloc" || name == "printf" || name == "putchar"
 
 
 def reserved_type_name(name: str) -> bool:
+    """TODO: Document this function."""
     return reserved_name(name) || name == "integer" || name == "real"

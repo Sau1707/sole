@@ -1,16 +1,18 @@
 import core
-import codegen.llvm.scalars.definition as scalar_definition
-import codegen.llvm.scalars.int16 as scalar_int16
 import codegen.llvm.scalars.registry as registry
+import codegen.llvm.scalars.int16 as scalar_int16
+import codegen.llvm.scalars.definition as scalar_definition
 
 
 def require(condition: bool, description: str) -> void:
+    """TODO: Document this function."""
     if not condition:
         core.print("FAIL: " + description)
         core.exit(1)
 
 
 def check_integer(name: str, llvm: str, bits: int64, unsigned: bool) -> void:
+    """TODO: Document this function."""
     definition: scalar_definition.Type = registry.lookup(name)
     require(definition.name == name && definition.llvm == llvm, name + " representation")
     require(definition.integer() && not definition.floating(), name + " category")
@@ -39,6 +41,7 @@ def check_integer(name: str, llvm: str, bits: int64, unsigned: bool) -> void:
 
 
 def main() -> int32:
+    """TODO: Document this function."""
     check_integer("int8", "i8", 8, false)
     check_integer("int16", "i16", 16, false)
     check_integer("int32", "i32", 32, false)

@@ -5,13 +5,10 @@ cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p .build
 cc=${SOLE_CC:-cc}
 llvm_library=${SOLE_LLVM_LIB:-LLVM-21}
-seed=${SOLE_BOOTSTRAP:-bootstrap/sole}
-if [ "$seed" = bootstrap/sole ]; then
-    if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
-        echo "The bundled seed requires Linux x86-64." >&2
-        exit 1
-    fi
-    sha256sum -c bootstrap/SHA256SUMS
+seed=${SOLE_BOOTSTRAP:-sole}
+if ! command -v "$seed" >/dev/null; then
+    echo "Install Sole first or set SOLE_BOOTSTRAP to an existing compiler." >&2
+    exit 1
 fi
 command -v "$cc" >/dev/null
 export SOLE_HOME="$PWD" SOLE_LIB="$PWD/lib"

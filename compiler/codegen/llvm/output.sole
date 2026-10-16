@@ -1,13 +1,13 @@
-import codegen.llvm.casts as casts
 import codegen.llvm.ir as ir
+import codegen.llvm.casts as casts
+import codegen.llvm.context as context
 import codegen.llvm.literals as literals
 import diagnostics.report as diagnostics
-import codegen.llvm.context as context
 import semantic.types.query as type_query
 
 
-# Select the runtime print helper for a scalar or string value.
 def print_ir(state: context.State, value: context.Value) -> void:
+    """Select the runtime print helper for a scalar or string value."""
     value = literals.coerce(state, value, "")
     if value.typ == "str":
         data: str = ir.extract(state, value, 0)

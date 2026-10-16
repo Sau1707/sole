@@ -1,0 +1,28 @@
+import core
+import process
+
+
+def main() -> int32:
+    if core.arg_count() > 1:
+        if core.arg_count() != 7:
+            return 1
+        if core.arg(1) != "" || core.arg(2) != "two words" || core.arg(3) != "'quoted'":
+            return 2
+        if core.arg(4) != "$(exit 99); * $HOME" || core.arg(5) != "line\nbreak" || core.arg(6) != "héllo":
+            return 3
+        return 23
+    result: process.Result = process.run(core.arg(0), ["", "two words", "'quoted'", "$(exit 99); * $HOME", "line\nbreak", "héllo"])
+    core.print(result.exit_code == 23 && result.signal == 0 && result.error == "")
+    result = process.run("sh", ["-c", "exit 7"])
+    core.print(result.exit_code == 7 && result.signal == 0 && result.error == "")
+    result = process.run("/bin/sh", ["-c", "kill -TERM $$"])
+    core.print(result.exit_code == -1 && result.signal == 15 && result.error == "")
+    result = process.run("/sole-missing-executable-for-test", [])
+    core.print(result.exit_code == -1 && result.signal == 0 && result.error != "")
+    result = process.run("", [])
+    core.print(result.error == "invalid process executable")
+    result = process.run("sh\0ignored", [])
+    core.print(result.error == "invalid process executable")
+    result = process.run("sh", ["-c", "exit 0\0ignored"])
+    core.print(result.error == "process argument contains NUL")
+    return 0

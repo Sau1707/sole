@@ -27,10 +27,12 @@ union Node:
 
 class Counter:
     calls: int64
+    def record(self) -> void:
+        self.calls = self.calls + 1
 
 
 def choose(counter: Counter, n: int64) -> Node:
-    counter.calls = counter.calls + 1
+    counter.record()
     if n == 0:
         return Node.Empty()
     return Node.Span(Span(second=n, first=1), Direction.Left)
@@ -79,6 +81,8 @@ struct Data:
 
 class Box:
     value: int64
+    def set(self, value: int64) -> void:
+        self.value = value
 
 
 union Payload:
@@ -105,7 +109,7 @@ def main() -> int32:
         case Payload.Value(data):
             return 4
         case Payload.Shared(box, items):
-            box.value = 10
+            box.set(10)
             core.append(items, 20)
     if shared.value != 10 || core.len(array) != 1 || array[0] != 20:
         return 5

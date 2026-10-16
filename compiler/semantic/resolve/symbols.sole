@@ -3,16 +3,15 @@ import codegen.llvm.context as context
 
 
 def end_scope(state: context.State) -> void:
-    i: int64 = 0
-    while i < core.len(state.depths):
+    """TODO: Document this function."""
+    for i in range(core.len(state.depths)):
         if state.depths[i] == state.depth:
             state.depths[i] = -1
-        i = i + 1
     state.depth = state.depth - 1
 
 
-# Recover a C symbol's original name from its module-qualified name.
 def foreign_name(name: str) -> str:
+    """Recover a C symbol's original name from its module-qualified name."""
     if core.len(name) > 10 && core.slice(name, 0, 8) == "__sole_m":
         i: int64 = 8
         while i < core.len(name) && name[i] != 95:
@@ -21,38 +20,32 @@ def foreign_name(name: str) -> str:
     return name
 
 
-# Find a declared enum or union by name.
 def sum_index(state: context.State, name: str) -> int64:
-    i: int64 = 0
-    while i < core.len(state.sums):
+    """Find a declared enum or union by name."""
+    for i in range(core.len(state.sums)):
         if state.sums[i].name == name:
             return i
-        i = i + 1
     return -1
 
 
-# Find a declared struct or class by name.
 def record_index(state: context.State, name: str) -> int64:
-    i: int64 = 0
-    while i < core.len(state.records):
+    """Find a declared struct or class by name."""
+    for i in range(core.len(state.records)):
         if state.records[i].name == name:
             return i
-        i = i + 1
     return -1
 
 
-# Find a declared function by name.
 def function_index(state: context.State, name: str) -> int64:
-    i: int64 = 0
-    while i < core.len(state.functions):
+    """Find a declared function by name."""
+    for i in range(core.len(state.functions)):
         if state.functions[i].name == name:
             return i
-        i = i + 1
     return -1
 
 
-# Find the most recent active local variable.
 def local_index(state: context.State, name: str) -> int64:
+    """Find the most recent active local variable."""
     i: int64 = core.len(state.names) - 1
     while i >= 0:
         if state.depths[i] >= 0 && state.names[i] == name:

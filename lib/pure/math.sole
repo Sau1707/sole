@@ -1,26 +1,31 @@
 def abs(value: int64) -> int64:
+    """TODO: Document this function."""
     if value < 0:
         return -value
     return value
 
 
 def min(left: int64, right: int64) -> int64:
+    """TODO: Document this function."""
     if left < right:
         return left
     return right
 
 
 def max(left: int64, right: int64) -> int64:
+    """TODO: Document this function."""
     if left > right:
         return left
     return right
 
 
 def clamp(value: int64, lower: int64, upper: int64) -> int64:
+    """TODO: Document this function."""
     return min(max(value, lower), upper)
 
 
 def gcd(left: int64, right: int64) -> int64:
+    """TODO: Document this function."""
     a: int64 = abs(left)
     b: int64 = abs(right)
     while b != 0:

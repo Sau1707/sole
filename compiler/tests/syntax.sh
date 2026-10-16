@@ -68,6 +68,12 @@ reject 'def main() -> int32:
 reject 'struct Value:
     def get(self) -> int32:
         return 1'
+reject 'class Value:
+    value: int32'
+reject 'class Empty:
+    pass'
+reject 'class Documented:
+    """Only documentation."""'
 reject 'def main() -> int32:
     return 0;'
 reject 'import core as return'

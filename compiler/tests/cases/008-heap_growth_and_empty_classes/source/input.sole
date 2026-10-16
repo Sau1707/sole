@@ -1,16 +1,19 @@
 import core
 class Buffer:
     bytes: uint64[4]
+    def get(self, index: int64) -> uint64:
+        return self.bytes[index]
 class Empty:
-    pass
+    def same(self, other: Empty) -> bool:
+        return self == other
 def main() -> int32:
     i: int32 = 0
     while i < 12000:
         b: Buffer = Buffer([1, 2, 3, 4])
-        if b.bytes[3] != 4:
+        if b.get(3) != 4:
             return 1
         i = i + 1
     a: Empty = Empty()
     b: Empty = Empty()
-    core.print(a != b)
+    core.print(not a.same(b))
     return 0

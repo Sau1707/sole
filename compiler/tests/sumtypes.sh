@@ -63,10 +63,14 @@ struct Box:
 
 class Trace:
     calls: int32
+    def record(self) -> void:
+        self.calls = self.calls + 1
 
 
 class Node:
     child: Link
+    def link(self) -> Link:
+        return self.child
 
 
 union Link:
@@ -76,7 +80,7 @@ union Link:
 
 
 def once(trace: Trace) -> Item:
-    trace.calls = trace.calls + 1
+    trace.record()
     return Item.Number(42)
 
 

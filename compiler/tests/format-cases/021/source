@@ -1,0 +1,5 @@
+from package.models import Point as P, Box
+import core
+from core import len
+def main() -> int32:
+    return 0

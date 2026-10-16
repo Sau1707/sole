@@ -3,4 +3,5 @@ import codegen.llvm.scalars.definition as scalar_definition
 
 class int64:
     def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
         return scalar_definition.Type("int64", "i64", 64, "integer", false)

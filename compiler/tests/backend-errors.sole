@@ -4,12 +4,14 @@ import codegen.llvm.target as target
 
 
 def require(condition: bool, description: str) -> void:
+    """TODO: Document this function."""
     if not condition:
         core.print("FAIL: " + description)
         core.exit(1)
 
 
 def main() -> int32:
+    """TODO: Document this function."""
     output: str = core.arg(1)
     missing: str = core.arg(2)
     level: int32 = 0

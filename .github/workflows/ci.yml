@@ -24,7 +24,11 @@ jobs:
           echo 'deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main' | sudo tee /etc/apt/sources.list.d/llvm21.list
           sudo apt-get update
           sudo apt-get install -y llvm-21-dev
-      - name: Bootstrap from the bundled seed
+      - name: Install the latest released compiler
+        run: |
+          sh install.sh "$HOME/.local"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Bootstrap from the installed compiler
         run: sh scripts/bootstrap-ci.sh
         env:
           SOLE_LLVM_LIB: LLVM-21
@@ -89,4 +93,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
             --title "Sole ${GITHUB_REF_NAME#v}" \
-            --notes 'Reorganizes the compiler into driver, diagnostics, syntax, semantic, module-loading, and LLVM-codegen subsystems. Consolidates loop targets, scope cleanup, C-string lowering, and test execution. The formatter now inserts missing function docstring placeholders and spaces standalone comments. Includes updated regression coverage and relocated grammar packaging. See compiler/README.md in the source or COMPILER.md in the release archive for the compiler architecture. Linux x86-64 with glibc 2.39 or newer; LLVM and its non-glibc dependencies are bundled. Use the attached install.sh to install the latest release and missing native C build tools. For manual installation, verify SHA256SUMS and copy bin/, lib/, and share/ into the same prefix. Third-party notices are in share/sole/licenses/. The bootstrap seed is unchanged.'
+            --notes 'Adds named imports with aliases and matching editor highlighting. Classes must now declare at least one method; use struct for data-only records. Adds shell-free process execution and reusable array, string, path, and filesystem helpers. Simplifies compiler and standard-library traversals with range-based for loops and expands boundary and regression coverage. Source builds now bootstrap from an installed released compiler instead of a bundled seed. Linux x86-64 with glibc 2.39 or newer; LLVM and its non-glibc dependencies are bundled. Use the attached install.sh to install the latest release and missing native C build tools. For manual installation, verify SHA256SUMS and copy bin/, lib/, and share/ into the same prefix. Third-party notices are in share/sole/licenses/.'

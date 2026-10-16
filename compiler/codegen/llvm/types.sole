@@ -1,15 +1,15 @@
 import core
-import diagnostics.report as diagnostics
-import codegen.llvm.context as context
 import semantic.model as model
-import semantic.resolve.symbols as symbols
+import codegen.llvm.context as context
+import diagnostics.report as diagnostics
 import semantic.types.query as type_query
-import codegen.llvm.scalars.definition as scalar_definition
+import semantic.resolve.symbols as symbols
 import codegen.llvm.scalars.registry as registry
+import codegen.llvm.scalars.definition as scalar_definition
 
 
-# Map a Sole type to its LLVM representation and validate array sizes.
 def llvm_type(state: context.State, typ: str) -> str:
+    """Map a Sole type to its LLVM representation and validate array sizes."""
     definition: scalar_definition.Type = registry.lookup(typ)
     if definition.llvm != "":
         return definition.llvm
@@ -38,31 +38,22 @@ def llvm_type(state: context.State, typ: str) -> str:
 
 
 def layouts(state: context.State) -> str:
+    """TODO: Document this function."""
     definitions: str[] = []
-    r: int64 = 0
-    while r < core.len(state.records):
+    for r in range(core.len(state.records)):
         info: model.RecordInfo = state.records[r]
         fields: str[] = []
-        i: int64 = 0
-        while i < core.len(info.types):
+        for i in range(core.len(info.types)):
             if i > 0:
                 core.append(fields, ", ")
             core.append(fields, llvm_type(state, info.types[i]))
-            i = i + 1
         core.append(definitions, "%" + info.name + " = type {" + core.join(fields) + "}\n")
-        r = r + 1
-    s: int64 = 0
-    while s < core.len(state.sums):
+    for s in range(core.len(state.sums)):
         sum: model.SumInfo = state.sums[s]
         if sum.kind == "union":
             layout: str = "%" + sum.name + " = type {i32"
-            v: int64 = 0
-            while v < core.len(sum.variants):
-                p: int64 = 0
-                while p < core.len(sum.variants[v].types):
+            for v in range(core.len(sum.variants)):
+                for p in range(core.len(sum.variants[v].types)):
                     layout = layout + ", " + llvm_type(state, sum.variants[v].types[p])
-                    p = p + 1
-                v = v + 1
             core.append(definitions, layout + "}\n")
-        s = s + 1
     return core.join(definitions)

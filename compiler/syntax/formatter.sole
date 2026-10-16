@@ -1,7 +1,7 @@
 import core
 
 
-class Lines:
+struct Lines:
     starts: int64[]
     kinds: int32[]
     bodies: int64[]
@@ -55,7 +55,7 @@ def scan(source: str) -> Lines:
                 while word_end < end && source[word_end] >= 97 && source[word_end] <= 122:
                     word_end = word_end + 1
                 word: str = core.slice(source, first, word_end)
-                if word == "import":
+                if word == "import" || word == "from":
                     kind = 3
                 elif word == "def" || word == "class" || word == "struct" || word == "enum" || word == "union" || word == "extern":
                     kind = 4
@@ -157,11 +157,9 @@ def sort_imports(source: str, lines: Lines) -> str:
             lengths[position] = length
             i = i + 1
         core.append(parts, core.slice(source, copied, lines.starts[first]))
-        j: int64 = 0
-        while j < core.len(imports):
+        for j in range(core.len(imports)):
             core.append(parts, imports[j])
             core.append(parts, endings[j])
-            j = j + 1
         copied = core.len(source)
         if i < core.len(lines.starts):
             copied = lines.starts[i]
@@ -173,8 +171,7 @@ def add_docstrings(source: str, lines: Lines, newline: str) -> str:
     """Insert TODO docstrings using each function body's indentation."""
     parts: str[] = []
     copied: int64 = 0
-    i: int64 = 0
-    while i < core.len(lines.bodies):
+    for i in range(core.len(lines.bodies)):
         start: int64 = lines.starts[lines.bodies[i]]
         first: int64 = start
         while first < core.len(source) && (source[first] == 32 || source[first] == 9):
@@ -183,7 +180,6 @@ def add_docstrings(source: str, lines: Lines, newline: str) -> str:
             core.append(parts, core.slice(source, copied, start))
             core.append(parts, core.slice(source, start, first) + "\"\"\"TODO: Document this function.\"\"\"" + newline)
             copied = start
-        i = i + 1
     core.append(parts, core.slice(source, copied, core.len(source)))
     return core.join(parts)
 
@@ -192,14 +188,12 @@ def space_comments(source: str, lines: Lines, newline: str) -> str:
     """Ensure every standalone comment has a preceding blank line."""
     parts: str[] = []
     copied: int64 = 0
-    i: int64 = 0
-    while i < core.len(lines.kinds):
+    for i in range(core.len(lines.kinds)):
         if lines.kinds[i] == 1 || lines.kinds[i] == 6:
             if i == 0 || lines.kinds[i - 1] != 0:
                 core.append(parts, core.slice(source, copied, lines.starts[i]))
                 core.append(parts, newline)
                 copied = lines.starts[i]
-        i = i + 1
     core.append(parts, core.slice(source, copied, core.len(source)))
     return core.join(parts)
 
@@ -209,8 +203,7 @@ def format_spacing(source: str, lines: Lines, newline: str) -> str:
     parts: str[] = []
     copied: int64 = 0
     previous: int32 = 0
-    i: int64 = 0
-    while i < core.len(lines.kinds):
+    for i in range(core.len(lines.kinds)):
         kind: int32 = lines.kinds[i]
         if kind >= 3 && kind <= 5:
             required: bool = previous == 3 || previous == 4 || kind == 4 && previous != 0
@@ -231,7 +224,6 @@ def format_spacing(source: str, lines: Lines, newline: str) -> str:
                     core.append(parts, newline + newline)
                     copied = lines.starts[anchor]
             previous = kind
-        i = i + 1
     core.append(parts, core.slice(source, copied, core.len(source)))
     return core.join(parts)
 
@@ -239,12 +231,10 @@ def format_spacing(source: str, lines: Lines, newline: str) -> str:
 def format_source(source: str, lines: Lines) -> str:
     """Format imports, declaration spacing, docstrings, and comments."""
     newline: str = "\n"
-    i: int64 = 1
-    while i < core.len(source):
+    for i in range(1, core.len(source)):
         if source[i - 1] == 13 && source[i] == 10:
             newline = "\r\n"
             break
-        i = i + 1
     formatted: str = add_docstrings(source, lines, newline)
     formatted = space_comments(formatted, scan(formatted), newline)
     formatted = format_spacing(formatted, scan(formatted), newline)

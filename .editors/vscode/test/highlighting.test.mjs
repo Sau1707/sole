@@ -114,6 +114,24 @@ test('all dotted import components use the same property coloring', () => {
   }
 });
 
+test('named imports distinguish paths, names, aliases, and punctuation', () => {
+  check('from math.vector import Vector as Renamed, dot # comment', [
+    ['from', 'keyword.control.import.sole'],
+    ['import', 'keyword.control.import.python'],
+    ['as', 'keyword.control.import.sole'],
+    ['math', 'variable.other.property.sole'],
+    ['vector', 'variable.other.property.sole'],
+    ['Vector', 'variable.other.property.sole'],
+    ['Renamed', 'variable.other.property.sole'],
+    ['dot', 'variable.other.property.sole'],
+    ['.', 'punctuation.separator.period.python'],
+    [',', 'punctuation.separator.sole'],
+    ['# comment', 'comment.line.number-sign.sole'],
+  ]);
+  check('fromage = 1', [['fromage', 'variable.other.readwrite.sole']]);
+  check('"from core import len"', [['from core import len', 'string.quoted.double.sole']]);
+});
+
 test('control flow, booleans, self, calls, and operators', () => {
   check('if true && not false:', [
     ['if', 'keyword.control.sole'],

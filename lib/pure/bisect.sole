@@ -2,6 +2,7 @@ import core
 
 
 def bisect_left(a: int64[], x: int64) -> int64:
+    """TODO: Document this function."""
     lo: int64 = 0
     hi: int64 = core.len(a)
     while lo < hi:
@@ -14,6 +15,7 @@ def bisect_left(a: int64[], x: int64) -> int64:
 
 
 def bisect_right(a: int64[], x: int64) -> int64:
+    """TODO: Document this function."""
     lo: int64 = 0
     hi: int64 = core.len(a)
     while lo < hi:
@@ -26,10 +28,12 @@ def bisect_right(a: int64[], x: int64) -> int64:
 
 
 def bisect(a: int64[], x: int64) -> int64:
+    """TODO: Document this function."""
     return bisect_right(a, x)
 
 
 def _insert(a: int64[], x: int64, index: int64) -> void:
+    """TODO: Document this function."""
     core.append(a, x)
     i: int64 = core.len(a) - 1
     while i > index:
@@ -39,12 +43,15 @@ def _insert(a: int64[], x: int64, index: int64) -> void:
 
 
 def insort_left(a: int64[], x: int64) -> void:
+    """TODO: Document this function."""
     _insert(a, x, bisect_left(a, x))
 
 
 def insort_right(a: int64[], x: int64) -> void:
+    """TODO: Document this function."""
     _insert(a, x, bisect_right(a, x))
 
 
 def insort(a: int64[], x: int64) -> void:
+    """TODO: Document this function."""
     insort_right(a, x)

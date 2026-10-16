@@ -1,15 +1,16 @@
 import codegen.llvm.ir as ir
-import codegen.llvm.literals as literals
-import codegen.llvm.types as llvm_types
-import diagnostics.report as diagnostics
 import codegen.llvm.context as context
+import codegen.llvm.types as llvm_types
+import codegen.llvm.literals as literals
+import diagnostics.report as diagnostics
 import semantic.types.query as type_query
-import codegen.llvm.scalars.definition as scalar_definition
 import codegen.llvm.scalars.registry as registry
+import codegen.llvm.scalars.definition as scalar_definition
 
 
-# Emit explicit numeric or pointer conversions with required range checks.
 def cast_value(state: context.State, value: context.Value, destination: str) -> context.Value:
+    """Emit explicit numeric or pointer conversions with required range checks."""
+
     # Resolve literal types before selecting a conversion instruction.
     if value.typ == "integer" || value.typ == "real":
         literal_context: str = ""
@@ -32,6 +33,7 @@ def cast_value(state: context.State, value: context.Value, destination: str) -> 
             zero = "0.0"
         return context.Value("bool", ir.instruction(state, operation + " " + ir.typed(state, value) + ", " + zero), "")
     if operation == "fptosi" || operation == "fptoui":
+
         # Guard float-to-integer conversions against NaN and range overflow.
         low_text: str = dest_definition.lower_bound()
         high_text: str = dest_definition.upper_bound()

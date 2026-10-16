@@ -1,5 +1,5 @@
-# Rank binary operators for precedence-based expression parsing.
 def precedence(operator: str) -> int32:
+    """Rank binary operators for precedence-based expression parsing."""
     if operator == "||":
         return 1
     if operator == "&&":

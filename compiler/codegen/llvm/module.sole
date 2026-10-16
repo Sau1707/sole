@@ -1,20 +1,19 @@
 import core
+import semantic.model as model
 import codegen.llvm.context as context
-import codegen.llvm.functions as functions
 import codegen.llvm.types as llvm_types
 import diagnostics.report as diagnostics
-import semantic.model as model
+import codegen.llvm.functions as functions
 import semantic.resolve.symbols as symbols
 
 
 def emit(state: context.State, home: str) -> str:
+    """TODO: Document this function."""
     record_definitions: str = llvm_types.layouts(state)
     prologue: str = core.read_file(home + "/lib/runtime/native.ll")
     runtime_declarations: str[] = functions.runtime_declarations(prologue)
-    f: int64 = 0
-    while f < core.len(state.functions):
+    for f in range(core.len(state.functions)):
         functions.compile_function(state, state.functions[f], runtime_declarations)
-        f = f + 1
     main_index: int64 = symbols.function_index(state, "main")
     if main_index >= 0:
         main_fn: model.FunctionInfo = state.functions[main_index]

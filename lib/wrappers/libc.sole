@@ -23,3 +23,6 @@ extern def unlink(path: ptr) -> int32
 
 
 extern def rmdir(path: ptr) -> int32
+
+
+extern def strerror(error: int32) -> ptr

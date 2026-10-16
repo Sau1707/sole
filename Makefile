@@ -4,11 +4,11 @@ format:
 	find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -exec "$(HOME)/.local/bin/sole" format {} +
 
 install:
-	SOLE_VERSION=0.0.6 sh install.sh "$(HOME)/.local"
+	SOLE_VERSION=latest sh install.sh "$(HOME)/.local"
 
 up:
 	@command -v code >/dev/null || { echo "Install the VS Code CLI first."; exit 1; }
-	SOLE_VERSION=0.0.6 sh install.sh "$(HOME)/.local"
+	SOLE_VERSION=latest sh install.sh "$(HOME)/.local"
 	npm --prefix .editors/vscode ci
 	npm --prefix .editors/vscode test
 	npm --prefix .editors/vscode run package

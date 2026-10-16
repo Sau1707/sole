@@ -6,15 +6,19 @@ class Type:
     unsigned: bool
 
     def integer(self) -> bool:
+        """TODO: Document this function."""
         return self.category == "integer"
 
     def floating(self) -> bool:
+        """TODO: Document this function."""
         return self.category == "float"
 
     def numeric(self) -> bool:
+        """TODO: Document this function."""
         return self.integer() || self.floating()
 
     def arithmetic(self, operator: str) -> str:
+        """TODO: Document this function."""
         if not self.numeric():
             return ""
         if self.floating():
@@ -58,6 +62,7 @@ class Type:
         return ""
 
     def comparison(self, operator: str) -> str:
+        """TODO: Document this function."""
         predicate: str = ""
         if operator == "==":
             predicate = "eq"
@@ -88,6 +93,7 @@ class Type:
         return "icmp s" + predicate
 
     def conversion(self, destination: Type) -> str:
+        """TODO: Document this function."""
         if self.name == destination.name:
             return "identity"
         if self.category == "ptr" && destination.integer():
@@ -124,6 +130,7 @@ class Type:
         return ""
 
     def maximum(self, negative: bool) -> uint64:
+        """TODO: Document this function."""
         if not self.unsigned:
             limit: uint64 = uint64(1) << uint64(self.bits - 1)
             if not negative:
@@ -134,11 +141,13 @@ class Type:
         return uint64(18446744073709551615)
 
     def lower_bound(self) -> str:
+        """TODO: Document this function."""
         if self.unsigned:
             return "0"
         return "-" + str(uint64(1) << uint64(self.bits - 1))
 
     def upper_bound(self) -> str:
+        """TODO: Document this function."""
         if not self.unsigned:
             return str(uint64(1) << uint64(self.bits - 1))
         if self.bits == 64:

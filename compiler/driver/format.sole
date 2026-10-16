@@ -1,6 +1,7 @@
 import core
+import files
+import strings
 import syntax.formatter as formatter
-import wrappers.system
 
 
 def main() -> int32:
@@ -15,16 +16,13 @@ def main() -> int32:
     if first == core.arg_count():
         core.print("error: expected at least one .sole file")
         return 1
-    i: int64 = first
-    while i < core.arg_count():
+    for i in range(first, core.arg_count()):
         path: str = core.arg(i)
-        if core.len(path) < 5 || core.slice(path, core.len(path) - 5, core.len(path)) != ".sole":
+        if not strings.ends_with(path, ".sole"):
             core.print("error: expected a .sole file: " + path)
             return 1
-        i = i + 1
     status: int32 = 0
-    i = first
-    while i < core.arg_count():
+    for i in range(first, core.arg_count()):
         path: str = core.arg(i)
         source: str = core.read_file(path)
         lines: formatter.Lines = formatter.scan(source)
@@ -38,11 +36,10 @@ def main() -> int32:
                     core.print(path + ": needs formatting")
                     status = 1
                 else:
-                    error: ptr = wrappers.system.sole_rt_atomic_write_file(core.cstr(path), core.cstr(formatted), core.len(formatted))
-                    if error != ptr(0):
-                        core.print(path + ": error: " + core.from_cstr(error))
+                    error: str = files.atomic_write(path, formatted)
+                    if error != "":
+                        core.print(path + ": error: " + error)
                         status = 1
                     else:
                         core.print("Formatted " + path)
-        i = i + 1
     return status

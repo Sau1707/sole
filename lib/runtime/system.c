@@ -2,10 +2,12 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdint.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #ifndef SOLE_HOME
@@ -14,6 +16,18 @@
 
 static int argument_count;
 static char **argument_values;
+
+extern char **environ;
+
+int sole_rt_process_run(const char *executable, char *const argv[], int *status) {
+    pid_t child;
+    int error = posix_spawnp(&child, executable, NULL, NULL, argv, environ);
+    if (error) return error;
+    while (waitpid(child, status, 0) < 0) {
+        if (errno != EINTR) return errno;
+    }
+    return 0;
+}
 
 static void fail(const char *message) {
     fprintf(stderr, "sole: %s\n", message);

@@ -1,75 +1,65 @@
 import core
-import diagnostics.report as diagnostics
-import semantic.resolve.builtins as builtins
+import files
+import arrays
+import strings
+import os.path
+import wrappers.system
 import syntax.lexer.scanner as lexer
 import modules.model as module_model
+import diagnostics.report as diagnostics
+import semantic.resolve.builtins as builtins
 import syntax.lexer.tokens as lexical_tokens
 import syntax.parser.tokens as token_helpers
-import wrappers.system
 
 
-# Return a file's containing directory with a trailing separator.
 def parent_directory(path: str) -> str:
-    i: int64 = core.len(path) - 1
-    while i >= 0:
-        if path[i] == 47:
-            return core.slice(path, 0, i + 1)
-        i = i - 1
+    """Return a file's containing directory with a trailing separator."""
+    parts: str[] = os.path.split(path)
+    if parts[0] != "":
+        return parts[0]
     return "./"
 
 
-# Translate a dotted module name into a relative Sole filename.
 def module_path(name: str) -> str:
-    parts: str[] = []
-    i: int64 = 0
-    while i < core.len(name):
-        if name[i] == 46:
-            core.append(parts, "/")
-        else:
-            core.append(parts, core.slice(name, i, i + 1))
-        i = i + 1
-    return core.join(parts) + ".sole"
+    """Translate a dotted module name into a relative Sole filename."""
+    return strings.replace(name, ".", "/") + ".sole"
 
 
-# Find a module in local, project, or standard-library directories.
 def resolve_import(module: module_model.ModuleInfo, name: str, position: int64, entry_directory: str) -> str:
+    """Find a module in local, project, or standard-library directories."""
     relative: str = module_path(name)
     library: str = core.from_cstr(wrappers.system.sole_rt_lib_home())
     candidates: str[] = [parent_directory(module.path) + relative, entry_directory + relative, library + "/" + relative, library + "/pure/" + relative, library + "/impure/" + relative, library + "/wrappers/" + relative]
-    i: int64 = 0
-    while i < core.len(candidates):
-        if wrappers.system.sole_rt_is_file(core.cstr(candidates[i])) != 0:
-            return core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(candidates[i])))
-        i = i + 1
+    for i in range(core.len(candidates)):
+        if files.is_file(candidates[i]):
+            return files.realpath(candidates[i])
     diagnostics.module_error(module, position, "cannot find module '" + name + "'")
     return ""
 
 
-# Load a module's declarations and dependencies, rejecting import cycles.
 def load_module(modules: module_model.ModuleInfo[], path: str, source: str) -> int64:
+    """Load a module's declarations and dependencies, rejecting import cycles."""
+
     # Reuse completed modules and reject dependencies still being loaded.
-    existing: int64 = 0
-    while existing < core.len(modules):
+    for existing in range(core.len(modules)):
         if modules[existing].path == path:
             if modules[existing].active:
                 diagnostics.die("circular import involving '" + path + "'")
             return existing
-        existing = existing + 1
     index: int64 = core.len(modules)
     prefix: str = ""
     if index > 0:
         prefix = "__sole_m" + str(index) + "__"
     tokens: lexical_tokens.Tokens = lexer.lex(source)
     removed: bool[] = []
-    n: int64 = 0
-    while n < core.len(tokens.kind):
+    for n in range(core.len(tokens.kind)):
         core.append(removed, false)
-        n = n + 1
-    module: module_model.ModuleInfo = module_model.ModuleInfo(path, prefix, tokens, [], [], [], removed, true, [])
+    module: module_model.ModuleInfo = module_model.ModuleInfo(path, prefix, tokens, [], [], [], removed, true, [], [])
     core.append(modules, module)
     if core.len(tokens.kind) > 1 && tokens.kind[0] == 3 && tokens.kind[1] == 4:
         module.removed[0] = true
         module.removed[1] = true
+
     # Collect declarations, intrinsic exports, and import aliases.
     positions: int64[] = []
     imports: str[] = []
@@ -78,21 +68,21 @@ def load_module(modules: module_model.ModuleInfo[], path: str, source: str) -> i
     while i < core.len(tokens.kind):
         kind: int32 = tokens.kind[i]
         text: str = tokens.text[i]
-        if kind == 1 && core.len(text) >= 7 && core.slice(text, 0, 7) == "__sole_":
+        if kind == 1 && strings.starts_with(text, "__sole_"):
             diagnostics.module_error(module, i, "names beginning with '__sole_' are reserved")
         if kind == 5:
             depth = depth + 1
         elif kind == 6:
             depth = depth - 1
         if depth == 0 && kind == 1 && (text == "def" || text == "struct" || text == "class" || text == "enum" || text == "union"):
-            if has_name(module.names, tokens.text[i + 1]):
+            if arrays.contains(module.names, tokens.text[i + 1]):
                 diagnostics.module_error(module, i + 1, "duplicate declaration '" + tokens.text[i + 1] + "'")
             core.append(module.names, tokens.text[i + 1])
         if depth == 0 && kind == 1 && text == "intrinsic":
             name: str = tokens.text[i + 1]
             if not builtins.builtin_name(name):
                 diagnostics.module_error(module, i + 1, "unknown intrinsic '" + name + "'")
-            if has_name(module.names, name):
+            if arrays.contains(module.names, name):
                 diagnostics.module_error(module, i + 1, "duplicate declaration '" + name + "'")
             if tokens.kind[i + 2] != 4:
                 diagnostics.module_error(module, i + 2, "expected newline after intrinsic")
@@ -102,13 +92,17 @@ def load_module(modules: module_model.ModuleInfo[], path: str, source: str) -> i
             module.removed[i + 1] = true
             module.removed[i + 2] = true
             i = i + 2
-        if depth == 0 && kind == 1 && text == "import":
+        if depth > 0 && kind == 1 && (text == "import" || text == "from"):
+            diagnostics.module_error(module, i, "imports are only allowed at module scope")
+        if depth == 0 && kind == 1 && (text == "import" || text == "from"):
             start: int64 = i
+            named: bool = text == "from"
             i = i + 1
             alias: str = ""
             while true:
                 if tokens.kind[i] != 1 || token_helpers.reserved_keyword(tokens.text[i]):
                     diagnostics.module_error(module, i, "expected a module name")
+                check_import_identifier(module, i)
                 alias = alias + tokens.text[i]
                 i = i + 1
                 if tokens.kind[i] != 7 || tokens.text[i] != ".":
@@ -116,70 +110,103 @@ def load_module(modules: module_model.ModuleInfo[], path: str, source: str) -> i
                 alias = alias + "."
                 i = i + 1
             name: str = alias
-            if tokens.kind[i] == 1 && tokens.text[i] == "as":
+            if named:
+                if tokens.kind[i] != 1 || tokens.text[i] != "import":
+                    diagnostics.module_error(module, i, "expected 'import' after module name")
+                i = i + 1
+                while true:
+                    check_import_identifier(module, i)
+                    position: int64 = i
+                    exported: str = tokens.text[i]
+                    local: str = exported
+                    i = i + 1
+                    if tokens.kind[i] == 1 && tokens.text[i] == "as":
+                        i = i + 1
+                        check_import_identifier(module, i)
+                        local = tokens.text[i]
+                        i = i + 1
+                    core.append(module.named_imports, module_model.NamedImport(name, exported, local, position, -1))
+                    if tokens.text[i] != ",":
+                        break
+                    i = i + 1
+            elif tokens.kind[i] == 1 && tokens.text[i] == "as":
                 i = i + 1
                 if tokens.kind[i] != 1 || token_helpers.reserved_keyword(tokens.text[i]):
                     diagnostics.module_error(module, i, "expected an import alias")
                 alias = tokens.text[i]
-                if core.len(alias) >= 7 && core.slice(alias, 0, 7) == "__sole_":
+                if strings.starts_with(alias, "__sole_"):
                     diagnostics.module_error(module, i, "names beginning with '__sole_' are reserved")
                 i = i + 1
             if tokens.kind[i] != 4:
                 diagnostics.module_error(module, i, "expected newline after import")
-            a: int64 = 0
-            while a < core.len(module.aliases):
-                if module.aliases[a] == alias:
+            if not named:
+                if arrays.contains(module.aliases, alias):
                     diagnostics.module_error(module, start, "duplicate import '" + alias + "'")
-                a = a + 1
-            core.append(module.aliases, alias)
-            core.append(imports, name)
-            core.append(positions, start)
-            j: int64 = start
-            while j <= i:
+                core.append(module.aliases, alias)
+                core.append(imports, name)
+                core.append(positions, start)
+            for j in range(start, i + 1):
                 module.removed[j] = true
-                j = j + 1
         i = i + 1
-    a: int64 = 0
+
     # Resolve and load each dependency after scanning this module.
-    while a < core.len(module.aliases):
+    for a in range(core.len(module.aliases)):
         dependency_path: str = resolve_import(module, imports[a], positions[a], parent_directory(modules[0].path))
         dependency: int64 = load_module(modules, dependency_path, core.read_file(dependency_path))
         core.append(module.dependencies, dependency)
-        a = a + 1
+    for a in range(core.len(module.named_imports)):
+        binding: module_model.NamedImport = module.named_imports[a]
+        if arrays.contains(module.names, binding.local_name):
+            diagnostics.module_error(module, binding.position, "import conflicts with a declaration: " + binding.local_name)
+        for b in range(core.len(module.aliases)):
+            if namespace_root(module.aliases[b]) == binding.local_name:
+                diagnostics.module_error(module, binding.position, "import conflicts with a module namespace: " + binding.local_name)
+        for b in range(a):
+            if module.named_imports[b].local_name == binding.local_name:
+                diagnostics.module_error(module, binding.position, "duplicate import '" + binding.local_name + "'")
+        dependency_path: str = resolve_import(module, binding.module_name, binding.position, parent_directory(modules[0].path))
+        binding.dependency = load_module(modules, dependency_path, core.read_file(dependency_path))
+        module.named_imports[a] = binding
+        if not arrays.contains(modules[binding.dependency].names, binding.exported_name):
+            diagnostics.module_error(module, binding.position, "module '" + binding.module_name + "' has no declaration '" + binding.exported_name + "'")
     module.active = false
+    modules[index] = module
     return index
 
 
-# Extract the first component of a dotted namespace.
+def check_import_identifier(module: module_model.ModuleInfo, position: int64) -> void:
+    """TODO: Document this function."""
+    name: str = module.tokens.text[position]
+    if module.tokens.kind[position] != 1 || token_helpers.reserved_keyword(name):
+        diagnostics.module_error(module, position, "expected an import name or alias")
+    if strings.starts_with(name, "__sole_"):
+        diagnostics.module_error(module, position, "names beginning with '__sole_' are reserved")
+
+
+def named_import_index(module: module_model.ModuleInfo, name: str) -> int64:
+    """TODO: Document this function."""
+    for i in range(core.len(module.named_imports)):
+        if module.named_imports[i].local_name == name:
+            return i
+    return -1
+
+
 def namespace_root(name: str) -> str:
-    i: int64 = 0
-    while i < core.len(name) && name[i] != 46:
-        i = i + 1
-    return core.slice(name, 0, i)
+    """Extract the first component of a dotted namespace."""
+    parts: str[] = strings.partition(name, ".")
+    return parts[0]
 
 
-# Check whether a declaration or namespace name is already present.
-def has_name(names: str[], name: str) -> bool:
-    i: int64 = 0
-    while i < core.len(names):
-        if names[i] == name:
-            return true
-        i = i + 1
-    return false
-
-
-# Qualify module references and copy tokens with their source locations.
 def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lexical_tokens.Tokens) -> void:
+    """Qualify module references and copy tokens with their source locations."""
     module: module_model.ModuleInfo = modules[index]
     tokens: lexical_tokens.Tokens = module.tokens
     roots: str[] = []
-    a: int64 = 0
-    while a < core.len(module.aliases):
+    for a in range(core.len(module.aliases)):
         root: str = namespace_root(module.aliases[a])
-        if has_name(module.names, root):
+        if arrays.contains(module.names, root):
             diagnostics.module_error(module, 0, "module namespace conflicts with a declaration: " + root)
         core.append(roots, root)
-        a = a + 1
     depth: int32 = 0
     record_scope: bool = false
     sum_scope: bool = false
@@ -205,10 +232,10 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lex
         range_syntax: bool = text == "range" && previous == "in"
         if pattern && text == "(":
             pattern_bindings = true
-        if kind == 1 && pattern_bindings && (has_name(module.names, text) || has_name(roots, text)):
+        if kind == 1 && pattern_bindings && (arrays.contains(module.names, text) || arrays.contains(roots, text) || named_import_index(module, text) >= 0):
             diagnostics.module_error(module, i, "pattern binding conflicts with a declaration or namespace: " + text)
         if kind == 1 && not label && not pattern_bindings && not range_syntax:
-            if has_name(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "class" || previous == "enum" || previous == "union" || previous == "for"):
+            if arrays.contains(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "class" || previous == "enum" || previous == "union" || previous == "for"):
                 diagnostics.module_error(module, i, "module namespace cannot be rebound: " + text)
             if previous != ".":
                 ends: int64[] = [i]
@@ -220,38 +247,45 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lex
                     core.append(ends, end)
                 matched: int64 = -1
                 matched_parts: int64 = 0
-                alias_index: int64 = 0
-                while alias_index < core.len(module.aliases):
+                for alias_index in range(core.len(module.aliases)):
                     alias: str = module.aliases[alias_index]
                     prefix: str = ""
-                    p: int64 = 0
-                    while p < core.len(parts):
+                    for p in range(core.len(parts)):
                         if p > 0:
                             prefix = prefix + "."
                         prefix = prefix + parts[p]
                         if prefix == alias && p + 1 > matched_parts:
                             matched = alias_index
                             matched_parts = p + 1
-                        p = p + 1
-                    alias_index = alias_index + 1
                 if matched >= 0:
                     if matched_parts >= core.len(parts):
                         diagnostics.module_error(module, i, "a module namespace is not a value")
                     dependency: module_model.ModuleInfo = modules[module.dependencies[matched]]
                     member: str = parts[matched_parts]
-                    if not has_name(dependency.names, member):
+                    if not arrays.contains(dependency.names, member):
                         diagnostics.module_error(module, i, "module '" + module.aliases[matched] + "' has no declaration '" + member + "'")
                     text = dependency.prefix + member
-                    if has_name(dependency.intrinsics, member):
+                    if arrays.contains(dependency.intrinsics, member):
                         text = "__sole_intrinsic_" + member
                     i = ends[matched_parts]
-                elif has_name(roots, text):
+                elif arrays.contains(roots, text):
                     diagnostics.module_error(module, i, "unknown module member")
                 else:
                     field: bool = record_scope && depth == 1 && line_start && following == ":"
                     method: bool = record_scope && depth == 1 && previous == "def"
-                    if has_name(module.names, text) && not field && not method:
-                        if has_name(module.intrinsics, text):
+                    binding_index: int64 = named_import_index(module, text)
+                    if binding_index >= 0 && not field && not method:
+                        declaration: bool = following == ":" && (line_start || previous == "(" || previous == ",")
+                        assignment: bool = (following == "=" || following == "+=") && previous != ":" && previous != "->"
+                        if declaration || assignment || previous == "for" || previous == "def":
+                            diagnostics.module_error(module, i, "imported name cannot be rebound or shadowed: " + text)
+                        binding: module_model.NamedImport = module.named_imports[binding_index]
+                        dependency: module_model.ModuleInfo = modules[binding.dependency]
+                        text = dependency.prefix + binding.exported_name
+                        if arrays.contains(dependency.intrinsics, binding.exported_name):
+                            text = "__sole_intrinsic_" + binding.exported_name
+                    elif arrays.contains(module.names, text) && not field && not method:
+                        if arrays.contains(module.intrinsics, text):
                             text = "__sole_intrinsic_" + text
                         else:
                             text = module.prefix + text
@@ -275,22 +309,20 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lex
             line_start = true
         else:
             line_start = false
-        lexical_tokens.token_add(output, text, kind, source_line)
+        output.add(text, kind, source_line)
         output.files[core.len(output.files) - 1] = module.path
         i = i + 1
 
 
-# Combine the entry module and its dependencies into one token stream.
 def load_imports(filename: str, source: str, inputs: str[]) -> lexical_tokens.Tokens:
+    """Combine the entry module and its dependencies into one token stream."""
     modules: module_model.ModuleInfo[] = []
-    path: str = core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(filename)))
+    path: str = files.realpath(filename)
     load_module(modules, path, source)
     output: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], 0, [])
-    i: int64 = 0
-    while i < core.len(modules):
+    for i in range(core.len(modules)):
         core.append(inputs, modules[i].path)
         rewrite_module(modules, i, output)
-        i = i + 1
-    lexical_tokens.token_add(output, "<end>", 0, 1)
+    output.add("<end>", 0, 1)
     output.files[core.len(output.files) - 1] = path
     return output

@@ -1,3 +1,4 @@
+
 # Locate compiler resources and the standard library.
 extern def sole_rt_home() -> ptr
 
@@ -31,3 +32,6 @@ extern def sole_rt_atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr
 
 
 extern def sole_rt_same_file(first: ptr, second: ptr) -> int32
+
+
+extern def sole_rt_process_run(executable: ptr, arguments: ptr, status: ptr) -> int32

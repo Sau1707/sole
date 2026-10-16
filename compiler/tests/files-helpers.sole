@@ -1,0 +1,40 @@
+import core
+import files
+
+
+def main() -> int32:
+    """Exercise filesystem helpers against paths prepared by files-helpers.sh."""
+    root: str = core.arg(1)
+    target: str = root + "/target"
+    link: str = root + "/link"
+    hard: str = root + "/hard"
+    alias: str = root + "/alias"
+    missing: str = root + "/missing"
+    dangling: str = root + "/dangling"
+    if not files.is_file(target) || not files.is_file(link) || not files.is_file(hard):
+        return 1
+    if files.is_file(root) || files.is_file(missing) || files.is_file(dangling):
+        return 2
+    if files.realpath(link) != files.realpath(target) || files.realpath(root + "/./target") != target:
+        return 3
+    if not files.same_file(target, link) || not files.same_file(hard, alias):
+        return 4
+    if files.same_file(target, hard) || files.same_file(target, missing) || files.same_file(missing, missing):
+        return 5
+    if files.atomic_write(link, "updated\n") != "" || files.read(target) != "updated\n":
+        return 6
+    if not files.same_file(target, link):
+        return 7
+    if files.atomic_write(target, "") != "" || files.read(target) != "":
+        return 8
+    error: str = files.atomic_write(hard, "must not be written")
+    if error == "" || files.read(hard) != "original\n" || not files.same_file(hard, alias):
+        return 9
+    core.print(error)
+    if files.atomic_write(missing, "must not be created") == "" || files.is_file(missing):
+        return 10
+    if files.atomic_write(dangling, "must not be created") == "" || files.is_file(dangling):
+        return 11
+    if files.atomic_write(root, "must not replace a directory") == "":
+        return 12
+    return 0

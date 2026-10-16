@@ -14,7 +14,7 @@ struct Pair:
     second: int32
 
 
-class Box:
+struct Box:
     small: uint8
     items: int16[]
 
@@ -36,6 +36,9 @@ struct Pair:
 
 class Trace:
     digits: int32
+    def mark(self, digit: int32) -> int32:
+        self.digits = self.digits * 10 + digit
+        return digit
 
 
 class Box:
@@ -57,21 +60,16 @@ struct Empty:
     pass
 
 
-def mark(trace: Trace, digit: int32) -> int32:
-    trace.digits = trace.digits * 10 + digit
-    return digit
-
-
 def identity(value: int32) -> int32:
     return value
 
 
 def main() -> int32:
     trace: Trace = Trace(digits=0)
-    pair: Pair = Pair(second=mark(trace, 2), first=mark(trace, 1))
+    pair: Pair = Pair(second=trace.mark(2), first=trace.mark(1))
     if trace.digits != 21 || pair.first != 1 || pair.second != 2:
         return 1
-    mixed: Pair = Pair(mark(trace, 3), second=mark(trace, 4))
+    mixed: Pair = Pair(trace.mark(3), second=trace.mark(4))
     if trace.digits != 2134 || mixed.first != 3 || mixed.second != 4:
         return 2
     box: Box = Box(data=[7, 8], pair=Pair(second=6, first=5))
@@ -91,7 +89,7 @@ def main() -> int32:
     if identity(positional.first) != 13 || positional.second != 14:
         return 7
     class_trace: Trace = Trace(0)
-    class_box: Box = Box(data=[int16(mark(class_trace, 1)), int16(mark(class_trace, 2))], pair=Pair(mark(class_trace, 3), mark(class_trace, 4)))
+    class_box: Box = Box(data=[int16(class_trace.mark(1)), int16(class_trace.mark(2))], pair=Pair(class_trace.mark(3), class_trace.mark(4)))
     if class_trace.digits != 1234 || class_box.sum() != 7:
         return 8
     labels: models.Labels = models.Labels(models=2, identity=1)

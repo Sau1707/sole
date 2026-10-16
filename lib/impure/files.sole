@@ -1,18 +1,50 @@
 import core
 import wrappers.libc
+import wrappers.system
 
 
 def read(path: str) -> str:
+    """TODO: Document this function."""
     return core.read_file(path)
 
 
 def write(path: str, contents: str) -> void:
+    """TODO: Document this function."""
     core.write_file(path, contents)
 
 
+def is_file(path: str) -> bool:
+    """Return whether path resolves to a regular file, following symlinks."""
+    return wrappers.system.sole_rt_is_file(core.cstr(path)) != 0
+
+
+def realpath(path: str) -> str:
+    """Return the canonical absolute path, exiting with an error if resolution fails."""
+    return core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(path)))
+
+
+def same_file(first: str, second: str) -> bool:
+    """Return whether both paths identify the same file, or false if either cannot be resolved."""
+    return wrappers.system.sole_rt_same_file(core.cstr(first), core.cstr(second)) != 0
+
+
+def atomic_write(path: str, contents: str) -> str:
+    """Atomically replace an existing regular file; return empty on success or an error message.
+
+    Follow symlinks and preserve the destination path rather than replacing the link.
+    Refuse files with multiple hard links. Missing files are not created.
+    """
+    error: ptr = wrappers.system.sole_rt_atomic_write_file(core.cstr(path), core.cstr(contents), core.len(contents))
+    if error == ptr(0):
+        return ""
+    return core.from_cstr(error)
+
+
 def remove(path: str) -> bool:
+    """TODO: Document this function."""
     return wrappers.libc.remove(core.cstr(path)) == 0
 
 
 def rename(source: str, destination: str) -> bool:
+    """TODO: Document this function."""
     return wrappers.libc.rename(core.cstr(source), core.cstr(destination)) == 0

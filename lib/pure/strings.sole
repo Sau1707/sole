@@ -2,32 +2,62 @@ import core
 
 
 def starts_with(text: str, prefix: str) -> bool:
+    """TODO: Document this function."""
     return core.len(prefix) <= core.len(text) && core.slice(text, 0, core.len(prefix)) == prefix
 
 
 def ends_with(text: str, suffix: str) -> bool:
+    """TODO: Document this function."""
     return core.len(suffix) <= core.len(text) && core.slice(text, core.len(text) - core.len(suffix), core.len(text)) == suffix
 
 
 def find(text: str, needle: str) -> int64:
-    i: int64 = 0
-    while i <= core.len(text) - core.len(needle):
+    """TODO: Document this function."""
+    for i in range(core.len(text) - core.len(needle) + 1):
         if core.slice(text, i, i + core.len(needle)) == needle:
             return i
-        i = i + 1
     return -1
 
 
 def contains(text: str, needle: str) -> bool:
+    """TODO: Document this function."""
     return find(text, needle) >= 0
 
 
+def replace(text: str, old: str, new: str) -> str:
+    """Replace non-overlapping byte matches; an empty old string leaves text unchanged."""
+    if old == "":
+        return text
+    parts: str[] = []
+    start: int64 = 0
+    i: int64 = 0
+    while i <= core.len(text) - core.len(old):
+        if core.slice(text, i, i + core.len(old)) == old:
+            core.append(parts, core.slice(text, start, i))
+            core.append(parts, new)
+            i = i + core.len(old)
+            start = i
+        else:
+            i = i + 1
+    core.append(parts, core.slice(text, start, core.len(text)))
+    return core.join(parts)
+
+
+def partition(text: str, separator: str) -> str[]:
+    """Return [before, separator, after] at the first byte match, or [text, "", ""] if absent or empty."""
+    if separator == "":
+        return [text, "", ""]
+    index: int64 = find(text, separator)
+    if index < 0:
+        return [text, "", ""]
+    return [core.slice(text, 0, index), separator, core.slice(text, index + core.len(separator), core.len(text))]
+
+
 def repeat(text: str, count: int64) -> str:
+    """TODO: Document this function."""
     if text == "" || count <= 0:
         return ""
     parts: str[] = []
-    i: int64 = 0
-    while i < count:
+    for i in range(count):
         core.append(parts, text)
-        i = i + 1
     return core.join(parts)

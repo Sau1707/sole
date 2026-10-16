@@ -1,6 +1,6 @@
 struct Empty:
     """An empty record."""
-class EmptyClass:
-    """An empty class."""
+struct EmptyRecord:
+    """Another empty record."""
 def main() -> void:
     """An empty function."""

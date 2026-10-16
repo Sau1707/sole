@@ -1,14 +1,13 @@
 import core
-import codegen.llvm.context as context
 import semantic.model as model
 import diagnostics.report as report
+import codegen.llvm.context as context
 
 
 def variant_index(state: context.State, info: model.SumInfo, name: str) -> int64:
-    i: int64 = 0
-    while i < core.len(info.variants):
+    """TODO: Document this function."""
+    for i in range(core.len(info.variants)):
         if info.variants[i].name == name:
             return i
-        i = i + 1
     report.fail_at(state, "unknown member '" + name + "' for " + info.name)
     return -1

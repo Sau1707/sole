@@ -3,4 +3,5 @@ import codegen.llvm.scalars.definition as scalar_definition
 
 class void:
     def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
         return scalar_definition.Type("void", "void", 0, "void", false)

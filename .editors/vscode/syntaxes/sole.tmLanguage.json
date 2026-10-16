@@ -7,16 +7,17 @@
     { "include": "#bytes" },
     { "include": "#strings" },
     {
-      "begin": "\\b(import)\\b",
+      "begin": "\\b(import|from)\\b",
       "end": "$",
       "beginCaptures": {
         "1": { "name": "keyword.control.import.sole keyword.control.import.python" }
       },
       "patterns": [
         { "include": "#comments" },
-        { "match": "\\bas\\b", "name": "keyword.control.import.sole keyword.control.import.python" },
+        { "match": "\\b(as|import)\\b", "name": "keyword.control.import.sole keyword.control.import.python" },
         { "match": "[\\p{L}_][\\p{L}\\p{N}_]*", "name": "variable.other.property.sole" },
-        { "match": "\\.", "name": "punctuation.separator.sole punctuation.separator.period.python" }
+        { "match": "\\.", "name": "punctuation.separator.sole punctuation.separator.period.python" },
+        { "match": ",", "name": "punctuation.separator.sole" }
       ]
     },
     {

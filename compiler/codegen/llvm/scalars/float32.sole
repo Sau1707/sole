@@ -3,4 +3,5 @@ import codegen.llvm.scalars.definition as scalar_definition
 
 class float32:
     def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
         return scalar_definition.Type("float32", "float", 32, "float", false)

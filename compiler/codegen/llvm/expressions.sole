@@ -1,24 +1,25 @@
 import core
-import codegen.llvm.casts as casts
+import arrays
 import codegen.llvm.ir as ir
-import codegen.llvm.literals as literals
-import codegen.llvm.operators as llvm_operators
-import codegen.llvm.output as output
-import codegen.llvm.types as llvm_types
-import semantic.resolve.builtins as builtins
-import diagnostics.report as report
-import codegen.llvm.context as context
 import semantic.model as model
-import syntax.parser.operators as operators
-import semantic.resolve.symbols as symbols
-import semantic.resolve.variants as variants
-import codegen.llvm.sumtypes as sumtypes
+import codegen.llvm.casts as casts
+import diagnostics.report as report
+import codegen.llvm.output as output
 import syntax.parser.tokens as tokens
+import codegen.llvm.context as context
+import codegen.llvm.types as llvm_types
+import codegen.llvm.literals as literals
+import codegen.llvm.sumtypes as sumtypes
 import semantic.types.query as type_query
+import semantic.resolve.symbols as symbols
+import syntax.parser.operators as operators
+import semantic.resolve.builtins as builtins
+import semantic.resolve.variants as variants
+import codegen.llvm.operators as llvm_operators
 
 
-# Parse positional arguments using the expected parameter types.
 def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
+    """Parse positional arguments using the expected parameter types."""
     values: context.Value[] = []
     tokens.expect(state, "(")
     while tokens.peek(state) != ")":
@@ -36,13 +37,12 @@ def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
 
 
 def parse_constructor_arguments(state: context.State, record: model.RecordInfo) -> context.Value[]:
+    """TODO: Document this function."""
     values: context.Value[] = []
     assigned: bool[] = []
-    i: int64 = 0
-    while i < core.len(record.names):
+    for i in range(core.len(record.names)):
         core.append(values, context.Value("void", "", ""))
         core.append(assigned, false)
-        i = i + 1
     tokens.expect(state, "(")
     positional: int64 = 0
     named: bool = false
@@ -52,10 +52,8 @@ def parse_constructor_arguments(state: context.State, record: model.RecordInfo) 
             named = true
             field_name: str = tokens.identifier(state)
             tokens.expect(state, "=")
-            field_index = 0
-            while field_index < core.len(record.names) && record.names[field_index] != field_name:
-                field_index = field_index + 1
-            if field_index == core.len(record.names):
+            field_index = arrays.index_of(record.names, field_name)
+            if field_index < 0:
                 report.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
         else:
             if named:
@@ -72,16 +70,15 @@ def parse_constructor_arguments(state: context.State, record: model.RecordInfo) 
         if not tokens.accept(state, ","):
             break
     tokens.expect(state, ")")
-    i = 0
-    while i < core.len(record.names):
+    for i in range(core.len(record.names)):
         if not assigned[i]:
             report.fail_at(state, "missing constructor field '" + record.names[i] + "' for " + record.name)
-        i = i + 1
     return values
 
 
-# Validate intrinsic arguments and emit their runtime operations.
 def call_builtin(state: context.State, name: str) -> context.Value:
+    """Validate intrinsic arguments and emit their runtime operations."""
+
     # Infer an appended value's type from the destination array.
     if name == "append":
         tokens.expect(state, "(")
@@ -94,6 +91,7 @@ def call_builtin(state: context.State, name: str) -> context.Value:
         tokens.expect(state, ")")
         ir.append_ir(state, array_value, next_item)
         return context.Value("void", "", "")
+
     # Check ordinary intrinsic argument types and counts.
     types: str[] = []
     if name == "arg" || name == "exit":
@@ -165,6 +163,7 @@ def call_builtin(state: context.State, name: str) -> context.Value:
     elif name == "exit":
         ir.emit(state, "call void @exit(i32 " + value.value + ")")
         return context.Value("void", "", "")
+
     # Convert file paths to C strings before calling native I/O helpers.
     path: str = ir.c_string(state, value)
     if name == "read_file":
@@ -181,8 +180,8 @@ def call_builtin(state: context.State, name: str) -> context.Value:
     return context.Value("void", "", "")
 
 
-# Resolve intrinsic calls, casts, constructors, functions, and methods.
 def named_call(state: context.State, name: str, receiver: context.Value[]) -> context.Value:
+    """Resolve intrinsic calls, casts, constructors, functions, and methods."""
     if core.len(receiver) == 0 && core.len(name) > 17 && core.slice(name, 0, 17) == "__sole_intrinsic_":
         return call_builtin(state, core.slice(name, 17, core.len(name)))
     if core.len(receiver) == 0 && (type_query.integer_type(name) || type_query.float_type(name) || name == "bool" || name == "ptr" || name == "str"):
@@ -209,14 +208,12 @@ def named_call(state: context.State, name: str, receiver: context.Value[]) -> co
             end: str = ir.instruction(state, "getelementptr %" + name + ", ptr null, i32 1")
             size: str = ir.instruction(state, "ptrtoint ptr " + end + " to i64")
             pointer = ir.instruction(state, "call ptr @_sole.alloc64(i64 " + size + ")")
-        i: int64 = 0
-        while i < core.len(arguments):
+        for i in range(core.len(arguments)):
             if record.kind == "class":
                 field: str = ir.instruction(state, "getelementptr %" + name + ", ptr " + pointer + ", i32 0, i32 " + str(i))
                 ir.emit(state, "store " + ir.typed(state, arguments[i]) + ", ptr " + field)
             else:
                 aggregate = ir.instruction(state, "insertvalue %" + name + " " + aggregate + ", " + ir.typed(state, arguments[i]) + ", " + str(i))
-            i = i + 1
         if record.kind == "class":
             return context.Value(name, pointer, "")
         if core.len(arguments) == 0:
@@ -229,22 +226,18 @@ def named_call(state: context.State, name: str, receiver: context.Value[]) -> co
     parameter_types: str[] = fn.types
     if core.len(receiver) > 0:
         parameter_types = []
-        j: int64 = core.len(receiver)
-        while j < core.len(fn.types):
+        for j in range(core.len(receiver), core.len(fn.types)):
             core.append(parameter_types, fn.types[j])
-            j = j + 1
     values: context.Value[] = parse_arguments(state, parameter_types)
     if core.len(values) + core.len(receiver) != core.len(fn.types):
         report.fail_at(state, "wrong number of arguments for " + name)
     parts: str[] = []
     if core.len(receiver) > 0:
         core.append(parts, ir.typed(state, receiver[0]))
-    k: int64 = 0
-    while k < core.len(values):
+    for k in range(core.len(values)):
         if core.len(parts) > 0:
             core.append(parts, ", ")
         core.append(parts, ir.typed(state, values[k]))
-        k = k + 1
     call_text: str = "call " + llvm_types.llvm_type(state, fn.result) + " @" + ir.function_symbol(fn) + "(" + core.join(parts) + ")"
     if fn.result == "void":
         ir.emit(state, call_text)
@@ -253,11 +246,13 @@ def named_call(state: context.State, name: str, receiver: context.Value[]) -> co
 
 
 def expression(state: context.State, minimum: int32, expected: str) -> context.Value:
+    """TODO: Document this function."""
     return parse_expression(state, minimum, expected).value
 
 
-# Parse and lower an expression using operator precedence.
 def parse_expression(state: context.State, minimum: int32, expected: str) -> context.Expression:
+    """Parse and lower an expression using operator precedence."""
+
     # Read the initial literal, unary operation, grouped value, or name.
     kind: int32 = state.tokens.kind[state.tokens.position]
     text: str = tokens.take(state)
@@ -323,11 +318,9 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
     elif kind == 2:
         number_kind: str = "integer"
         hex_number: bool = core.len(text) > 1 && text[0] == 48 && (text[1] == 120 || text[1] == 88)
-        n: int64 = 0
-        while n < core.len(text):
+        for n in range(core.len(text)):
             if text[n] == 46 || not hex_number && (text[n] == 101 || text[n] == 69):
                 number_kind = "real"
-            n = n + 1
         left = context.Value(number_kind, text, "")
     elif kind == 1:
         si: int64 = symbols.sum_index(state, text)
@@ -355,6 +348,7 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
     else:
         report.fail_at(state, "expected an expression, got '" + text + "'")
     while true:
+
         # Extend the value with members, indexes, or binary operators.
         if tokens.accept(state, "."):
             member: str = tokens.identifier(state)
@@ -427,9 +421,9 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
             tokens.take(state)
             if operator == "&&" || operator == "||":
                 left = literals.coerce(state, left, "bool")
-                rhs_label: str = ir.fresh(state)
-                short_label: str = ir.fresh(state)
-                end_label: str = ir.fresh(state)
+                rhs_label: str = state.fresh()
+                short_label: str = state.fresh()
+                end_label: str = state.fresh()
                 bool_slot: str = ir.slot(state, "bool")
                 if operator == "&&":
                     ir.emit(state, "br i1 " + left.value + ", label %" + rhs_label + ", label %" + short_label)

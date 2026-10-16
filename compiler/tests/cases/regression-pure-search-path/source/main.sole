@@ -1,0 +1,59 @@
+import core
+import strings
+import arrays
+import os.path
+
+
+def partition_is(text: str, separator: str, before: str, matched: str, after: str) -> bool:
+    parts: str[] = strings.partition(text, separator)
+    return core.len(parts) == 3 && parts[0] == before && parts[1] == matched && parts[2] == after
+
+
+def split_is(text: str, directory: str, basename: str) -> bool:
+    parts: str[] = os.path.split(text)
+    return core.len(parts) == 2 && parts[0] == directory && parts[1] == basename
+
+
+def main() -> int32:
+    if strings.replace("", "", "x") != "" || strings.replace("abc", "", "x") != "abc":
+        return 1
+    if strings.replace("abc", "abcd", "x") != "abc" || strings.replace("abc", "z", "x") != "abc":
+        return 2
+    if strings.replace("aaaaa", "aa", "x") != "xxa" || strings.replace("aba", "a", "") != "b":
+        return 3
+    if strings.replace("a", "a", "aa") != "aa" || strings.replace("é.猫.é", ".", "/") != "é/猫/é":
+        return 4
+    if strings.replace("a\0a", "\0", "é") != "aéa" || strings.replace("猫猫", "猫", "é") != "éé":
+        return 5
+    if not partition_is("", "", "", "", "") || not partition_is("abc", "", "abc", "", ""):
+        return 6
+    if not partition_is("abc", "abcd", "abc", "", "") || not partition_is("abc", "z", "abc", "", ""):
+        return 7
+    if not partition_is(".a.b", ".", "", ".", "a.b") || not partition_is("a.", ".", "a", ".", ""):
+        return 8
+    if not partition_is("猫é猫", "é", "猫", "é", "猫") || not partition_is("a\0b", "\0", "a", "\0", "b"):
+        return 9
+    empty: str[] = []
+    items: str[] = ["", "猫", "a\0b", "猫"]
+    if arrays.contains(empty, "") || arrays.index_of(empty, "") != -1:
+        return 10
+    if not arrays.contains(items, "") || arrays.index_of(items, "猫") != 1 || arrays.index_of(items, "a\0b") != 2:
+        return 11
+    if arrays.contains(items, "a") || arrays.index_of(items, "missing") != -1 || core.len(items) != 4:
+        return 12
+    if not split_is("", "", "") || not split_is("name", "", "name") || not split_is("/", "/", ""):
+        return 13
+    if not split_is("//a///b", "//a///", "b") || not split_is("a//", "a//", ""):
+        return 14
+    if not split_is("/猫/é.sole", "/猫/", "é.sole") || not split_is("./a", "./", "a"):
+        return 15
+    if os.path.replace_suffix(".sole", ".sole", ".o") != ".sole.o" || os.path.replace_suffix("", ".sole", ".o") != ".o":
+        return 16
+    if os.path.replace_suffix("猫.sole", ".sole", ".o") != "猫.o" || os.path.replace_suffix("/.sole", ".sole", ".o") != "/.o":
+        return 17
+    if os.path.replace_suffix("a.sole/", ".sole", ".o") != "a.sole/.o" || os.path.replace_suffix("a.SOLE", ".sole", ".o") != "a.SOLE.o":
+        return 18
+    if os.path.replace_suffix("a.sole", ".sole", "") != "a" || os.path.replace_suffix("a", "", ".o") != "a.o":
+        return 19
+    core.print("pure helpers ok")
+    return 0

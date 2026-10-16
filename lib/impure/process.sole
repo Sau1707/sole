@@ -1,0 +1,41 @@
+import core
+import wrappers.libc
+import wrappers.system
+
+
+struct Result:
+    exit_code: int32
+    signal: int32
+    error: str
+
+
+def has_nul(text: str) -> bool:
+    """Check whether a string cannot be represented as a process argument."""
+    for i in range(core.len(text)):
+        if text[i] == 0:
+            return true
+    return false
+
+
+def run(executable: str, arguments: str[]) -> Result:
+    """Run synchronously without a shell, inheriting environment and standard streams.
+
+    Arguments exclude argv[0]. On launch or wait failure error is nonempty;
+    otherwise exactly one of exit_code (nonnegative) or signal (positive) applies.
+    Executable names without slashes are searched on PATH. Scripts need a shebang.
+    """
+    if executable == "" || has_nul(executable):
+        return Result(-1, 0, "invalid process executable")
+    argv: ptr[] = [core.cstr(executable)]
+    for i in range(core.len(arguments)):
+        if has_nul(arguments[i]):
+            return Result(-1, 0, "process argument contains NUL")
+        core.append(argv, core.cstr(arguments[i]))
+    core.append(argv, ptr(0))
+    status: int32 = 0
+    error: int32 = wrappers.system.sole_rt_process_run(argv[0], core.address(argv[0]), core.address(status))
+    if error != 0:
+        return Result(-1, 0, core.from_cstr(wrappers.libc.strerror(error)))
+    if (status & 127) != 0:
+        return Result(-1, status & 127, "")
+    return Result((status >> 8) & 255, 0, "")

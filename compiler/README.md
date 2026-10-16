@@ -46,7 +46,9 @@ Do not use `support/` as a home for otherwise unowned compiler responsibilities.
 
 ## Verification
 
-From the repository root:
+Install a released Sole compiler first (see the root README), then run from the
+repository root. Bootstrap uses `sole` on `PATH`, or the compiler specified by
+`SOLE_BOOTSTRAP`:
 
 ```sh
 sh scripts/bootstrap-ci.sh

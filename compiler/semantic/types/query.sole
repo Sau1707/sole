@@ -1,61 +1,60 @@
 import core
-import syntax.lexer.characters as characters
 import diagnostics.report as report
+import syntax.lexer.characters as characters
 import codegen.llvm.scalars.registry as registry
 
 
 def builtin_type(typ: str) -> bool:
+    """TODO: Document this function."""
     return registry.lookup(typ).llvm != ""
 
 
-# Recognize fixed-size and growable array type names.
 def array_type(typ: str) -> bool:
+    """Recognize fixed-size and growable array type names."""
     return core.len(typ) > 2 && typ[core.len(typ) - 1] == 93
 
 
-# Extract the base type before an array's brackets.
 def element_type(typ: str) -> str:
+    """Extract the base type before an array's brackets."""
     i: int64 = 0
     while i < core.len(typ) && typ[i] != 91:
         i = i + 1
     return core.slice(typ, 0, i)
 
 
-# Recognize growable arrays with empty brackets.
 def dynamic_type(typ: str) -> bool:
+    """Recognize growable arrays with empty brackets."""
     return array_type(typ) && typ[core.len(typ) - 2] == 91
 
 
-# Recognize the supported signed and unsigned integer types.
 def integer_type(typ: str) -> bool:
+    """Recognize the supported signed and unsigned integer types."""
     return registry.lookup(typ).integer()
 
 
-# Recognize the supported floating-point types.
 def float_type(typ: str) -> bool:
+    """Recognize the supported floating-point types."""
     return registry.lookup(typ).floating()
 
 
-# Distinguish unsigned integer type names.
 def unsigned_type(typ: str) -> bool:
+    """Distinguish unsigned integer type names."""
     return registry.lookup(typ).unsigned
 
 
-# Parse a bounded decimal size, allowing underscore separators.
 def decimal(text: str) -> int64:
+    """Parse a bounded decimal size, allowing underscore separators."""
     result_number: int64 = 0
-    i: int64 = 0
-    while i < core.len(text):
+    for i in range(core.len(text)):
         if text[i] != 95:
             if not characters.digit(text[i]):
                 report.die("expected a decimal integer: " + text)
             if result_number > 1000000000:
                 report.die("decimal size is too large")
             result_number = result_number * 10 + int64(text[i] - 48)
-        i = i + 1
     return result_number
 
 
-# Read the element count from a fixed-size array type.
 def fixed_length(typ: str) -> int64:
+    """Read the element count from a fixed-size array type."""
     return decimal(core.slice(typ, core.len(element_type(typ)) + 1, core.len(typ) - 1))

@@ -2,12 +2,14 @@ import core
 
 
 def fibonacci(n: int64) -> int64:
+    """TODO: Document this function."""
     if n < 2:
         return n
     return fibonacci(n - 1) + fibonacci(n - 2)
 
 
 def main() -> int32:
+    """TODO: Document this function."""
     n: int64 = 40
     result: int64 = fibonacci(n)
 

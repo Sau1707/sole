@@ -1,5 +1,8 @@
-import codegen.llvm.scalars.definition as scalar_definition
+import codegen.llvm.scalars.str as scalar_str
+import codegen.llvm.scalars.ptr as scalar_ptr
 import codegen.llvm.scalars.int8 as scalar_int8
+import codegen.llvm.scalars.bool as scalar_bool
+import codegen.llvm.scalars.void as scalar_void
 import codegen.llvm.scalars.int16 as scalar_int16
 import codegen.llvm.scalars.int32 as scalar_int32
 import codegen.llvm.scalars.int64 as scalar_int64
@@ -9,13 +12,11 @@ import codegen.llvm.scalars.uint32 as scalar_uint32
 import codegen.llvm.scalars.uint64 as scalar_uint64
 import codegen.llvm.scalars.float32 as scalar_float32
 import codegen.llvm.scalars.float64 as scalar_float64
-import codegen.llvm.scalars.bool as scalar_bool
-import codegen.llvm.scalars.str as scalar_str
-import codegen.llvm.scalars.ptr as scalar_ptr
-import codegen.llvm.scalars.void as scalar_void
+import codegen.llvm.scalars.definition as scalar_definition
 
 
 def lookup(name: str) -> scalar_definition.Type:
+    """TODO: Document this function."""
     if name == "int8":
         return scalar_int8.int8().definition()
     if name == "int16":

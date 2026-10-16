@@ -28,9 +28,14 @@ class State:
     result: str
     filename: str
 
+    def fresh(self) -> str:
+        """TODO: Document this function."""
+        self.serial = self.serial + 1
+        return "v" + str(self.serial)
+
 
 # Carry an expression's type, LLVM value, and optional storage address.
-class Value:
+struct Value:
     typ: str
     value: str
     pointer: str

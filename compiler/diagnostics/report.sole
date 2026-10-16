@@ -1,22 +1,22 @@
 import core
-import codegen.llvm.context as context
 import modules.model as module_model
+import codegen.llvm.context as context
 
 
-# Report a fatal compiler error and terminate.
 def die(message: str) -> void:
+    """Report a fatal compiler error and terminate."""
     core.print("sole: error: " + message)
     core.exit(1)
 
 
-# Report an error at the current token's source location.
 def fail_at(state: context.State, message: str) -> void:
+    """Report an error at the current token's source location."""
     filename: str = state.tokens.files[state.tokens.position]
     if filename == "":
         filename = state.filename
     die(filename + ":" + str(state.tokens.line[state.tokens.position]) + ": " + message)
 
 
-# Report an import error at a module's token location.
 def module_error(module: module_model.ModuleInfo, position: int64, message: str) -> void:
+    """Report an import error at a module's token location."""
     die(module.path + ":" + str(module.tokens.line[position]) + ": " + message)
