@@ -1,0 +1,16 @@
+import core
+import allocation
+
+extern def malloc(size: int64) -> ptr
+extern def putchar(value: int32) -> int32
+extern def exit(status: int32) -> void
+extern def sole_rt_init(argc: int32, argv: ptr) -> void
+extern def sole_rt_arg_count() -> int64
+extern def sole_rt_arg(index: int64) -> ptr
+extern def sole_rt_read_file(path: ptr, length: ptr) -> ptr
+extern def sole_rt_write_file(path: ptr, data: ptr, length: int64) -> void
+
+def main() -> int32:
+    core.print(malloc(1) != ptr(0))
+    core.print(allocation.allocate() != ptr(0))
+    return 0

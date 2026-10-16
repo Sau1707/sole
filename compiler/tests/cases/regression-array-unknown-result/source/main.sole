@@ -1,0 +1,6 @@
+def unused() -> MissingType[]:
+    return []
+
+
+def main() -> int32:
+    return 0

@@ -1,0 +1,3 @@
+def main() -> int32:
+    value: float32 = 1.2E-
+    return 0

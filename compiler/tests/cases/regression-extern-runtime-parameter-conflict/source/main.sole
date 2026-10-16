@@ -1,0 +1,4 @@
+extern def malloc(size: int32) -> ptr
+
+def main() -> int32:
+    return 0

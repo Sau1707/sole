@@ -1,0 +1,21 @@
+import core
+
+
+def main() -> int32:
+    decimal: float64 = 1.25
+    trailing_dot: float64 = 2.
+    exponent: float64 = 125e-2
+    positive_exponent: float64 = 1.25E+2
+    negative: float64 = -1.25e1
+    single: float32 = 1.25e0
+    integer: float64 = 42
+    negative_integer: float32 = -42
+    core.print(decimal == 1.25)
+    core.print(trailing_dot == 2)
+    core.print(exponent == decimal)
+    core.print(positive_exponent == 125)
+    core.print(negative == -12.5)
+    core.print(single == 1.25)
+    core.print(integer == 42)
+    core.print(negative_integer == -42)
+    return 0

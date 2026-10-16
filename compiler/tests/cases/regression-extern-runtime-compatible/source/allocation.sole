@@ -1,0 +1,4 @@
+extern def malloc(size: uint64) -> ptr
+
+def allocate() -> ptr:
+    return malloc(1)

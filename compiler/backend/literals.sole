@@ -76,7 +76,11 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
 
 # Encode floating-point literals with exact LLVM bit patterns.
 def float_literal(state: frontend.model.State, text: str, typ: str) -> frontend.model.Value:
-    real_value: float64 = wrappers.libc.strtod(core.cstr(text), ptr(0))
+    start: ptr = core.cstr(text)
+    end: ptr = ptr(0)
+    real_value: float64 = wrappers.libc.strtod(start, core.address(end))
+    if end == start || wrappers.libc.strlen(end) != 0:
+        frontend.diagnostics.fail_at(state, "invalid floating-point literal")
     bits: uint64 = wrappers.system.sole_rt_f64_bits(real_value)
     digits: str = "0123456789ABCDEF"
     hex: str = "0x"

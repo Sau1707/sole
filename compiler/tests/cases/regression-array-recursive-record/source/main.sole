@@ -1,0 +1,12 @@
+import core
+
+
+struct Node:
+    children: Node[]
+
+
+def main() -> int32:
+    leaf: Node = Node([])
+    root: Node = Node([leaf])
+    core.print(core.len(root.children))
+    return 0

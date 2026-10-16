@@ -19,17 +19,34 @@ jobs:
       - name: Install LLVM 21 and native build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl gnupg
+          sudo apt-get install -y build-essential curl gnupg patchelf
           curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/llvm.gpg > /dev/null
           echo 'deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main' | sudo tee /etc/apt/sources.list.d/llvm21.list
           sudo apt-get update
           sudo apt-get install -y llvm-21-dev
       - name: Bootstrap from the bundled seed
-        run: ./bootstrap.sh --seed
+        run: make bootstrap SOLE_SEED=1
         env:
           SOLE_LLVM_LIB: LLVM-21
+      - name: Package compiler with bundled libraries
+        run: |
+          version=$(.build/sole --version | awk '{print $2}')
+          sh scripts/package-release.sh "$version"
+          echo "SOLE_TEST_RELEASE=dist/sole-$version-linux-x86_64.tar.gz" >> "$GITHUB_ENV"
       - name: Test syntax, compiler, installation, and formatter
         run: make test-suite
+      - name: Test release without system LLVM
+        run: |
+          docker run --rm -e SOLE_TEST_RELEASE -v "$PWD:/source:ro" ubuntu:24.04 sh -eu -c '
+            apt-get update
+            apt-get install -y --no-install-recommends build-essential
+            mkdir /work
+            tar -xzf "/source/$SOLE_TEST_RELEASE" -C /work
+            package=/work/$(basename "$SOLE_TEST_RELEASE" .tar.gz)
+            "$package/bin/sole" --version
+            "$package/bin/sole" build /source/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole -o /work/hello
+            /work/hello
+          '
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,19 +56,10 @@ jobs:
         run: |
           npm --prefix .editors/vscode ci
           npm --prefix .editors/vscode test
-      - name: Package release
+      - name: Check release version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          version=${GITHUB_REF_NAME#v}
-          test "$(.build/sole --version)" = "sole $version (self-hosted)"
-          archive="sole-$version-linux-x86_64"
-          mkdir -p ".build/$archive/bin" ".build/$archive/share/sole"
-          install -m 755 .build/sole ".build/$archive/bin/sole"
-          cp -R lib ".build/$archive/share/sole/"
-          cp README.md .build/bootstrap-proof.txt ".build/$archive/"
-          mkdir -p dist
-          tar -C .build -czf "dist/$archive.tar.gz" "$archive"
-          (cd dist && sha256sum "$archive.tar.gz" > SHA256SUMS)
+          test "$(.build/sole --version)" = "sole ${GITHUB_REF_NAME#v} (self-hosted)"
       - uses: actions/upload-artifact@v4
         if: startsWith(github.ref, 'refs/tags/v')
         with:
@@ -77,4 +85,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
             --title "Sole ${GITHUB_REF_NAME#v}" \
-            --notes 'Experimental self-hosted Sole compiler with a built-in formatter. Linux x86-64 only; requires glibc, LLVM 21 (libLLVM.so.21.1), and a native C toolchain. Verify the archive using SHA256SUMS, then extract it and copy bin/ and share/ into your installation prefix. Source archives are available below.'
+            --notes 'Experimental self-hosted Sole compiler with a built-in formatter. Linux x86-64 with glibc 2.39 or newer. LLVM and its non-glibc dependencies are bundled. Use install.sh to install the release and any missing native C build tools. For manual installation, verify SHA256SUMS and copy bin/, lib/, and share/ into the same prefix. Third-party notices are in share/sole/licenses/. Source archives are available below.'

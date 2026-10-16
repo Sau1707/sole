@@ -11,7 +11,7 @@ import frontend.diagnostics
 # Parse command-line options and dispatch compilation, linking, or execution.
 def main() -> int32:
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.2 (self-hosted)")
+        core.print("sole 0.0.3 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -52,6 +52,8 @@ def main() -> int32:
                 frontend.diagnostics.die("unknown option: " + option)
             i = i + 1
         i = i + 1
+    if command == "run" && emission != "binary":
+        frontend.diagnostics.die("run requires binary emission")
     # Generate LLVM IR and handle validation-only requests.
     home: str = core.from_cstr(wrappers.system.sole_rt_home())
     contents: str = core.read_file(filename)

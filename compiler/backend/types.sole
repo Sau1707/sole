@@ -12,6 +12,10 @@ def llvm_type(state: frontend.model.State, typ: str) -> str:
     if definition.llvm != "":
         return definition.llvm
     if frontend.types.dynamic_type(typ):
+        element: str = frontend.types.element_type(typ)
+        if element == "void":
+            frontend.diagnostics.fail_at(state, "void cannot be an array element type")
+        llvm_type(state, element)
         return "ptr"
     if frontend.types.array_type(typ):
         length: int64 = frontend.types.fixed_length(typ)

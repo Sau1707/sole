@@ -1,0 +1,3 @@
+def main() -> int32:
+    items: MissingType[] = []
+    return 0

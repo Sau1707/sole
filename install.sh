@@ -2,7 +2,7 @@
 set -eu
 
 prefix=${1:-"$HOME/.local"}
-version=${SOLE_VERSION:-0.0.2}
+version=${SOLE_VERSION:-0.0.3}
 if [ "$#" -gt 1 ]; then
     echo "Usage: sh install.sh [/absolute/prefix]" >&2
     exit 1
@@ -13,13 +13,51 @@ case "$prefix" in
 esac
 destination=${DESTDIR:-}$prefix
 case "$version" in
-    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.2." >&2; exit 1 ;;
+    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.3." >&2; exit 1 ;;
 esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo "Prebuilt Sole releases support Linux x86-64 only." >&2
     exit 1
 fi
-for tool in curl sha256sum tar install; do
+case "${SOLE_INSTALL_DEPS:-1}" in
+    0|1) ;;
+    *) echo "SOLE_INSTALL_DEPS must be 0 or 1." >&2; exit 1 ;;
+esac
+
+install_dependencies() {
+    if [ "${SOLE_INSTALL_DEPS:-1}" = 0 ] || [ -n "${DESTDIR:-}" ]; then
+        echo "Install curl, coreutils, tar, gzip, awk, and a native C toolchain before installing Sole." >&2
+        exit 1
+    fi
+    elevate=
+    if [ "$(id -u)" != 0 ]; then
+        command -v sudo >/dev/null || { echo "Installing dependencies requires root or sudo." >&2; exit 1; }
+        elevate=sudo
+    fi
+    echo "Installing Sole's system dependencies (may request sudo access)."
+    if command -v apt-get >/dev/null; then
+        $elevate apt-get update
+        $elevate apt-get install -y build-essential curl coreutils tar gzip gawk
+    elif command -v dnf >/dev/null; then
+        $elevate dnf install -y gcc glibc-devel binutils curl coreutils tar gzip gawk
+    elif command -v yum >/dev/null; then
+        $elevate yum install -y gcc glibc-devel binutils curl coreutils tar gzip gawk
+    elif command -v pacman >/dev/null; then
+        $elevate pacman -S --needed --noconfirm base-devel curl coreutils tar gzip gawk
+    elif command -v zypper >/dev/null; then
+        $elevate zypper --non-interactive install gcc glibc-devel binutils curl coreutils tar gzip gawk
+    else
+        echo "Unsupported package manager. Install the dependencies manually, then rerun install.sh." >&2
+        exit 1
+    fi
+}
+
+missing=0
+for tool in curl sha256sum tar install awk gzip mktemp cp mkdir; do
+    command -v "$tool" >/dev/null || missing=1
+done
+if [ "$missing" = 1 ]; then install_dependencies; fi
+for tool in curl sha256sum tar install awk gzip mktemp cp mkdir; do
     command -v "$tool" >/dev/null || { echo "Install $tool first." >&2; exit 1; }
 done
 
@@ -27,6 +65,11 @@ temp_root=${TMPDIR:-/tmp}
 if [ -z "${TMPDIR:-}" ] && [ -d /tmp/opencode ]; then temp_root=/tmp/opencode; fi
 temporary=$(mktemp -d "$temp_root/sole-install-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
+
+check_toolchain() {
+    printf 'int main(void) { return 0; }\n' | "${SOLE_CC:-cc}" -x c - -o "$temporary/cc-test" > "$temporary/cc.log" 2>&1 &&
+        "$temporary/cc-test" >> "$temporary/cc.log" 2>&1
+}
 archive="sole-$version-linux-x86_64"
 base="https://github.com/Sau1707/sole/releases/download/v$version"
 curl --proto '=https' --tlsv1.2 -fL "$base/$archive.tar.gz" -o "$temporary/$archive.tar.gz"
@@ -36,12 +79,30 @@ awk -v file="$archive.tar.gz" '$2 == file { print; found = 1 } END { if (!found)
 (cd "$temporary" && sha256sum -c expected)
 tar -xzf "$temporary/$archive.tar.gz" -C "$temporary"
 package="$temporary/$archive"
-if [ "$("$package/bin/sole" --version)" != "sole $version (self-hosted)" ]; then
-    echo "The downloaded compiler could not run or has the wrong version. Install LLVM 21 (libLLVM.so.21.1) and its dependencies." >&2
+if [ ! -d "$package/lib/sole" ]; then
+    echo "This release archive does not contain bundled libraries. A newly packaged release is required." >&2
     exit 1
 fi
-mkdir -p "$destination/bin" "$destination/share/sole"
+if [ "$("$package/bin/sole" --version)" != "sole $version (self-hosted)" ]; then
+    echo "The downloaded compiler could not run or has the wrong version. This release requires a compatible Linux x86-64 glibc system." >&2
+    exit 1
+fi
+if [ -z "${DESTDIR:-}" ] && ! check_toolchain; then
+    if [ -n "${SOLE_CC:-}" ]; then
+        echo "SOLE_CC=$SOLE_CC cannot compile and link a native C program." >&2
+        cat "$temporary/cc.log" >&2
+        exit 1
+    fi
+    install_dependencies
+    if ! check_toolchain; then
+        echo "The native C toolchain is still unusable after installing dependencies." >&2
+        cat "$temporary/cc.log" >&2
+        exit 1
+    fi
+fi
+mkdir -p "$destination/bin" "$destination/lib/sole" "$destination/share/sole"
+cp -R "$package/lib/sole/." "$destination/lib/sole/"
 cp -R "$package/share/sole/." "$destination/share/sole/"
 install -m 755 "$package/bin/sole" "$destination/bin/sole"
 echo "Installed Sole $version in $destination"
-echo "Add $prefix/bin to PATH to use sole. Compilation requires a native C toolchain."
+echo "Add $prefix/bin to PATH to use sole."

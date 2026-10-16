@@ -1,0 +1,6 @@
+struct Container:
+    items: MissingType[]
+
+
+def main() -> int32:
+    return 0

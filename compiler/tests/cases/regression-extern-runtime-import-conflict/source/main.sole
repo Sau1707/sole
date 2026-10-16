@@ -1,0 +1,4 @@
+import foreign
+
+def main() -> int32:
+    return 0

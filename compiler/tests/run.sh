@@ -40,7 +40,12 @@ for case in "$root"/compiler/tests/cases/*; do
         case "$mode" in reject-*) fail "$(basename "$case") was accepted" ;; esac
     else
         case "$mode" in
-            reject-*) grep -q 'error' "$temporary/compile.log" || fail "$(basename "$case") has no diagnostic" ;;
+            reject-*)
+                grep -q 'error' "$temporary/compile.log" || fail "$(basename "$case") has no diagnostic"
+                if [ -f "$case/diagnostic" ]; then
+                    grep -Fq -f "$case/diagnostic" "$temporary/compile.log" || fail "$(basename "$case") diagnostic differs"
+                fi
+                ;;
             *) fail "$(basename "$case") did not compile" ;;
         esac
     fi
@@ -50,9 +55,14 @@ for case in "$root"/compiler/tests/cases/*; do
             cmp -s "$case/expected" "$temporary/actual" || fail "$(basename "$case") output differs"
             ;;
         trap)
-            if "$work/program" > "$temporary/actual" 2> "$temporary/run.log"; then
-                fail "$(basename "$case") did not trap"
-            fi
+            status=0
+            "$work/program" > "$temporary/actual" 2> "$temporary/run.log" || status=$?
+            [ "$status" -gt 128 ] || fail "$(basename "$case") expected a trap signal, got status $status"
+            signal=$(kill -l "$status" 2>/dev/null || :)
+            case "$signal" in
+                ILL|SIGILL|TRAP|SIGTRAP) ;;
+                *) fail "$(basename "$case") expected a trap signal, got status $status" ;;
+            esac
             ;;
         exit)
             status=0
@@ -65,7 +75,7 @@ for case in "$root"/compiler/tests/cases/*; do
     count=$((count + 1))
 done
 
-"$compiler" --version | grep -q 'sole 0.0.2' || fail version
+"$compiler" --version | grep -q 'sole 0.0.3' || fail version
 SOLE_CC=/no/such/linker "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -93,6 +103,13 @@ printf 'def main() -> int32:\n    return 7\n' > "$temporary/exit.sole"
 status=0
 "$compiler" run "$temporary/exit.sole" > "$temporary/compile.log" 2>&1 || status=$?
 [ "$status" -eq 7 ] || fail 'run exit status'
+for emit in llvm object; do
+    if "$compiler" run "$temporary/exit.sole" --emit "$emit" -o "$temporary/not-run.$emit" > "$temporary/compile.log" 2>&1; then
+        fail "run accepted $emit emission"
+    fi
+    grep -q 'run requires binary emission' "$temporary/compile.log" || fail 'run emission diagnostic'
+    test ! -e "$temporary/not-run.$emit" || fail 'run emitted an unused artifact'
+done
 
 cc -Wall -Wextra -Werror -fsyntax-only "$root/lib/runtime/system.c"
 

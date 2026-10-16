@@ -1,0 +1,4 @@
+extern def printf(format: ptr) -> int32
+
+def main() -> int32:
+    return 0

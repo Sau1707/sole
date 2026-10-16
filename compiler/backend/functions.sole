@@ -8,8 +8,23 @@ import frontend.statements
 import frontend.symbols
 
 
+# Collect native runtime declarations as the foreign ABI registry.
+def runtime_declarations(source: str) -> str[]:
+    declarations: str[] = []
+    start: int64 = 0
+    end: int64 = 0
+    while end <= core.len(source):
+        if end == core.len(source) || source[end] == 10:
+            line: str = core.slice(source, start, end)
+            if core.len(line) >= 8 && core.slice(line, 0, 8) == "declare ":
+                core.append(declarations, line)
+            start = end + 1
+        end = end + 1
+    return declarations
+
+
 # Emit a foreign declaration or compile a function's parameters and body.
-def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInfo) -> void:
+def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInfo, runtime: str[]) -> void:
     parameter_parts: str[] = []
     i: int64 = 0
     while i < core.len(fn.types):
@@ -22,8 +37,23 @@ def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInf
     prefix: str = "define "
     if fn.external:
         prefix = "declare "
-    header: str = prefix + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(fn) + "(" + core.join(parameter_parts) + ") nobuiltin"
+    header: str = prefix + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(fn) + "(" + core.join(parameter_parts) + ")"
     if fn.external:
+        state.tokens.position = fn.body
+        native: int64 = 0
+        while native < core.len(runtime):
+            declaration: str = runtime[native]
+            symbol_start: int64 = 0
+            while symbol_start < core.len(declaration) && declaration[symbol_start] != 64:
+                symbol_start = symbol_start + 1
+            symbol_end: int64 = symbol_start
+            while symbol_end < core.len(declaration) && declaration[symbol_end] != 40:
+                symbol_end = symbol_end + 1
+            if core.slice(declaration, symbol_start, symbol_end) == "@" + backend.ir.function_symbol(fn):
+                if declaration != header:
+                    frontend.diagnostics.fail_at(state, "conflicting external declaration: " + frontend.symbols.foreign_name(fn.name))
+                return
+            native = native + 1
         # Reuse compatible declarations of the same foreign symbol.
         previous: int64 = 0
         while previous < core.len(state.functions):
@@ -40,7 +70,7 @@ def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInf
                     p = p + 1
                 return
             previous = previous + 1
-        core.append(state.definitions, header + "\n")
+        core.append(state.definitions, header + " nobuiltin\n")
         return
     # Reset per-function state before declaring parameters and compiling blocks.
     state.tokens.position = fn.body
@@ -65,4 +95,4 @@ def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInf
         if fn.result != "void":
             frontend.diagnostics.fail_at(state, "function must return on every checked path: " + fn.name)
         backend.ir.emit(state, "ret void")
-    core.append(state.definitions, header + " {\nentry:\n" + core.join(state.slots) + "  br label %body\nbody:\n" + core.join(state.code) + "}\n")
+    core.append(state.definitions, header + " nobuiltin {\nentry:\n" + core.join(state.slots) + "  br label %body\nbody:\n" + core.join(state.code) + "}\n")
