@@ -1,0 +1,11 @@
+import core
+import math
+import strings
+import ascii
+
+def main() -> int32:
+    core.print(math.gcd(48, 18))
+    core.print(strings.contains("Hello, Sole!", "Sole"))
+    core.print(strings.repeat("ha", 3))
+    core.print(ascii.to_lower(65))
+    return 0

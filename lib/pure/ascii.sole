@@ -1,0 +1,22 @@
+def is_digit(byte: uint8) -> bool:
+    return byte >= 48 and byte <= 57
+
+
+def is_alpha(byte: uint8) -> bool:
+    return byte >= 65 and byte <= 90 or byte >= 97 and byte <= 122
+
+
+def is_space(byte: uint8) -> bool:
+    return byte == 32 or byte >= 9 and byte <= 13
+
+
+def to_lower(byte: uint8) -> uint8:
+    if byte >= 65 and byte <= 90:
+        return byte + 32
+    return byte
+
+
+def to_upper(byte: uint8) -> uint8:
+    if byte >= 97 and byte <= 122:
+        return byte - 32
+    return byte

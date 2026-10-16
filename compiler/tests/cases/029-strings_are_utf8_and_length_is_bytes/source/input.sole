@@ -1,0 +1,7 @@
+import core
+def main() -> int32:
+    core.print("Sole ☀")
+    core.print(core.len("☀"))
+    core.print("a\0b")
+    core.print("")
+    return 0

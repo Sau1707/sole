@@ -1,0 +1,3 @@
+import common.types
+def read() -> common.types.Answer:
+    return common.types.Answer(42)

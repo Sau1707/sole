@@ -1,0 +1,4 @@
+import core
+extern def strlen(text: ptr) -> uint64
+def size() -> uint64:
+    return strlen(core.cstr("one"))

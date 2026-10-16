@@ -1,0 +1,65 @@
+import core
+import frontend.diagnostics
+import frontend.model
+
+
+# Append a token and its source-location fields.
+def token_add(tokens: frontend.model.Tokens, text: str, kind: int32, line: int64) -> void:
+    core.append(tokens.text, text)
+    core.append(tokens.kind, kind)
+    core.append(tokens.line, line)
+    core.append(tokens.files, "")
+
+
+# Inspect the next token without treating literal contents as syntax.
+def peek(state: frontend.model.State) -> str:
+    if state.tokens.kind[state.tokens.position] == 3:
+        return "<string>"
+    if state.tokens.kind[state.tokens.position] == 2:
+        return "<number>"
+    return state.tokens.text[state.tokens.position]
+
+
+# Consume the next token, rejecting unexpected end of input.
+def take(state: frontend.model.State) -> str:
+    value: str = state.tokens.text[state.tokens.position]
+    if state.tokens.kind[state.tokens.position] == 0:
+        frontend.diagnostics.fail_at(state, "unexpected end of input")
+    state.tokens.position = state.tokens.position + 1
+    return value
+
+
+# Consume a token only when it matches the requested syntax.
+def accept(state: frontend.model.State, text: str) -> bool:
+    if peek(state) == text:
+        take(state)
+        return true
+    return false
+
+
+# Require a matching token or report a syntax error.
+def expect(state: frontend.model.State, text: str) -> void:
+    if not accept(state, text):
+        frontend.diagnostics.fail_at(state, "expected '" + text + "', got '" + peek(state) + "'")
+
+
+# Skip an optional docstring at the start of a block.
+def skip_docstring(state: frontend.model.State) -> void:
+    if state.tokens.kind[state.tokens.position] == 3 and state.tokens.kind[state.tokens.position + 1] == 4:
+        take(state)
+        take(state)
+
+
+# Identify keywords that cannot be used as names.
+def reserved_keyword(name: str) -> bool:
+    return name == "def" or name == "extern" or name == "import" or name == "class" or name == "struct" or name == "if" or name == "elif" or name == "else" or name == "while" or name == "return" or name == "break" or name == "continue" or name == "pass" or name == "and" or name == "or" or name == "not" or name == "true" or name == "false" or name == "self" or name == "as" or name == "from" or name == "intrinsic" or name == "for" or name == "in" or name == "lambda" or name == "None" or name == "True" or name == "False"
+
+
+# Read an identifier and reject reserved keywords.
+def identifier(state: frontend.model.State) -> str:
+    if state.tokens.kind[state.tokens.position] != 1:
+        frontend.diagnostics.fail_at(state, "expected an identifier")
+    name: str = take(state)
+    if reserved_keyword(name):
+        frontend.diagnostics.fail_at(state, "reserved keyword: " + name)
+    return name

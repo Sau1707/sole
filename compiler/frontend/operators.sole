@@ -1,0 +1,21 @@
+# Rank binary operators for precedence-based expression parsing.
+def precedence(operator: str) -> int32:
+    if operator == "or":
+        return 1
+    if operator == "and":
+        return 2
+    if operator == "==" or operator == "!=" or operator == "<" or operator == "<=" or operator == ">" or operator == ">=":
+        return 3
+    if operator == "|":
+        return 4
+    if operator == "^":
+        return 5
+    if operator == "&":
+        return 6
+    if operator == "<<" or operator == ">>":
+        return 7
+    if operator == "+" or operator == "-":
+        return 8
+    if operator == "*" or operator == "/" or operator == "%":
+        return 9
+    return -1

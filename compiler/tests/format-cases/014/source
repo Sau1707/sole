@@ -1,0 +1,4 @@
+import core
+# Entry point.
+def main() -> void:
+    pass

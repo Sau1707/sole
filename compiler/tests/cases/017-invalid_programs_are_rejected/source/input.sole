@@ -1,0 +1,4 @@
+struct A:
+    value: B
+struct B:
+    value: A

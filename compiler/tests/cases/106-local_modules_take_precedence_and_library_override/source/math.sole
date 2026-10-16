@@ -1,0 +1,2 @@
+def value() -> int32:
+    return 9

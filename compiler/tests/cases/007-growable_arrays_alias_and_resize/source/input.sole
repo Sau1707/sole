@@ -1,0 +1,13 @@
+import core
+def main() -> int32:
+    numbers: int32[] = []
+    alias: int32[] = numbers
+    i: int32 = 0
+    while i < 1000:
+        core.append(alias, i)
+        i = i + 1
+    alias[0] = 42
+    core.print(core.len(numbers))
+    core.print(numbers[0])
+    core.print(numbers[999])
+    return 0

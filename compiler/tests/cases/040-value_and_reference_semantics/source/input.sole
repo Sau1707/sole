@@ -1,0 +1,35 @@
+import core
+struct Point:
+    x: int32
+class Box:
+    point: Point
+    data: int32[2]
+    def set(self, value: int32) -> void:
+        self.point.x = value
+def get(box: Box) -> Box:
+    core.print("get")
+    return box
+def changed(p: Point) -> Point:
+    p.x = 99
+    return p
+def main() -> int32:
+    p: Point = Point(1)
+    q: Point = changed(p)
+    core.print(p.x)
+    core.print(q.x)
+    box: Box = Box(p, [10, 20])
+    alias: Box = box
+    alias.set(7)
+    core.print(box.point.x)
+    get(box).point.x = 8
+    core.print(box.point.x)
+    get(box).data[1] = 30
+    core.print(box.data[1])
+    points: Point[2] = [Point(2), Point(3)]
+    points[1].x = 4
+    core.print(points[1].x)
+    nums: int32[2] = [1, 2]
+    copy: int32[2] = nums
+    copy[0] = 5
+    core.print(nums[0])
+    return 0

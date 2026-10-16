@@ -1,0 +1,17 @@
+struct Point:
+    x: int32
+class Counter:
+    value: int32
+    def add(self, amount: int32) -> void:
+        self.value = self.value + amount
+def main() -> int32:
+    point: Point = Point(36)
+    copy: Point = point
+    copy.x = 99
+    counter: Counter = Counter(0)
+    values: int32[3] = [1, 2, 3]
+    i: int32 = 0
+    while i < 3:
+        counter.add(values[i])
+        i = i + 1
+    return point.x + counter.value

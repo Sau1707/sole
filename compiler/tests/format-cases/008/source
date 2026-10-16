@@ -1,0 +1,7 @@
+import core
+
+
+
+
+def main() -> void:
+    pass

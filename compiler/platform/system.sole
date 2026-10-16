@@ -1,0 +1,39 @@
+# Locate compiler resources and the standard library.
+extern def sole_rt_home() -> ptr
+
+
+extern def sole_rt_lib_home() -> ptr
+
+
+# Resolve filesystem paths and identify regular files.
+extern def sole_rt_realpath(path: ptr) -> ptr
+
+
+extern def sole_rt_is_file(path: ptr) -> int32
+
+
+# Parse native floating-point values and inspect their bits.
+extern def sole_rt_f64_bits(value: float64) -> uint64
+
+
+extern def strtod(text: ptr, end: ptr) -> float64
+
+
+# Execute linker commands and read environment overrides.
+extern def system(command: ptr) -> int32
+
+
+extern def getenv(name: ptr) -> ptr
+
+
+# Manage temporary outputs and protect source files from overwrites.
+extern def sole_rt_temp_dir() -> ptr
+
+
+extern def sole_rt_same_file(first: ptr, second: ptr) -> int32
+
+
+extern def unlink(path: ptr) -> int32
+
+
+extern def rmdir(path: ptr) -> int32

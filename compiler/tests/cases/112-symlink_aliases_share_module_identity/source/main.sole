@@ -1,0 +1,6 @@
+import core
+import original
+import alias
+def main() -> void:
+    box: original.Box = alias.Box(42)
+    core.print(box.value)

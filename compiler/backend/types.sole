@@ -1,0 +1,32 @@
+import frontend.diagnostics
+import frontend.model
+import frontend.symbols
+import frontend.types
+
+
+# Map a Sole type to its LLVM representation and validate array sizes.
+def llvm_type(state: frontend.model.State, typ: str) -> str:
+    if typ == "void":
+        return "void"
+    if typ == "bool":
+        return "i1"
+    if typ == "ptr" or frontend.types.dynamic_type(typ):
+        return "ptr"
+    if typ == "str":
+        return "{ptr, i64}"
+    if frontend.types.integer_type(typ):
+        return "i" + str(frontend.types.width(typ))
+    if typ == "float32":
+        return "float"
+    if typ == "float64":
+        return "double"
+    if frontend.types.array_type(typ):
+        if frontend.types.fixed_length(typ) < 1 or frontend.types.fixed_length(typ) > 1000000:
+            frontend.diagnostics.fail_at(state, "array size must be between 1 and 1000000")
+        return "[" + str(frontend.types.fixed_length(typ)) + " x " + llvm_type(state, frontend.types.element_type(typ)) + "]"
+    idx: int64 = frontend.symbols.record_index(state, typ)
+    if idx < 0:
+        frontend.diagnostics.fail_at(state, "unknown type '" + typ + "'")
+    if state.records[idx].kind == "class":
+        return "ptr"
+    return "%" + typ

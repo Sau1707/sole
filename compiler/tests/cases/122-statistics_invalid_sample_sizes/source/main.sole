@@ -1,0 +1,5 @@
+import core
+import statistics
+def main() -> void:
+    data: float64[] = []
+    core.print(statistics.median_high(data))

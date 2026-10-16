@@ -1,0 +1,53 @@
+import core
+import backend.llvm
+import frontend.diagnostics
+
+
+# Verify LLVM IR and optionally optimize it into a native object file.
+def llvm_object(text: str, output: str, level: int32, check_only: bool) -> void:
+    # Parse and verify the generated module before target-specific work.
+    context: ptr = backend.llvm.LLVMContextCreate()
+    buffer: ptr = backend.llvm.LLVMCreateMemoryBufferWithMemoryRangeCopy(core.cstr(text), uint64(core.len(text)), core.cstr("sole"))
+    module_handle: ptr = ptr(0)
+    error_message: ptr = ptr(0)
+    if backend.llvm.LLVMParseIRInContext(context, buffer, core.address(module_handle), core.address(error_message)) != 0:
+        frontend.diagnostics.die(core.from_cstr(error_message))
+    if backend.llvm.LLVMVerifyModule(module_handle, 2, core.address(error_message)) != 0:
+        frontend.diagnostics.die(core.from_cstr(error_message))
+    if check_only:
+        backend.llvm.LLVMDisposeModule(module_handle)
+        backend.llvm.LLVMContextDispose(context)
+        return
+    # Create the native target machine and apply its memory layout.
+    backend.llvm.LLVMInitializeX86TargetInfo()
+    backend.llvm.LLVMInitializeX86Target()
+    backend.llvm.LLVMInitializeX86TargetMC()
+    backend.llvm.LLVMInitializeX86AsmPrinter()
+    triple: ptr = backend.llvm.LLVMGetDefaultTargetTriple()
+    target_handle: ptr = ptr(0)
+    if backend.llvm.LLVMGetTargetFromTriple(triple, core.address(target_handle), core.address(error_message)) != 0:
+        frontend.diagnostics.die(core.from_cstr(error_message))
+    relocation: int32 = 2
+    machine: ptr = backend.llvm.LLVMCreateTargetMachine(target_handle, triple, core.cstr("generic"), core.cstr(""), level, relocation, 0)
+    if machine == ptr(0):
+        frontend.diagnostics.die("cannot create LLVM target machine")
+    backend.llvm.LLVMSetTarget(module_handle, triple)
+    layout_handle: ptr = backend.llvm.LLVMCreateTargetDataLayout(machine)
+    layout: ptr = backend.llvm.LLVMCopyStringRepOfTargetData(layout_handle)
+    backend.llvm.LLVMSetDataLayout(module_handle, layout)
+    backend.llvm.LLVMDisposeMessage(layout)
+    backend.llvm.LLVMDisposeTargetData(layout_handle)
+    # Apply the requested LLVM optimization pipeline.
+    if level > 0:
+        passes: str = "default<O" + str(level) + ">"
+        options: ptr = backend.llvm.LLVMCreatePassBuilderOptions()
+        pass_error: ptr = backend.llvm.LLVMRunPasses(module_handle, core.cstr(passes), machine, options)
+        backend.llvm.LLVMDisposePassBuilderOptions(options)
+        if pass_error != ptr(0):
+            frontend.diagnostics.die(core.from_cstr(backend.llvm.LLVMGetErrorMessage(pass_error)))
+    # Write the object file and release LLVM resources.
+    if backend.llvm.LLVMTargetMachineEmitToFile(machine, module_handle, core.cstr(output), 1, core.address(error_message)) != 0:
+        frontend.diagnostics.die(core.from_cstr(error_message))
+    backend.llvm.LLVMDisposeTargetMachine(machine)
+    backend.llvm.LLVMDisposeModule(module_handle)
+    backend.llvm.LLVMContextDispose(context)

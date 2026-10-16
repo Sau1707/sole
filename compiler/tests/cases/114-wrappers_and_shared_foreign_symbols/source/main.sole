@@ -1,0 +1,10 @@
+import core
+import one
+import two
+import wrappers.cmath
+def strlen() -> int32:
+    return 9
+def main() -> void:
+    core.print(one.size() + two.size())
+    core.print(strlen())
+    core.print(wrappers.cmath.sqrt(16.0))

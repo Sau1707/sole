@@ -1,0 +1,90 @@
+import core
+import backend.types
+import frontend.model
+import frontend.symbols
+
+
+# Allocate a unique name within the current function.
+def fresh(state: frontend.model.State) -> str:
+    state.serial = state.serial + 1
+    return "v" + str(state.serial)
+
+
+# Append an instruction to the current function body.
+def emit(state: frontend.model.State, text: str) -> void:
+    core.append(state.code, "  " + text + "\n")
+
+
+# Emit an instruction and return its result name.
+def instruction(state: frontend.model.State, text: str) -> str:
+    result_name: str = "%" + fresh(state)
+    emit(state, result_name + " = " + text)
+    return result_name
+
+
+# Start a basic block that can receive new instructions.
+def block_label(state: frontend.model.State, name: str) -> void:
+    core.append(state.code, name + ":\n")
+    state.ended = false
+
+
+# Reserve typed storage in the function's entry block.
+def slot(state: frontend.model.State, typ: str) -> str:
+    result_name: str = "%" + fresh(state)
+    core.append(state.slots, "  " + result_name + " = alloca " + backend.types.llvm_type(state, typ) + "\n")
+    return result_name
+
+
+# Trap when a runtime safety condition fails.
+def checked(state: frontend.model.State, condition: str) -> void:
+    ok: str = fresh(state)
+    bad: str = fresh(state)
+    emit(state, "br i1 " + condition + ", label %" + ok + ", label %" + bad)
+    block_label(state, bad)
+    emit(state, "call void @llvm.trap()")
+    emit(state, "unreachable")
+    block_label(state, ok)
+
+
+# Choose a function's native symbol, preserving foreign C names.
+def function_symbol(state: frontend.model.State, fn: frontend.model.FunctionInfo) -> str:
+    if fn.external:
+        return frontend.symbols.foreign_name(fn.name)
+    return "_sole.fn." + fn.name
+
+
+# Format an LLVM value together with its type.
+def typed(state: frontend.model.State, value: frontend.model.Value) -> str:
+    return backend.types.llvm_type(state, value.typ) + " " + value.value
+
+
+# Read a field from an LLVM aggregate value.
+def extract(state: frontend.model.State, value: frontend.model.Value, index: int64) -> str:
+    return instruction(state, "extractvalue " + typed(state, value) + ", " + str(index))
+
+
+# Build a string value from a byte pointer and length.
+def make_string(state: frontend.model.State, data: str, size: str) -> frontend.model.Value:
+    first: str = instruction(state, "insertvalue {ptr, i64} poison, ptr " + data + ", 0")
+    result_value: str = instruction(state, "insertvalue {ptr, i64} " + first + ", i64 " + size + ", 1")
+    return frontend.model.Value("str", result_value, "")
+
+
+# Compute a type's byte size using LLVM's target layout.
+def size_of(state: frontend.model.State, typ: str) -> str:
+    end: str = instruction(state, "getelementptr " + backend.types.llvm_type(state, typ) + ", ptr null, i32 1")
+    return instruction(state, "ptrtoint ptr " + end + " to i64")
+
+
+# Store an item temporarily and append it through the array runtime.
+def append_ir(state: frontend.model.State, array: frontend.model.Value, item: frontend.model.Value) -> void:
+    storage: str = slot(state, item.typ)
+    emit(state, "store " + typed(state, item) + ", ptr " + storage)
+    amount: str = size_of(state, item.typ)
+    emit(state, "call void @_sole.append(ptr " + array.value + ", ptr " + storage + ", i64 " + amount + ")")
+
+
+# Load the element count from a growable array's header.
+def array_length(state: frontend.model.State, value: frontend.model.Value) -> str:
+    pointer: str = instruction(state, "getelementptr {ptr, i64, i64}, ptr " + value.value + ", i32 0, i32 1")
+    return instruction(state, "load i64, ptr " + pointer)

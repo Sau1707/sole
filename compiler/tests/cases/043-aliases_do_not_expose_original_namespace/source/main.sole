@@ -1,0 +1,3 @@
+import helper as renamed
+def main() -> void:
+    helper.value()

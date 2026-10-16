@@ -1,0 +1,4 @@
+struct Token:
+    value: int32
+def lex() -> Token:
+    return Token(42)

@@ -1,0 +1,4 @@
+def f() -> void:
+    x: int32 = 1
+    if true:
+        x: int32 = 2

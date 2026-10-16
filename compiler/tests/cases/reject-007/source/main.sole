@@ -1,0 +1,2 @@
+def f() -> void:
+    x: void[2] = [1, 2]

@@ -1,0 +1,8 @@
+import core
+import left
+import right
+def main() -> void:
+    first: left.Box = left.Box(left.value())
+    second: right.Box = right.Box(right.value())
+    core.print(first.value)
+    core.print(second.value)

@@ -1,0 +1,4 @@
+import core
+def f() -> void:
+    return
+    core.print(1)

@@ -1,0 +1,4 @@
+import core
+import math
+def main() -> void:
+    core.print(math)

@@ -1,0 +1,6 @@
+import core
+import math
+import custom
+def main() -> void:
+    core.print(math.value())
+    core.print(custom.value())

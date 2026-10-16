@@ -1,0 +1,5 @@
+import core
+def main() -> int32:
+    core.write_file("@DATA_ROOT@/0/Sole's message.txt", "a\0b")
+    core.print(core.read_file("@DATA_ROOT@/0/Sole's message.txt"))
+    return 0

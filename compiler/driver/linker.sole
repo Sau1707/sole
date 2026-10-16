@@ -1,0 +1,31 @@
+import core
+import platform.system
+
+
+# Quote a command argument without allowing shell expansion.
+def shell_quote(text: str) -> str:
+    parts: str[] = ["'"]
+    i: int64 = 0
+    while i < core.len(text):
+        if text[i] == 39:
+            core.append(parts, "'\\''")
+        else:
+            core.append(parts, core.slice(text, i, i + 1))
+        i = i + 1
+    core.append(parts, "'")
+    return core.join(parts)
+
+
+# Choose the configured C linker driver or the system default.
+def native_linker() -> str:
+    configured: ptr = platform.system.getenv(core.cstr("SOLE_CC"))
+    if configured != ptr(0):
+        return shell_quote(core.from_cstr(configured))
+    return "cc"
+
+
+# Replace the source extension with the requested output suffix.
+def default_output(filename: str, suffix: str) -> str:
+    if core.len(filename) > 5 and core.slice(filename, core.len(filename) - 5, core.len(filename)) == ".sole":
+        return core.slice(filename, 0, core.len(filename) - 5) + suffix
+    return filename + suffix

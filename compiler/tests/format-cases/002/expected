@@ -1,0 +1,17 @@
+"""Module documentation."""
+import core
+
+
+def first(
+    value: int32
+) -> str:
+    return """text
+def fake() -> void:
+
+
+class Fake:
+"""
+
+
+def second() -> void:
+    pass

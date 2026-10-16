@@ -1,0 +1,5 @@
+import core
+def main() -> int32:
+    x: int32[2] = [1, 2]
+    x[-1] = 3
+    return 0

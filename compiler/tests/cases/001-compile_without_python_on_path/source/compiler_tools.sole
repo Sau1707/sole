@@ -1,0 +1,10 @@
+import core
+def main() -> int32:
+    words: str[] = ["Sole", " compiles", " itself"]
+    core.append(words, "!")
+    core.print(core.join(words))
+    core.print(core.slice(words[0], 0, 3))
+    core.print(words[0][0])
+    core.print(words[0] == "Sole")
+    core.print(str(int32(42)))
+    return 0

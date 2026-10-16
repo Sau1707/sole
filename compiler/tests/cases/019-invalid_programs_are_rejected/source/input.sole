@@ -1,0 +1,1 @@
+extern def invalid() -> str

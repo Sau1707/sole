@@ -1,0 +1,5 @@
+import core
+def main() -> int32:
+    x: int32 = 0
+    core.print(1 / x)
+    return 0

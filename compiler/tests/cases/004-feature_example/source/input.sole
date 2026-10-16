@@ -1,0 +1,45 @@
+import core
+struct Point:
+    x: float64
+    y: float64
+
+class Counter:
+    value: int32
+
+    def add(self, amount: int32) -> void:
+        self.value = self.value + amount
+
+    def read(self) -> int32:
+        return self.value
+
+def factorial(n: int64) -> int64:
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+def main() -> int32:
+    point: Point = Point(3.0, 4.0)
+    copy: Point = point
+    copy.x = 9.0
+    core.print(point.x)
+
+    counter: Counter = Counter(0)
+    alias: Counter = counter
+    alias.add(7)
+    core.print(counter.read())
+
+    numbers: int32[4] = [10, 20, 30, 40]
+    i: int64 = 0
+    total: int32 = 0
+    while i < core.len(numbers):
+        total = total + numbers[i]
+        i = i + 1
+    core.print(total)
+
+    small: int8 = 127
+    small = small + 1
+    core.print(small)
+    core.print(uint64(18446744073709551615))
+    core.print(factorial(10))
+    core.print(true and not false)
+    return 0

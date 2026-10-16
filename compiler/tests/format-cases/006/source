@@ -1,0 +1,4 @@
+extern def first() -> void
+extern def second() -> void
+def main() -> void:
+    pass

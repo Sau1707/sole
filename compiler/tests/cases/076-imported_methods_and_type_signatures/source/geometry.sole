@@ -1,0 +1,11 @@
+struct Point:
+    x: int32
+class Counter:
+    value: int32
+    def read(self) -> int32:
+        return self.value
+def read() -> int32:
+    return 77
+def move(p: Point) -> Point:
+    p.x = p.x + 1
+    return p

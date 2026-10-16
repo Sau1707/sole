@@ -1,0 +1,25 @@
+# Module comment.
+"""Module documentation.
+# Quotes, 'single' and "double", are text here.
+"""
+import core
+struct Point:
+    """A value type."""
+    x: int32  # Field comment.
+class Box:
+    """A reference type.
+    With multiline documentation.
+    """
+    value: int32
+    def read(self) -> int32:
+        """Return the stored value."""
+        return self.value
+def main() -> int32:
+    # A comment may precede a docstring.
+    """Run the example."""
+    point: Point = Point(42)
+    box: Box = Box(point.x)
+# Comment-only lines do not change indentation.
+    core.print(box.read())  # Trailing comment.
+    core.print("# is literal text")
+    return 0

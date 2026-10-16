@@ -1,0 +1,4 @@
+import core
+import bad
+def main() -> void:
+    core.print(bad.value())

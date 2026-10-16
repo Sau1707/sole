@@ -1,0 +1,46 @@
+# Sole token grammar. The native lexer supplies IDENTIFIER, NUMBER, STRING,
+# NEWLINE, INDENT, DEDENT and EOF; comments and continued lines are removed.
+# IDENTIFIER excludes reserved keywords. Types, names, lvalues, call targets,
+# intrinsic availability and control-flow validity are checked semantically.
+# Notation: comma = sequence, | = choice, [] = optional, {} = repetition.
+
+program = [docstring], {import_decl | intrinsic_decl | function_decl | extern_decl | struct_decl | class_decl}, EOF;
+docstring = STRING, NEWLINE;
+qualified_name = IDENTIFIER, {".", IDENTIFIER};
+import_decl = "import", qualified_name, ["as", IDENTIFIER], NEWLINE;
+intrinsic_decl = "intrinsic", IDENTIFIER, NEWLINE;
+type_name = qualified_name, ["[", [NUMBER], "]"];
+parameter = IDENTIFIER, ":", type_name;
+parameters = parameter, {",", parameter}, [","];
+signature = "def", IDENTIFIER, "(", [parameters], ")", "->", type_name;
+function_decl = signature, block;
+extern_decl = "extern", signature, NEWLINE;
+field = IDENTIFIER, ":", type_name, NEWLINE;
+empty_member = "pass", NEWLINE;
+struct_decl = "struct", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], {field | empty_member}, DEDENT;
+class_decl = "class", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], {field | method_decl | empty_member}, DEDENT;
+method_decl = "def", IDENTIFIER, "(", "self", [",", [parameters]], ")", "->", type_name, block;
+block = ":", NEWLINE, INDENT, [docstring], {statement}, DEDENT;
+statement = if_stmt | while_stmt | return_stmt | jump_stmt | pass_stmt | variable_decl | expression_stmt;
+if_stmt = "if", expression, block, {"elif", expression, block}, ["else", block];
+while_stmt = "while", expression, block;
+return_stmt = "return", [expression], NEWLINE;
+jump_stmt = ("break" | "continue"), NEWLINE;
+pass_stmt = "pass", NEWLINE;
+variable_decl = IDENTIFIER, ":", type_name, "=", expression, NEWLINE;
+expression_stmt = expression, ["=", expression], NEWLINE;
+
+expression = conjunction, {"or", conjunction};
+conjunction = negation, {"and", negation};
+negation = "not", negation | comparison;
+comparison = bit_or, [("==" | "!=" | "<" | "<=" | ">" | ">="), bit_or];
+bit_or = bit_xor, {"|", bit_xor};
+bit_xor = bit_and, {"^", bit_and};
+bit_and = shift, {"&", shift};
+shift = sum, {("<<" | ">>"), sum};
+sum = product, {("+" | "-"), product};
+product = unary, {("*" | "/" | "%"), unary};
+unary = ("-" | "~"), unary | postfix;
+postfix = primary, {".", IDENTIFIER | "[", expression, "]" | "(", [arguments], ")"};
+primary = NUMBER | STRING | "true" | "false" | "self" | IDENTIFIER | "(", expression, ")" | "[", [arguments], "]";
+arguments = expression, {",", expression}, [","];

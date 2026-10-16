@@ -1,0 +1,8 @@
+import core as io
+import frontend.lexer as lexer
+def read(token: lexer.Token) -> int32:
+    return token.value
+def main() -> void:
+    token: lexer.Token = lexer.lex()
+    io.print(read(token))
+    io.print(io.len("abc"))

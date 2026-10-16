@@ -1,0 +1,97 @@
+import core
+import frontend.diagnostics
+import frontend.model
+import frontend.tokens
+
+
+# Parse a type name with optional array brackets.
+def parse_type(state: frontend.model.State) -> str:
+    name: str = frontend.tokens.identifier(state)
+    if frontend.tokens.accept(state, "["):
+        name = name + "["
+        if frontend.tokens.peek(state) != "]":
+            name = name + frontend.tokens.take(state)
+        frontend.tokens.expect(state, "]")
+        name = name + "]"
+    return name
+
+
+# Skip a complete indented body while collecting declarations.
+def skip_body(state: frontend.model.State) -> void:
+    frontend.tokens.expect(state, ":")
+    frontend.tokens.expect(state, "<newline>")
+    frontend.tokens.expect(state, "<indent>")
+    depth: int32 = 1
+    while depth > 0:
+        kind: int32 = state.tokens.kind[state.tokens.position]
+        frontend.tokens.take(state)
+        if kind == 5:
+            depth = depth + 1
+        elif kind == 6:
+            depth = depth - 1
+
+
+# Collect a function signature and remember where its body starts.
+def scan_function(state: frontend.model.State, owner: str, external: bool) -> void:
+    frontend.tokens.expect(state, "def")
+    name: str = frontend.tokens.identifier(state)
+    if owner != "":
+        name = owner + "." + name
+    names: str[] = []
+    types: str[] = []
+    frontend.tokens.expect(state, "(")
+    if owner != "":
+        frontend.tokens.expect(state, "self")
+        core.append(names, "self")
+        core.append(types, owner)
+        if frontend.tokens.peek(state) != ")":
+            frontend.tokens.expect(state, ",")
+    while frontend.tokens.peek(state) != ")":
+        core.append(names, frontend.tokens.identifier(state))
+        frontend.tokens.expect(state, ":")
+        core.append(types, parse_type(state))
+        if not frontend.tokens.accept(state, ","):
+            break
+    frontend.tokens.expect(state, ")")
+    frontend.tokens.expect(state, "->")
+    result_type: str = parse_type(state)
+    core.append(state.functions, frontend.model.FunctionInfo(name, names, types, result_type, state.tokens.position, external))
+    if external:
+        frontend.tokens.expect(state, "<newline>")
+    else:
+        skip_body(state)
+
+
+# Collect module-level functions, records, and class members.
+def scan(state: frontend.model.State) -> void:
+    while frontend.tokens.peek(state) != "<end>":
+        if frontend.tokens.accept(state, "<newline>"):
+            pass
+        elif frontend.tokens.peek(state) == "def":
+            scan_function(state, "", false)
+        elif frontend.tokens.accept(state, "extern"):
+            scan_function(state, "", true)
+        elif frontend.tokens.peek(state) == "class" or frontend.tokens.peek(state) == "struct":
+            record_kind: str = frontend.tokens.take(state)
+            record_name: str = frontend.tokens.identifier(state)
+            record: frontend.model.RecordInfo = frontend.model.RecordInfo(record_name, record_kind, [], [])
+            core.append(state.records, record)
+            frontend.tokens.expect(state, ":")
+            frontend.tokens.expect(state, "<newline>")
+            frontend.tokens.expect(state, "<indent>")
+            frontend.tokens.skip_docstring(state)
+            while frontend.tokens.peek(state) != "<dedent>":
+                if frontend.tokens.peek(state) == "def":
+                    if record_kind == "struct":
+                        frontend.diagnostics.fail_at(state, "structs cannot contain methods")
+                    scan_function(state, record_name, false)
+                elif frontend.tokens.accept(state, "pass"):
+                    frontend.tokens.expect(state, "<newline>")
+                else:
+                    core.append(record.names, frontend.tokens.identifier(state))
+                    frontend.tokens.expect(state, ":")
+                    core.append(record.types, parse_type(state))
+                    frontend.tokens.expect(state, "<newline>")
+            frontend.tokens.expect(state, "<dedent>")
+        else:
+            frontend.diagnostics.fail_at(state, "expected a function, struct, or class declaration")

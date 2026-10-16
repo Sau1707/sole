@@ -1,0 +1,4 @@
+def f(x: int32) -> void:
+    pass
+def g() -> void:
+    f()

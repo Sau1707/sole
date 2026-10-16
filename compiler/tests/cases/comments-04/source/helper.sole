@@ -1,0 +1,5 @@
+"""Imported module.
+Multiple lines."""
+def value() -> int32:
+    """Return a value."""
+    return 42

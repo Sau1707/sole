@@ -1,0 +1,2 @@
+def main() -> void:
+    __sole_intrinsic_len("abc")

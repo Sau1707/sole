@@ -1,0 +1,3 @@
+import math
+struct math:
+    value: int32

@@ -1,0 +1,4 @@
+class A:
+    x: int32
+    def x(self) -> void:
+        pass

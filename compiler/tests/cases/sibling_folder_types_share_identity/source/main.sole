@@ -1,0 +1,5 @@
+import common.model
+import features.reader
+def main() -> int32:
+    answer: common.model.Answer = features.reader.read()
+    return answer.value

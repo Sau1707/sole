@@ -1,0 +1,4 @@
+import core
+def main() -> int32:
+    core.print("Hello from Sole!")
+    return 0

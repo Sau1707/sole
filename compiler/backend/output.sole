@@ -1,0 +1,28 @@
+import backend.casts
+import backend.ir
+import backend.literals
+import frontend.diagnostics
+import frontend.model
+import frontend.types
+
+
+# Select the runtime print helper for a scalar or string value.
+def print_ir(state: frontend.model.State, value: frontend.model.Value) -> void:
+    value = backend.literals.coerce(state, value, "")
+    if value.typ == "str":
+        data: str = backend.ir.extract(state, value, 0)
+        length: str = backend.ir.extract(state, value, 1)
+        backend.ir.emit(state, "call void @_sole.print_str(ptr " + data + ", i64 " + length + ")")
+    elif value.typ == "bool":
+        backend.ir.emit(state, "call void @_sole.print_bool(i1 " + value.value + ")")
+    elif frontend.types.float_type(value.typ):
+        converted: frontend.model.Value = backend.casts.cast_value(state, value, "float64")
+        backend.ir.emit(state, "call void @_sole.print_float(double " + converted.value + ")")
+    elif frontend.types.integer_type(value.typ):
+        widened: frontend.model.Value = backend.casts.cast_value(state, value, "int64")
+        signed: str = "true"
+        if frontend.types.unsigned_type(value.typ):
+            signed = "false"
+        backend.ir.emit(state, "call void @_sole.print_int(i64 " + widened.value + ", i1 " + signed + ")")
+    else:
+        frontend.diagnostics.fail_at(state, "print requires a scalar or string")

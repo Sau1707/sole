@@ -1,0 +1,103 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sole",
+  "scopeName": "source.sole",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    {
+      "begin": "\\b(import)\\b",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.import.sole keyword.control.import.python" }
+      },
+      "patterns": [
+        { "include": "#comments" },
+        { "match": "[\\p{L}_][\\p{L}\\p{N}_]*", "name": "variable.other.property.sole" },
+        { "match": "\\.", "name": "punctuation.separator.sole punctuation.separator.period.python" }
+      ]
+    },
+    {
+      "begin": "\\b(def)[ \\t]+([\\p{L}_][\\p{L}\\p{N}_]*)[ \\t]*(\\()",
+      "end": "\\)",
+      "contentName": "meta.function.parameters.python",
+      "beginCaptures": {
+        "1": { "name": "storage.type.function.sole storage.type.function.python" },
+        "2": { "name": "entity.name.function.sole entity.name.function.python" },
+        "3": { "name": "punctuation.section.parens.sole" }
+      },
+      "endCaptures": { "0": { "name": "punctuation.section.parens.sole" } },
+      "patterns": [
+        { "include": "#comments" },
+        { "match": "\\bself\\b", "name": "variable.language.self.sole variable.parameter.function.language.special.self.python" },
+        { "match": "[\\p{L}_][\\p{L}\\p{N}_]*(?=[ \\t]*:)", "name": "variable.other.readwrite.sole variable.parameter.function.language.python" },
+        { "include": "$self" }
+      ]
+    },
+    {
+      "match": "\\b(struct|class)[ \\t]+([\\p{L}_][\\p{L}\\p{N}_]*)",
+      "captures": {
+        "1": { "name": "storage.type.sole storage.type.class.python" },
+        "2": { "name": "entity.name.type.sole entity.name.type.class.python" }
+      }
+    },
+    {
+      "match": "(:|->)[ \\t]*([\\p{L}_][\\p{L}\\p{N}_]*)",
+      "captures": {
+        "1": { "name": "punctuation.separator.annotation.sole" },
+        "2": { "patterns": [
+          { "include": "#types" },
+          { "match": "[\\p{L}_][\\p{L}\\p{N}_]*", "name": "entity.name.type.sole entity.name.type.class.python" }
+        ] }
+      }
+    },
+    { "include": "#types" },
+    { "match": "\\bextern\\b", "name": "storage.modifier.sole storage.modifier.declaration.python" },
+    { "match": "\\b(if|elif|else|while|return|break|continue|pass)\\b", "name": "keyword.control.sole keyword.control.flow.python" },
+    { "match": "\\b(and|or|not)\\b", "name": "keyword.operator.logical.sole keyword.operator.logical.python" },
+    { "match": "\\b(true|false)\\b", "name": "constant.language.boolean.sole constant.language.python" },
+    { "match": "\\bself\\b", "name": "variable.language.self.sole variable.language.special.self.python" },
+    { "match": "(?<![\\p{L}\\p{N}_.])(?:0[xX][0-9a-fA-F](?:_?[0-9a-fA-F])*|0[bB][01](?:_?[01])*|0[oO][0-7](?:_?[0-7])*|(?:[0-9](?:_?[0-9])*(?:\\.(?:[0-9](?:_?[0-9])*)?)?|\\.[0-9](?:_?[0-9])*)(?:[eE][+-]?[0-9](?:_?[0-9])*)?)(?![\\p{L}\\p{N}_])", "name": "constant.numeric.sole constant.numeric.python" },
+    { "match": "(?<![\\p{L}\\p{N}_.])\\b(print|len)\\b(?=[ \\t]*\\()", "name": "support.function.builtin.sole support.function.builtin.python" },
+    { "match": "[\\p{L}_][\\p{L}\\p{N}_]*(?=[ \\t]*\\()", "name": "entity.name.function.sole meta.function-call.generic.python" },
+    {
+      "match": "(\\.)[ \\t]*([\\p{L}_][\\p{L}\\p{N}_]*)(?![\\p{L}\\p{N}_]|[ \\t]*\\()",
+      "captures": {
+        "1": { "name": "punctuation.accessor.sole" },
+        "2": { "name": "variable.other.property.sole" }
+      }
+    },
+    { "match": "[\\p{L}_][\\p{L}\\p{N}_]*", "name": "variable.other.readwrite.sole" },
+    { "match": "->", "name": "keyword.operator.sole keyword.operator.python" },
+    { "match": "==|!=|<=|>=|[<>](?![<>])", "name": "keyword.operator.sole keyword.operator.comparison.python" },
+    { "match": "<<|>>|[&|^~]", "name": "keyword.operator.sole keyword.operator.bitwise.python" },
+    { "match": "[-+*/%]", "name": "keyword.operator.sole keyword.operator.arithmetic.python" },
+    { "match": "=", "name": "keyword.operator.sole keyword.operator.assignment.python" },
+    { "match": "[()]", "name": "punctuation.section.parens.sole" },
+    { "match": "[\\[\\]]", "name": "punctuation.section.brackets.sole" },
+    { "match": "[:,.]", "name": "punctuation.separator.sole" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.number-sign.sole comment.line.number-sign.python",
+      "begin": "#",
+      "end": "$"
+    },
+    "types": {
+      "match": "\\b(?:u?int(?:8|16|32|64)|float(?:32|64)|bool|str|void)\\b",
+      "name": "storage.type.sole support.type.python"
+    },
+    "strings": {
+      "patterns": [
+        { "name": "string.quoted.triple.double.sole string.quoted.multi.python", "begin": "(?i:\\br)?\"\"\"", "end": "\"\"\"", "patterns": [{ "include": "#escapes" }] },
+        { "name": "string.quoted.triple.single.sole string.quoted.multi.python", "begin": "(?i:\\br)?'''", "end": "'''", "patterns": [{ "include": "#escapes" }] },
+        { "name": "string.quoted.double.sole string.quoted.single.python", "begin": "(?i:\\br)?\"", "end": "\"|(?<!\\\\)$", "patterns": [{ "include": "#escapes" }] },
+        { "name": "string.quoted.single.sole string.quoted.single.python", "begin": "(?i:\\br)?'", "end": "'|(?<!\\\\)$", "patterns": [{ "include": "#escapes" }] }
+      ]
+    },
+    "escapes": {
+      "match": "\\\\(?:x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|N\\{[^}]*\\}|[0-7]{1,3}|.)",
+      "name": "constant.character.escape.sole constant.character.escape.python"
+    }
+  }
+}

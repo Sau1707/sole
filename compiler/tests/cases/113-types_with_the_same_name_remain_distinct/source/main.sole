@@ -1,0 +1,4 @@
+import one
+import two
+def main() -> void:
+    box: one.Box = two.Box(42)

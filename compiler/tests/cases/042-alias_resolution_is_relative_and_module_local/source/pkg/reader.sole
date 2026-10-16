@@ -1,0 +1,3 @@
+import real as short
+def read() -> int32:
+    return short.value()

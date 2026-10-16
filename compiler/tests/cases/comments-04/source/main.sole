@@ -1,0 +1,6 @@
+"""Entry module."""
+import core
+import helper
+def main() -> void:
+    """Print the result."""
+    core.print(helper.value())

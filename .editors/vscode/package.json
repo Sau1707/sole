@@ -1,0 +1,56 @@
+{
+  "name": "sole-language",
+  "displayName": "Sole Language",
+  "description": "Syntax highlighting and editor support for the Sole programming language.",
+  "version": "0.1.0",
+  "publisher": "sole-lang",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "sole",
+    "syntax",
+    "highlighting"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sole",
+        "aliases": [
+          "Sole",
+          "sole"
+        ],
+        "extensions": [
+          ".sole"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sole",
+        "scopeName": "source.sole",
+        "path": "./syntaxes/sole.tmLanguage.json"
+      }
+    ],
+    "configurationDefaults": {
+      "[sole]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.detectIndentation": false
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "package": "vsce package --allow-missing-repository --skip-license --out sole-language.vsix"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^4.0.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  }
+}

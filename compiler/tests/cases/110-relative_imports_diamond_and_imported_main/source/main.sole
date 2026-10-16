@@ -1,0 +1,5 @@
+import core
+import pkg.left
+import pkg.right
+def main() -> void:
+    core.print(pkg.left.value() + pkg.right.value())

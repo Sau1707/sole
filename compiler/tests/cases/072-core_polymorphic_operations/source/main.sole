@@ -1,0 +1,11 @@
+import core
+def main() -> void:
+    fixed: int32[2] = [4, 5]
+    dynamic: int32[] = []
+    core.append(dynamic, fixed[0])
+    core.print(core.len(fixed))
+    core.print(core.len(dynamic))
+    core.print(core.len("abc"))
+    core.print(core.slice("abcd", 1, 3))
+    pieces: str[] = ["a", "b"]
+    core.print(core.join(pieces))

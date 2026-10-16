@@ -1,0 +1,5 @@
+import core
+def main() -> int32:
+    x: float64 = 0.0 / 0.0
+    core.print(int64(x))
+    return 0

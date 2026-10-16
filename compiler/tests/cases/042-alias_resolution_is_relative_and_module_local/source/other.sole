@@ -1,0 +1,3 @@
+import math as short
+def read() -> int64:
+    return short.gcd(12, 8)

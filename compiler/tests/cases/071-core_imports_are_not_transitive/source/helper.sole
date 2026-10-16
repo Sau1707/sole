@@ -1,0 +1,3 @@
+import core
+def size() -> int64:
+    return core.len("abc")

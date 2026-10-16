@@ -1,0 +1,18 @@
+import core
+import wrappers.libc
+
+
+def read(path: str) -> str:
+    return core.read_file(path)
+
+
+def write(path: str, contents: str) -> void:
+    core.write_file(path, contents)
+
+
+def remove(path: str) -> bool:
+    return wrappers.libc.remove(core.cstr(path)) == 0
+
+
+def rename(source: str, destination: str) -> bool:
+    return wrappers.libc.rename(core.cstr(source), core.cstr(destination)) == 0

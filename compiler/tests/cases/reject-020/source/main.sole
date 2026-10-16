@@ -1,0 +1,3 @@
+def f() -> void:
+    x: int32 = 1
+    x: int32 = 2

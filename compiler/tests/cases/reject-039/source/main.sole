@@ -1,0 +1,2 @@
+def f() -> void:
+    x: int32[2] = [n for n in range(2)]

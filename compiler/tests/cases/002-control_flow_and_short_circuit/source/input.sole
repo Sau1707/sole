@@ -1,0 +1,29 @@
+import core
+def side_effect() -> bool:
+    core.print("called")
+    return true
+def classify(x: int32) -> int32:
+    if x < 0:
+        return -1
+    elif x > 0:
+        return 1
+    else:
+        return 0
+def main() -> int32:
+    core.print(false and side_effect())
+    core.print(true or side_effect())
+    core.print(true and side_effect())
+    core.print(false or side_effect())
+    core.print(not 1 == 2)
+    i: int32 = 0
+    while i < 8:
+        i = i + 1
+        if i == 2:
+            continue
+        if i == 4:
+            break
+        core.print(i)
+    core.print(classify(-2))
+    core.print(classify(0))
+    core.print(classify(2))
+    return 0

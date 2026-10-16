@@ -1,0 +1,6 @@
+import core
+import pkg.reader as reader
+import other
+def main() -> void:
+    core.print(reader.read())
+    core.print(other.read())

@@ -1,0 +1,4 @@
+import core
+def f() -> void:
+    x: int32[2] = [1, 2]
+    core.print(x[true])

@@ -1,0 +1,5 @@
+import core
+def main() -> int32:
+    x: int8 = -128
+    core.print(x / -1)
+    return 0

@@ -1,0 +1,13 @@
+intrinsic print
+intrinsic len
+intrinsic append
+intrinsic slice
+intrinsic join
+intrinsic cstr
+intrinsic from_cstr
+intrinsic address
+intrinsic arg_count
+intrinsic arg
+intrinsic read_file
+intrinsic write_file
+intrinsic exit

@@ -1,0 +1,6 @@
+import driver.cli
+
+
+# Start the compiler's command-line driver.
+def main() -> int32:
+    return driver.cli.main()

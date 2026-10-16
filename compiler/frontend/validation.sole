@@ -1,0 +1,83 @@
+import core
+import backend.types
+import frontend.builtins
+import frontend.diagnostics
+import frontend.model
+import frontend.symbols
+import frontend.types
+
+
+# Reject recursive inline record layouts while allowing reference fields.
+def check_layout(state: frontend.model.State, index: int64, path: str[]) -> void:
+    record: frontend.model.RecordInfo = state.records[index]
+    i: int64 = 0
+    while i < core.len(path):
+        if path[i] == record.name:
+            frontend.diagnostics.fail_at(state, "recursive value layout: " + record.name)
+        i = i + 1
+    next_path: str[] = []
+    j: int64 = 0
+    while j < core.len(path):
+        core.append(next_path, path[j])
+        j = j + 1
+    core.append(next_path, record.name)
+    f: int64 = 0
+    while f < core.len(record.types):
+        typ: str = record.types[f]
+        if not frontend.types.dynamic_type(typ):
+            child: int64 = frontend.symbols.record_index(state, frontend.types.element_type(typ))
+            if child >= 0 and state.records[child].kind == "struct":
+                check_layout(state, child, next_path)
+        f = f + 1
+
+
+# Check declaration names, field types, signatures, and record layouts.
+def validate(state: frontend.model.State) -> void:
+    # Check record names, field types, and conflicting members.
+    i: int64 = 0
+    while i < core.len(state.records):
+        record: frontend.model.RecordInfo = state.records[i]
+        if frontend.symbols.record_index(state, record.name) != i or frontend.builtins.reserved_name(record.name):
+            frontend.diagnostics.fail_at(state, "duplicate or reserved type: " + record.name)
+        j: int64 = 0
+        while j < core.len(record.names):
+            if record.types[j] == "void" or frontend.types.element_type(record.types[j]) == "void":
+                frontend.diagnostics.fail_at(state, "void cannot be a field type")
+            backend.types.llvm_type(state, record.types[j])
+            if frontend.symbols.function_index(state, record.name + "." + record.names[j]) >= 0:
+                frontend.diagnostics.fail_at(state, "duplicate member: " + record.names[j])
+            k: int64 = 0
+            while k < j:
+                if record.names[j] == record.names[k]:
+                    frontend.diagnostics.fail_at(state, "duplicate field: " + record.names[j])
+                k = k + 1
+            j = j + 1
+        i = i + 1
+    # Walk inline record fields to reject infinite-sized value layouts.
+    layout_index: int64 = 0
+    while layout_index < core.len(state.records):
+        check_layout(state, layout_index, [])
+        layout_index = layout_index + 1
+    # Validate function names, return types, parameters, and foreign signatures.
+    f: int64 = 0
+    while f < core.len(state.functions):
+        fn: frontend.model.FunctionInfo = state.functions[f]
+        if frontend.symbols.function_index(state, fn.name) != f or not fn.external and frontend.builtins.reserved_name(fn.name) or frontend.symbols.record_index(state, fn.name) >= 0:
+            frontend.diagnostics.fail_at(state, "duplicate or reserved function: " + fn.name)
+        backend.types.llvm_type(state, fn.result)
+        if fn.external and fn.result != "void" and fn.result != "ptr" and fn.result != "bool" and not frontend.types.integer_type(fn.result) and not frontend.types.float_type(fn.result):
+            frontend.diagnostics.fail_at(state, "extern results must be scalar, ptr, or void")
+        p: int64 = 0
+        while p < core.len(fn.types):
+            if fn.types[p] == "void" or frontend.types.element_type(fn.types[p]) == "void":
+                frontend.diagnostics.fail_at(state, "void cannot be a parameter type")
+            backend.types.llvm_type(state, fn.types[p])
+            q: int64 = 0
+            while q < p:
+                if fn.names[p] == fn.names[q]:
+                    frontend.diagnostics.fail_at(state, "duplicate parameter")
+                q = q + 1
+            if fn.external and not frontend.types.integer_type(fn.types[p]) and not frontend.types.float_type(fn.types[p]) and fn.types[p] != "ptr" and fn.types[p] != "bool":
+                frontend.diagnostics.fail_at(state, "extern parameters must be scalar or ptr")
+            p = p + 1
+        f = f + 1

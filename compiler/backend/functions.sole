@@ -1,0 +1,68 @@
+import core
+import backend.ir
+import backend.locals
+import backend.types
+import frontend.diagnostics
+import frontend.model
+import frontend.statements
+import frontend.symbols
+
+
+# Emit a foreign declaration or compile a function's parameters and body.
+def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInfo) -> void:
+    parameter_parts: str[] = []
+    i: int64 = 0
+    while i < core.len(fn.types):
+        if i > 0:
+            core.append(parameter_parts, ", ")
+        core.append(parameter_parts, backend.types.llvm_type(state, fn.types[i]))
+        if not fn.external:
+            core.append(parameter_parts, " %arg" + str(i))
+        i = i + 1
+    prefix: str = "define "
+    if fn.external:
+        prefix = "declare "
+    header: str = prefix + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(state, fn) + "(" + core.join(parameter_parts) + ") nobuiltin"
+    if fn.external:
+        # Reuse compatible declarations of the same foreign symbol.
+        previous: int64 = 0
+        while previous < core.len(state.functions):
+            other: frontend.model.FunctionInfo = state.functions[previous]
+            if other.name == fn.name:
+                break
+            if other.external and frontend.symbols.foreign_name(other.name) == frontend.symbols.foreign_name(fn.name):
+                if backend.types.llvm_type(state, other.result) != backend.types.llvm_type(state, fn.result) or core.len(other.types) != core.len(fn.types):
+                    frontend.diagnostics.fail_at(state, "conflicting external declaration: " + frontend.symbols.foreign_name(fn.name))
+                p: int64 = 0
+                while p < core.len(fn.types):
+                    if backend.types.llvm_type(state, other.types[p]) != backend.types.llvm_type(state, fn.types[p]):
+                        frontend.diagnostics.fail_at(state, "conflicting external declaration: " + frontend.symbols.foreign_name(fn.name))
+                    p = p + 1
+                return
+            previous = previous + 1
+        core.append(state.definitions, header + "\n")
+        return
+    # Reset per-function state before declaring parameters and compiling blocks.
+    state.tokens.position = fn.body
+    state.code = []
+    state.slots = []
+    state.names = []
+    state.types = []
+    state.pointers = []
+    state.depths = []
+    state.loop_tests = []
+    state.loop_ends = []
+    state.serial = 0
+    state.depth = 0
+    state.ended = false
+    state.result = fn.result
+    j: int64 = 0
+    while j < core.len(fn.types):
+        backend.locals.declare_local(state, fn.names[j], fn.types[j], frontend.model.Value(fn.types[j], "%arg" + str(j), ""))
+        j = j + 1
+    frontend.statements.compile_block(state)
+    if not state.ended:
+        if fn.result != "void":
+            frontend.diagnostics.fail_at(state, "function must return on every checked path: " + fn.name)
+        backend.ir.emit(state, "ret void")
+    core.append(state.definitions, header + " {\nentry:\n" + core.join(state.slots) + "  br label %body\nbody:\n" + core.join(state.code) + "}\n")

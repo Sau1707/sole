@@ -1,0 +1,7 @@
+import core
+def main() -> void:
+    core.print("""first
+second # literal text""")
+    core.print("""one " and two "" quotes""")
+    core.print("""escaped \""" and newline\nend""")
+    core.print("""""")

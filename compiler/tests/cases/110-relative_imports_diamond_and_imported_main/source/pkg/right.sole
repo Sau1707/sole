@@ -1,0 +1,3 @@
+import shared
+def value() -> int32:
+    return shared.main()

@@ -1,0 +1,3 @@
+import features.reader
+def main() -> int32:
+    return features.reader.value()

@@ -1,0 +1,8 @@
+import core
+import pkg.types as first
+import pkg.types as second
+import pkg.types
+def main() -> void:
+    box: first.Box = second.Box(42)
+    other: pkg.types.Box = box
+    core.print(other.read())

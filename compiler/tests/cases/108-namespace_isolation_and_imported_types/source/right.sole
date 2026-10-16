@@ -1,0 +1,4 @@
+struct Box:
+    value: int32
+def value() -> int32:
+    return 20

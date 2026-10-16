@@ -1,0 +1,3 @@
+import common.model
+def read() -> common.model.Answer:
+    return common.model.Answer(42)

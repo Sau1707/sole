@@ -1,0 +1,16 @@
+import core
+import math
+
+
+struct Point:
+    x: int32
+
+
+class Box:
+    value: int32
+    def read(self) -> int32:
+        return self.value
+
+
+def main() -> void:
+    pass

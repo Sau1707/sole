@@ -1,0 +1,3 @@
+import core
+def f() -> void:
+    x: void = core.print(1)

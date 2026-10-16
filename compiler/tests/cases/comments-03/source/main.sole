@@ -1,0 +1,4 @@
+import core
+def main() -> void:
+    core.print('''single
+quotes''')

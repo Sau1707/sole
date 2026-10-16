@@ -1,0 +1,110 @@
+import core
+import backend.ir
+import frontend.characters
+import frontend.diagnostics
+import frontend.model
+import frontend.types
+import platform.system
+
+
+# Encode string bytes as an LLVM global and return its string view.
+def string_constant(state: frontend.model.State, text: str) -> frontend.model.Value:
+    digits: str = "0123456789ABCDEF"
+    pieces: str[] = []
+    i: int64 = 0
+    while i < core.len(text):
+        byte: uint8 = text[i]
+        high: int64 = int64(byte / 16)
+        low: int64 = int64(byte % 16)
+        core.append(pieces, "\\" + core.slice(digits, high, high + 1) + core.slice(digits, low, low + 1))
+        i = i + 1
+    symbol: str = "@_sole.string." + str(core.len(state.globals))
+    core.append(state.globals, symbol + " = private constant [" + str(core.len(text) + 1) + " x i8] c\"" + core.join(pieces) + "\\00\"\n")
+    return frontend.model.Value("str", "{ptr " + symbol + ", i64 " + str(core.len(text)) + "}", "")
+
+
+# Parse an integer literal and check it against its contextual type.
+def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend.model.Value:
+    negative: bool = core.len(text) > 0 and text[0] == 45
+    offset: int64 = 0
+    if negative:
+        offset = 1
+    base: uint64 = 10
+    if core.len(text) > offset + 2 and text[offset] == 48:
+        prefix: uint8 = text[offset + 1]
+        if prefix == 120 or prefix == 88:
+            base = 16
+            offset = offset + 2
+        elif prefix == 98 or prefix == 66:
+            base = 2
+            offset = offset + 2
+        elif prefix == 111 or prefix == 79:
+            base = 8
+            offset = offset + 2
+    magnitude: uint64 = 0
+    while offset < core.len(text):
+        byte: uint8 = text[offset]
+        if byte != 95:
+            d: uint64 = 255
+            if frontend.characters.digit(byte):
+                d = uint64(byte - 48)
+            elif byte >= 97 and byte <= 102:
+                d = uint64(byte - 97 + 10)
+            elif byte >= 65 and byte <= 70:
+                d = uint64(byte - 65 + 10)
+            if d >= base or magnitude > (uint64(18446744073709551615) - d) / base:
+                frontend.diagnostics.fail_at(state, "integer literal is invalid or too large")
+            magnitude = magnitude * base + d
+        offset = offset + 1
+    if frontend.types.float_type(typ):
+        signed_value: str = str(magnitude)
+        if negative:
+            signed_value = "-" + signed_value
+        return float_literal(state, signed_value, typ)
+    bits: int64 = frontend.types.width(typ)
+    maximum: uint64 = uint64(18446744073709551615)
+    if not frontend.types.unsigned_type(typ):
+        maximum = uint64(1) << uint64(bits - 1)
+        if not negative:
+            maximum = maximum - 1
+    elif bits < 64:
+        maximum = (uint64(1) << uint64(bits)) - 1
+    if magnitude > maximum or negative and frontend.types.unsigned_type(typ):
+        frontend.diagnostics.fail_at(state, "integer literal does not fit " + typ)
+    output_number: str = str(magnitude)
+    if negative:
+        output_number = "-" + output_number
+    return frontend.model.Value(typ, output_number, "")
+
+
+# Encode floating-point literals with exact LLVM bit patterns.
+def float_literal(state: frontend.model.State, text: str, typ: str) -> frontend.model.Value:
+    real_value: float64 = platform.system.strtod(core.cstr(text), ptr(0))
+    bits: uint64 = platform.system.sole_rt_f64_bits(real_value)
+    digits: str = "0123456789ABCDEF"
+    hex: str = "0x"
+    i: int64 = 60
+    while i >= 0:
+        index: int64 = int64((bits >> uint64(i)) & 15)
+        hex = hex + core.slice(digits, index, index + 1)
+        i = i - 4
+    if typ == "float32":
+        return frontend.model.Value(typ, backend.ir.instruction(state, "fptrunc double " + hex + " to float"), "")
+    return frontend.model.Value("float64", hex, "")
+
+
+# Resolve literal types and require explicit casts for typed mismatches.
+def coerce(state: frontend.model.State, value: frontend.model.Value, expected: str) -> frontend.model.Value:
+    if value.typ == "integer":
+        destination: str = expected
+        if not frontend.types.integer_type(destination) and not frontend.types.float_type(destination):
+            destination = "int64"
+        value = number_literal(state, value.value, destination)
+    if value.typ == "real":
+        destination_float: str = "float64"
+        if frontend.types.float_type(expected):
+            destination_float = expected
+        value = float_literal(state, value.value, destination_float)
+    if expected != "" and value.typ != expected:
+        frontend.diagnostics.fail_at(state, "expected " + expected + ", got " + value.typ + "; use an explicit cast")
+    return value

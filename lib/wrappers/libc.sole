@@ -1,0 +1,13 @@
+extern def strlen(text: ptr) -> uint64
+
+
+extern def abs(value: int32) -> int32
+
+
+extern def remove(path: ptr) -> int32
+
+
+extern def rename(source: ptr, destination: ptr) -> int32
+
+
+extern def getenv(name: ptr) -> ptr

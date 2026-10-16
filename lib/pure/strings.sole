@@ -1,0 +1,31 @@
+import core
+
+
+def starts_with(text: str, prefix: str) -> bool:
+    return core.len(prefix) <= core.len(text) and core.slice(text, 0, core.len(prefix)) == prefix
+
+
+def ends_with(text: str, suffix: str) -> bool:
+    return core.len(suffix) <= core.len(text) and core.slice(text, core.len(text) - core.len(suffix), core.len(text)) == suffix
+
+
+def find(text: str, needle: str) -> int64:
+    i: int64 = 0
+    while i <= core.len(text) - core.len(needle):
+        if core.slice(text, i, i + core.len(needle)) == needle:
+            return i
+        i = i + 1
+    return -1
+
+
+def contains(text: str, needle: str) -> bool:
+    return find(text, needle) >= 0
+
+
+def repeat(text: str, count: int64) -> str:
+    parts: str[] = []
+    i: int64 = 0
+    while i < count:
+        core.append(parts, text)
+        i = i + 1
+    return core.join(parts)

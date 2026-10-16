@@ -1,0 +1,9 @@
+import core
+extern def strtol(text: ptr, end: ptr, base: int32) -> int64
+def main() -> int32:
+    tail: ptr = ptr(0)
+    core.print(strtol(core.cstr("123tail"), core.address(tail), 10))
+    core.print(core.from_cstr(tail))
+    core.print(core.arg_count())
+    core.print(core.len(core.arg(0)) > 0)
+    return 0

@@ -1,0 +1,68 @@
+import core
+
+
+def mean(data: float64[]) -> float64:
+    total: float64 = data[0]
+    i: int64 = 1
+    while i < core.len(data):
+        total = total + data[i]
+        i = i + 1
+    return total / float64(core.len(data))
+
+
+def fmean(data: float64[]) -> float64:
+    return mean(data)
+
+
+def _sorted(data: float64[]) -> float64[]:
+    result: float64[] = []
+    i: int64 = 0
+    while i < core.len(data):
+        value: float64 = data[i]
+        core.append(result, value)
+        j: int64 = i
+        while j > 0 and result[j - 1] > value:
+            result[j] = result[j - 1]
+            j = j - 1
+        result[j] = value
+        i = i + 1
+    return result
+
+
+def median(data: float64[]) -> float64:
+    ordered: float64[] = _sorted(data)
+    middle: int64 = core.len(ordered) / 2
+    if core.len(ordered) % 2 == 1:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2.0
+
+
+def median_low(data: float64[]) -> float64:
+    ordered: float64[] = _sorted(data)
+    return ordered[(core.len(ordered) - 1) / 2]
+
+
+def median_high(data: float64[]) -> float64:
+    ordered: float64[] = _sorted(data)
+    return ordered[core.len(ordered) / 2]
+
+
+def _sum_squares(data: float64[]) -> float64:
+    center: float64 = mean(data)
+    total: float64 = 0.0
+    i: int64 = 0
+    while i < core.len(data):
+        delta: float64 = data[i] - center
+        total = total + delta * delta
+        i = i + 1
+    return total
+
+
+def pvariance(data: float64[]) -> float64:
+    return _sum_squares(data) / float64(core.len(data))
+
+
+def variance(data: float64[]) -> float64:
+    if core.len(data) < 2:
+        return data[1]
+    return _sum_squares(data) / float64(core.len(data) - 1)

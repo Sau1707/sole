@@ -1,0 +1,6 @@
+first
+second # literal text
+one " and two "" quotes
+escaped """ and newline
+end
+

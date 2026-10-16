@@ -1,0 +1,107 @@
+import core
+import backend.target
+import driver.format
+import driver.linker
+import frontend.diagnostics
+import pipeline
+import platform.system
+
+
+# Parse command-line options and dispatch compilation, linking, or execution.
+def main() -> int32:
+    if core.arg_count() == 2 and core.arg(1) == "--version":
+        core.print("sole 0.0.0 (self-hosted)")
+        return 0
+    if core.arg_count() >= 2 and core.arg(1) == "format":
+        return driver.format.main()
+    if core.arg_count() < 3:
+        core.print("Usage: sole build|check|run file.sole [-o output] [--target native] [--emit binary|llvm|object] [--link library] [-O0..3]")
+        core.print("       sole format [--check] file.sole ...")
+        return 1
+    # Read the command, source path, and compilation options.
+    command: str = core.arg(1)
+    if command != "build" and command != "check" and command != "run":
+        frontend.diagnostics.die("unknown command: " + command)
+    filename: str = core.arg(2)
+    output: str = ""
+    emission: str = "binary"
+    libraries: str[] = []
+    level: int32 = 2
+    i: int64 = 3
+    while i < core.arg_count():
+        option: str = core.arg(i)
+        if option == "-O0" or option == "-O1" or option == "-O2" or option == "-O3":
+            level = int32(option[2] - 48)
+        else:
+            if i + 1 >= core.arg_count():
+                frontend.diagnostics.die("missing value for " + option)
+            value: str = core.arg(i + 1)
+            if option == "-o" or option == "--output":
+                output = value
+            elif option == "--target":
+                if value != "native":
+                    frontend.diagnostics.die("unknown target: " + value)
+            elif option == "--emit":
+                if value != "binary" and value != "llvm" and value != "object":
+                    frontend.diagnostics.die("unknown emission: " + value)
+                emission = value
+            elif option == "--link":
+                core.append(libraries, value)
+            else:
+                frontend.diagnostics.die("unknown option: " + option)
+            i = i + 1
+        i = i + 1
+    # Generate LLVM IR and handle validation-only requests.
+    home: str = core.from_cstr(platform.system.sole_rt_home())
+    contents: str = core.read_file(filename)
+    ir_text: str = pipeline.generate(filename, contents, home)
+    if command == "check":
+        backend.target.llvm_object(ir_text, "", 0, true)
+        core.print(filename + ": OK")
+        return 0
+    # Select an output path without overwriting the input source.
+    suffix: str = ""
+    if emission == "llvm":
+        suffix = ".ll"
+    elif emission == "object":
+        suffix = ".o"
+    if output == "":
+        output = driver.linker.default_output(filename, suffix)
+    if output == filename or platform.system.sole_rt_same_file(core.cstr(filename), core.cstr(output)) != 0:
+        frontend.diagnostics.die("output path must not overwrite the source file")
+    # Emit IR or an object directly, or link a native executable.
+    if emission == "llvm":
+        backend.target.llvm_object(ir_text, "", 0, true)
+        core.write_file(output, ir_text)
+    elif emission == "object":
+        backend.target.llvm_object(ir_text, output, level, false)
+    else:
+        temporary: str = core.from_cstr(platform.system.sole_rt_temp_dir())
+        object_path: str = temporary + "/program.o"
+        backend.target.llvm_object(ir_text, object_path, level, false)
+        if command == "run":
+            output = temporary + "/program"
+        runtime_path: str = home + "/runtime/system.c"
+        link_command: str = driver.linker.native_linker() + " " + driver.linker.shell_quote(object_path) + " " + driver.linker.shell_quote(runtime_path) + " -lm"
+        l: int64 = 0
+        while l < core.len(libraries):
+            link_command = link_command + " " + driver.linker.shell_quote("-l" + libraries[l])
+            l = l + 1
+        link_command = link_command + " -o " + driver.linker.shell_quote(output)
+        status: int32 = platform.system.system(core.cstr(link_command))
+        platform.system.unlink(core.cstr(object_path))
+        if status != 0:
+            platform.system.rmdir(core.cstr(temporary))
+            frontend.diagnostics.die("linking failed")
+        if command == "run":
+            # Run the temporary executable and preserve its exit status.
+            run_command: str = driver.linker.shell_quote(output)
+            status = platform.system.system(core.cstr(run_command))
+            platform.system.unlink(core.cstr(output))
+            platform.system.rmdir(core.cstr(temporary))
+            if (status & 127) != 0:
+                return 128 + (status & 127)
+            return (status >> 8) & 255
+        platform.system.rmdir(core.cstr(temporary))
+    core.print("Built " + output)
+    return 0

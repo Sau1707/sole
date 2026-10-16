@@ -1,0 +1,14 @@
+import core
+import frontend.types
+
+
+# Recognize the compiler-supported intrinsic names.
+def builtin_name(name: str) -> bool:
+    return name == "print" or name == "len" or name == "append" or name == "join" or name == "slice" or name == "cstr" or name == "from_cstr" or name == "address" or name == "arg_count" or name == "arg" or name == "read_file" or name == "write_file" or name == "exit"
+
+
+# Protect builtin types and runtime symbols from conflicting declarations.
+def reserved_name(name: str) -> bool:
+    if core.len(name) >= 5 and core.slice(name, 0, 5) == "_sole":
+        return true
+    return frontend.types.integer_type(name) or frontend.types.float_type(name) or name == "str" or name == "bool" or name == "ptr" or name == "void" or name == "malloc" or name == "printf" or name == "putchar"

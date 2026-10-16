@@ -1,0 +1,2 @@
+def f() -> void:
+    flag: bool = 1

@@ -1,0 +1,6 @@
+import core
+import common.types
+import features.reader
+def main() -> void:
+    answer: common.types.Answer = features.reader.read()
+    core.print(answer.value)

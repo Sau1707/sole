@@ -1,0 +1,54 @@
+import core
+import backend.functions
+import backend.types
+import frontend.declarations
+import frontend.diagnostics
+import frontend.model
+import frontend.modules
+import frontend.symbols
+import frontend.validation
+
+
+# Coordinate source loading, semantic checks, and LLVM module assembly.
+def generate(filename: str, source: str, home: str) -> str:
+    # Load dependencies and collect validated declarations.
+    loaded: frontend.model.Tokens = frontend.modules.load_imports(filename, source)
+    state: frontend.model.State = frontend.model.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [], 0, 0, false, "", filename)
+    frontend.declarations.scan(state)
+    frontend.validation.validate(state)
+    # Emit named LLVM layouts for structs and classes.
+    record_definitions: str[] = []
+    r: int64 = 0
+    while r < core.len(state.records):
+        info: frontend.model.RecordInfo = state.records[r]
+        fields: str[] = []
+        i: int64 = 0
+        while i < core.len(info.types):
+            if i > 0:
+                core.append(fields, ", ")
+            core.append(fields, backend.types.llvm_type(state, info.types[i]))
+            i = i + 1
+        core.append(record_definitions, "%" + info.name + " = type {" + core.join(fields) + "}\n")
+        r = r + 1
+    # Lower each function and foreign declaration.
+    f: int64 = 0
+    while f < core.len(state.functions):
+        backend.functions.compile_function(state, state.functions[f])
+        f = f + 1
+    # Wrap Sole's entry point with native argument initialization.
+    main_index: int64 = frontend.symbols.function_index(state, "main")
+    if main_index >= 0:
+        main_fn: frontend.model.FunctionInfo = state.functions[main_index]
+        if core.len(main_fn.types) != 0 or main_fn.result != "int32" and main_fn.result != "void" or main_fn.external:
+            frontend.diagnostics.die("main must take no parameters and return int32 or void")
+        wrapper: str = "define i32 @main(i32 %argc, ptr %argv) {\nentry:\n  call void @sole_rt_init(i32 %argc, ptr %argv)\n"
+        if main_fn.result == "void":
+            wrapper = wrapper + "  call void @_sole.fn.main()\n  ret i32 0\n}\n"
+        else:
+            wrapper = wrapper + "  %result = call i32 @_sole.fn.main()\n  ret i32 %result\n}\n"
+        core.append(state.definitions, wrapper)
+    # Combine runtime helpers, record layouts, constants, and function bodies.
+    prologue: str = core.read_file(home + "/runtime/native.ll")
+    runtime_core: str = core.read_file(home + "/runtime/core.ll")
+    runtime_core = core.slice(runtime_core, core.len("declare ptr @_sole.alloc64(i64)\n"), core.len(runtime_core))
+    return prologue + runtime_core + core.join(record_definitions) + core.join(state.globals) + core.join(state.definitions)

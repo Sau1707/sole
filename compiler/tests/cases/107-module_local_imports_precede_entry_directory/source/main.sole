@@ -1,0 +1,4 @@
+import core
+import features.reader
+def main() -> void:
+    core.print(features.reader.value())

@@ -1,0 +1,2 @@
+struct Box:
+    value: int32
