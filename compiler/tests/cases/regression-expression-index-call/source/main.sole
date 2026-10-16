@@ -1,0 +1,8 @@
+def index() -> int64:
+    return 0
+
+
+def main() -> int32:
+    items: int32[1] = [1]
+    (items[index()])
+    return 0

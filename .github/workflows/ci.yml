@@ -36,7 +36,13 @@ jobs:
       - name: Test syntax, compiler, installation, and formatter
         run: |
           sha256sum -c .build/bootstrap-proof.txt
-          make test-suite SOLE_COMPILER="$PWD/.build/sole"
+          export SOLE_COMPILER="$PWD/.build/sole"
+          sh compiler/tests/harness.sh
+          sh compiler/tests/syntax.sh
+          sh compiler/tests/types.sh
+          sh compiler/tests/run.sh
+          sh compiler/tests/format.sh
+          sh compiler/tests/install.sh
       - name: Test release without system LLVM
         run: |
           docker run --rm -e SOLE_TEST_RELEASE -v "$PWD:/source:ro" ubuntu:24.04 sh -eu -c '

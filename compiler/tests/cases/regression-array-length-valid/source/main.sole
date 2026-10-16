@@ -1,0 +1,17 @@
+import core
+
+
+def sum(values: int32[0_2]) -> int32:
+    return values[0] + values[1]
+
+
+def main() -> int32:
+    fixed: int32[0_2] = [3, 4]
+    plain: int32[2] = [5, 6]
+    dynamic: int32[] = []
+    core.append(dynamic, sum(fixed))
+    core.print(dynamic[0])
+    core.print(core.len(fixed))
+    core.print(plain[1])
+    core.print(core.len(dynamic))
+    return 0

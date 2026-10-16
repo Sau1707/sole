@@ -1,0 +1,7 @@
+import core as c
+import package.numbers
+import package.numbers as numbers
+
+def main() -> int32:
+    c.print(package.numbers.value() + numbers.value())
+    return 0

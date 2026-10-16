@@ -1,0 +1,3 @@
+def main() -> int32:
+    value: int32 = 0b_
+    return value

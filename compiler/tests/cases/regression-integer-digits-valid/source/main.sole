@@ -1,0 +1,21 @@
+import core
+
+
+def main() -> int32:
+    hex: int32 = 0x__2_a_
+    binary: int32 = 0B__1_0_1_0_1_0_
+    octal: int32 = 0O__5_2_
+    decimal: int32 = 4__2_
+    negative: int32 = -0X__2_A_
+    zero: uint64 = 0b__0_
+    real: float64 = 0o__5_2_
+    negative_real: float32 = -0x__2_a_
+    core.print(hex == 42)
+    core.print(binary == hex)
+    core.print(octal == hex)
+    core.print(decimal == hex)
+    core.print(negative == -42)
+    core.print(zero == 0)
+    core.print(real == 42)
+    core.print(negative_real == -42)
+    return 0

@@ -1,0 +1,6 @@
+def consume(values: int32[_]) -> void:
+    pass
+
+
+def main() -> int32:
+    return 0

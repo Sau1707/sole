@@ -45,6 +45,7 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
             base = 8
             offset = offset + 2
     magnitude: uint64 = 0
+    has_digit: bool = false
     while offset < core.len(text):
         byte: uint8 = text[offset]
         if byte != 95:
@@ -58,7 +59,10 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
             if d >= base || magnitude > (uint64(18446744073709551615) - d) / base:
                 frontend.diagnostics.fail_at(state, "integer literal is invalid or too large")
             magnitude = magnitude * base + d
+            has_digit = true
         offset = offset + 1
+    if not has_digit:
+        frontend.diagnostics.fail_at(state, "integer literal requires at least one digit")
     if frontend.types.float_type(typ):
         signed_value: str = str(magnitude)
         if negative:

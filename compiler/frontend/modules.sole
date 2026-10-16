@@ -110,12 +110,12 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
                     frontend.diagnostics.module_error(module, i, "expected a module name")
                 alias = alias + tokens.text[i]
                 i = i + 1
-                if tokens.text[i] != ".":
+                if tokens.kind[i] != 7 || tokens.text[i] != ".":
                     break
                 alias = alias + "."
                 i = i + 1
             name: str = alias
-            if tokens.text[i] == "as":
+            if tokens.kind[i] == 1 && tokens.text[i] == "as":
                 i = i + 1
                 if tokens.kind[i] != 1 || frontend.tokens.reserved_keyword(tokens.text[i]):
                     frontend.diagnostics.module_error(module, i, "expected an import alias")

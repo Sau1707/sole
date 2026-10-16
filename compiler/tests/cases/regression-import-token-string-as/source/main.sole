@@ -1,0 +1,4 @@
+import core "as" c
+
+def main() -> int32:
+    return 0

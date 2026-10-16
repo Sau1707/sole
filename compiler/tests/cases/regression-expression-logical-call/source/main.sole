@@ -1,0 +1,7 @@
+def predicate() -> bool:
+    return true
+
+
+def main() -> int32:
+    true && predicate()
+    return 0

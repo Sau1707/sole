@@ -10,6 +10,8 @@ def parse_type(state: frontend.model.State) -> str:
     if frontend.tokens.accept(state, "["):
         name = name + "["
         if frontend.tokens.peek(state) != "]":
+            if state.tokens.kind[state.tokens.position] != 2:
+                frontend.diagnostics.fail_at(state, "expected a numeric array length")
             name = name + frontend.tokens.take(state)
         frontend.tokens.expect(state, "]")
         name = name + "]"

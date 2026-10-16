@@ -1,0 +1,4 @@
+import wrappers "." system
+
+def main() -> int32:
+    return 0

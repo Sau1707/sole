@@ -6,6 +6,7 @@ import frontend.declarations
 import frontend.diagnostics
 import frontend.expressions
 import frontend.model
+import frontend.symbols
 import frontend.tokens
 
 
@@ -119,13 +120,14 @@ def statement(state: frontend.model.State) -> void:
         backend.locals.declare_local(state, name, local_type, initializer)
         frontend.tokens.expect(state, "<newline>")
     else:
-        start: int64 = state.tokens.position
-        left: frontend.model.Value = frontend.expressions.expression(state, 0, "")
+        parsed: frontend.model.Expression = frontend.expressions.parse_expression(state, 0, "")
+        left: frontend.model.Value = parsed.value
         if frontend.tokens.accept(state, "="):
-            if left.pointer == "" || state.tokens.text[start] == "self" && state.tokens.position == start + 2:
+            receiver: int64 = frontend.symbols.local_index(state, "self")
+            if left.pointer == "" || receiver >= 0 && left.pointer == state.pointers[receiver]:
                 frontend.diagnostics.fail_at(state, "assignment requires mutable storage")
             right: frontend.model.Value = backend.literals.coerce(state, frontend.expressions.expression(state, 0, left.typ), left.typ)
             backend.ir.emit(state, "store " + backend.ir.typed(state, right) + ", ptr " + left.pointer)
-        elif state.tokens.text[state.tokens.position - 1] != ")":
+        elif not parsed.is_call:
             frontend.diagnostics.fail_at(state, "only calls can be expression statements")
         frontend.tokens.expect(state, "<newline>")

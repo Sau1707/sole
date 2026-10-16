@@ -1,0 +1,7 @@
+def number() -> int32:
+    return 1
+
+
+def main() -> int32:
+    number() + number()
+    return 0

@@ -1,0 +1,21 @@
+import core
+
+
+class Counter:
+    value: int32
+
+    def change(self) -> void:
+        (self).value = 7
+        ((self.value)) = self.value + 4
+        alias: Counter = self
+        alias = Counter(99)
+
+
+def main() -> int32:
+    counter: Counter = Counter(1)
+    other: Counter = counter
+    (counter) = Counter(7)
+    core.print(counter.value)
+    other.change()
+    core.print(other.value)
+    return 0

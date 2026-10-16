@@ -208,12 +208,17 @@ def named_call(state: frontend.model.State, name: str, receiver: frontend.model.
     return frontend.model.Value(fn.result, backend.ir.instruction(state, call_text), "")
 
 
-# Parse and lower an expression using operator precedence.
 def expression(state: frontend.model.State, minimum: int32, expected: str) -> frontend.model.Value:
+    return parse_expression(state, minimum, expected).value
+
+
+# Parse and lower an expression using operator precedence.
+def parse_expression(state: frontend.model.State, minimum: int32, expected: str) -> frontend.model.Expression:
     # Read the initial literal, unary operation, grouped value, or name.
     kind: int32 = state.tokens.kind[state.tokens.position]
     text: str = frontend.tokens.take(state)
     left: frontend.model.Value = frontend.model.Value("void", "", "")
+    is_call: bool = false
     if kind == 3:
         left = backend.literals.string_constant(state, text)
     elif text == "-" || text == "~" || text == "not":
@@ -241,7 +246,9 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             else:
                 frontend.diagnostics.fail_at(state, "invalid unary operator")
     elif text == "(":
-        left = expression(state, 0, expected)
+        grouped: frontend.model.Expression = parse_expression(state, 0, expected)
+        left = grouped.value
+        is_call = grouped.is_call
         frontend.tokens.expect(state, ")")
     elif text == "[":
         if not frontend.types.array_type(expected):
@@ -279,6 +286,7 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
     elif kind == 1:
         if frontend.tokens.peek(state) == "(":
             left = named_call(state, text, [])
+            is_call = true
         else:
             li: int64 = frontend.symbols.local_index(state, text)
             if li < 0:
@@ -296,7 +304,9 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             if frontend.tokens.peek(state) == "(":
                 receivers: frontend.model.Value[] = [left]
                 left = named_call(state, left.typ + "." + member, receivers)
+                is_call = true
             else:
+                is_call = false
                 record_id: int64 = frontend.symbols.record_index(state, left.typ)
                 if record_id < 0:
                     frontend.diagnostics.fail_at(state, "this value has no fields")
@@ -317,6 +327,7 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
                 else:
                     left = frontend.model.Value(field_type, backend.ir.extract(state, left, field_index), "")
         elif frontend.tokens.accept(state, "["):
+            is_call = false
             index_value: frontend.model.Value = backend.literals.coerce(state, expression(state, 0, ""), "")
             if not frontend.types.integer_type(index_value.typ):
                 frontend.diagnostics.fail_at(state, "an index must be an integer")
@@ -355,6 +366,7 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             power: int32 = frontend.operators.precedence(operator)
             if power < minimum:
                 break
+            is_call = false
             frontend.tokens.take(state)
             if operator == "&&" || operator == "||":
                 left = backend.literals.coerce(state, left, "bool")
@@ -380,4 +392,4 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
                 left = backend.operators.binary_ir(state, operator, left, right, expected)
                 if power == 3 && frontend.operators.precedence(frontend.tokens.peek(state)) == 3:
                     frontend.diagnostics.fail_at(state, "chained comparisons are not supported")
-    return left
+    return frontend.model.Expression(left, is_call)

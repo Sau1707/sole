@@ -65,3 +65,8 @@ class Value:
     typ: str
     value: str
     pointer: str
+
+
+struct Expression:
+    value: Value
+    is_call: bool

@@ -1,0 +1,7 @@
+struct Box:
+    value: int32
+
+
+def main() -> int32:
+    (Box(1).value)
+    return 0

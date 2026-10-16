@@ -1,0 +1,4 @@
+def main() -> int32:
+    pass
+    ")"
+    return 0

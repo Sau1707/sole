@@ -1,0 +1,11 @@
+class Counter:
+    value: int32
+
+    def replace(self) -> void:
+        ((self)) = Counter(2)
+
+
+def main() -> int32:
+    counter: Counter = Counter(1)
+    counter.replace()
+    return 0

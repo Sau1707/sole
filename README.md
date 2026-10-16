@@ -50,14 +50,13 @@ def main() -> int32:
 
 ```sh
 make up             # Setup the local development
-make test           # Run the tests cases
 make down           # Cleanup the local enviroment
 ```
 
 Local development uses the published compiler at `~/.local/bin/sole`, never a
-locally built compiler. `make install` installs the release; `make test` and
-`make format` use it without rebuilding the compiler. `SOLE_COMPILER` can select
-another installed compiler. CI bootstraps source releases separately.
+locally built compiler. `make install` installs the release;
+`make format` uses it without rebuilding the compiler.
+CI bootstraps source releases separately.
 
 `sole syntax file.sole ...` validates syntax without type checking or linking,
 using the bundled EBNF grammar. `--grammar path.ebnf` selects another grammar.
