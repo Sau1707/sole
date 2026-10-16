@@ -61,7 +61,7 @@ reject 'def main() -> int32:
     return 1 < 2 < 3'
 reject 'def main() -> int32:
     value: int32 = 1
-    value += 2'
+    value -= 2'
 reject 'def main() -> int32:
     for value in values:
         pass'
@@ -77,6 +77,49 @@ reject 'def main() -> int32:
     value: bool = true and false'
 reject 'def main() -> int32:
     value: bool = true or false'
+
+cat > "$temporary/features.sole" <<'EOF'
+enum Kind:
+    Number
+    Text
+
+
+union Item:
+    Number(value: int64)
+    Empty()
+
+
+struct Pair:
+    first: int64
+    second: int64
+
+
+def main() -> int32:
+    pair: Pair = Pair(second=2, first=1)
+    total: int64 = 0
+    for i in range(0, pair.second):
+        total += i
+    item: Item = Item.Number(total)
+    match item:
+        case Item.Number(value):
+            return int32(value)
+        case Item.Empty():
+            return 0
+EOF
+syntax "$temporary/features.sole"
+reject 'enum Empty:'
+reject 'union Item:
+    Value(value int64)'
+reject 'def main() -> int32:
+    match value:
+        case Item.Value(x) if true:
+            return 0'
+reject 'def main() -> int32:
+    for i in range():
+        pass'
+reject 'def main() -> int32:
+    for i in range(0, 3, 1):
+        pass'
 
 # Prove that the file, rather than a hard-coded Sole parser, drives acceptance.
 printf 'program = "pass", NEWLINE, EOF;\n' > "$temporary/minimal.ebnf"

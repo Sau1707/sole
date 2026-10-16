@@ -14,6 +14,6 @@
     "offSide": true
   },
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(?:(?:extern[ \\t]+)?def\\b|class\\b|struct\\b|if\\b|elif\\b|else\\b|while\\b).*:[ \\t]*(?:#.*)?$"
+    "increaseIndentPattern": "^\\s*(?:(?:extern[ \\t]+)?def\\b|class\\b|struct\\b|enum\\b|union\\b|if\\b|elif\\b|else\\b|while\\b|match\\b|case\\b|for\\b).*:[ \\t]*(?:#.*)?$"
   }
 }

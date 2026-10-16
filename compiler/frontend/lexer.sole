@@ -47,6 +47,7 @@ def lex(text: str) -> frontend.model.Tokens:
             beginning = false
         # Separate whitespace, comments, literals, and punctuation.
         byte: uint8 = text[i]
+        byte_literal: bool = byte == 98 && i + 1 < core.len(text) && (text[i + 1] == 34 || text[i + 1] == 39)
         if byte == 32 || byte == 13:
             i = i + 1
         elif byte == 9:
@@ -62,7 +63,7 @@ def lex(text: str) -> frontend.model.Tokens:
             i = i + 1
             line = line + 1
             beginning = true
-        elif frontend.characters.letter(byte):
+        elif frontend.characters.letter(byte) && not byte_literal:
             start: int64 = i
             i = i + 1
             while i < core.len(text) && (frontend.characters.letter(text[i]) || frontend.characters.digit(text[i])):
@@ -77,10 +78,18 @@ def lex(text: str) -> frontend.model.Tokens:
                 if not hex_number && i < core.len(text) && (text[i - 1] == 101 || text[i - 1] == 69) && (text[i] == 43 || text[i] == 45):
                     i = i + 1
             frontend.tokens.token_add(tokens, core.slice(text, start_number, i), 2, line)
-        elif byte == 34 || byte == 39:
-            quote: uint8 = byte
+        elif byte == 34 || byte == 39 || byte_literal:
+            literal_kind: int32 = 3
+            literal_name: str = "string"
+            if byte_literal:
+                literal_kind = 8
+                literal_name = "byte literal"
+                i = i + 1
+            quote: uint8 = text[i]
             start_line: int64 = line
             triple: bool = i + 2 < core.len(text) && text[i + 1] == quote && text[i + 2] == quote
+            if literal_kind == 8 && triple:
+                frontend.diagnostics.die("byte literals cannot be triple-quoted at line " + str(line))
             width: int64 = 1
             if triple:
                 width = 3
@@ -93,12 +102,12 @@ def lex(text: str) -> frontend.model.Tokens:
                     break
                 if text[i] == 10:
                     if not triple:
-                        frontend.diagnostics.die("unterminated string at line " + str(start_line))
+                        frontend.diagnostics.die("unterminated " + literal_name + " at line " + str(start_line))
                     line = line + 1
                 if text[i] == 92:
                     i = i + 1
                     if i == core.len(text):
-                        frontend.diagnostics.die("unterminated string")
+                        frontend.diagnostics.die("unterminated " + literal_name + " at line " + str(start_line))
                     escaped: uint8 = text[i]
                     if escaped == 110:
                         core.append(parts, "\n")
@@ -111,19 +120,22 @@ def lex(text: str) -> frontend.model.Tokens:
                     elif escaped == 92 || escaped == 34 || escaped == 39:
                         core.append(parts, core.slice(text, i, i + 1))
                     else:
-                        frontend.diagnostics.die("unsupported string escape at line " + str(line))
+                        frontend.diagnostics.die("unsupported " + literal_name + " escape at line " + str(line))
                 else:
                     core.append(parts, core.slice(text, i, i + 1))
                 i = i + 1
             if not closed:
-                frontend.diagnostics.die("unterminated string at line " + str(start_line))
+                frontend.diagnostics.die("unterminated " + literal_name + " at line " + str(start_line))
             i = i + width
-            frontend.tokens.token_add(tokens, core.join(parts), 3, start_line)
+            decoded: str = core.join(parts)
+            if literal_kind == 8 && core.len(decoded) != 1:
+                frontend.diagnostics.die("byte literal must contain exactly one byte at line " + str(start_line))
+            frontend.tokens.token_add(tokens, decoded, literal_kind, start_line)
         else:
             punct: str = core.slice(text, i, i + 1)
             if i + 1 < core.len(text):
                 pair: str = core.slice(text, i, i + 2)
-                if pair == "->" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "<<" || pair == ">>" || pair == "&&" || pair == "||":
+                if pair == "->" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "<<" || pair == ">>" || pair == "&&" || pair == "||" || pair == "+=":
                     punct = pair
             if punct == "(" || punct == "[":
                 nesting = nesting + 1

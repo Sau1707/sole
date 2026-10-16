@@ -9,10 +9,27 @@ import wrappers.system
 import frontend.diagnostics
 
 
+def output_error(output: str, inputs: str[]) -> str:
+    i: int64 = 0
+    while i < core.len(inputs):
+        input_path: str = inputs[i]
+        if output == input_path || wrappers.system.sole_rt_same_file(core.cstr(input_path), core.cstr(output)) != 0:
+            return "output path must not overwrite the source file: " + input_path
+        i = i + 1
+    return ""
+
+
+def cleanup(temporary: str) -> void:
+    wrappers.libc.unlink(core.cstr(temporary + "/program.o"))
+    wrappers.libc.unlink(core.cstr(temporary + "/program"))
+    if wrappers.libc.rmdir(core.cstr(temporary)) != 0:
+        core.print("sole: warning: cannot remove temporary directory: " + temporary)
+
+
 # Parse command-line options and dispatch compilation, linking, or execution.
 def main() -> int32:
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.4 (self-hosted)")
+        core.print("sole 0.0.5 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -61,9 +78,12 @@ def main() -> int32:
     # Generate LLVM IR and handle validation-only requests.
     home: str = core.from_cstr(wrappers.system.sole_rt_home())
     contents: str = core.read_file(filename)
-    ir_text: str = pipeline.generate(filename, contents, home)
+    compiled: pipeline.Compilation = pipeline.generate(filename, contents, home)
+    ir_text: str = compiled.ir
     if command == "check":
-        backend.target.llvm_object(ir_text, "", 0, true)
+        check_error: str = backend.target.llvm_object(ir_text, "", 0, true)
+        if check_error != "":
+            frontend.diagnostics.die(check_error)
         core.print(filename + ": OK")
         return 0
     # Select an output path without overwriting the input source.
@@ -74,41 +94,62 @@ def main() -> int32:
         suffix = ".o"
     if output == "":
         output = driver.linker.default_output(filename, suffix)
-    if output == filename || wrappers.system.sole_rt_same_file(core.cstr(filename), core.cstr(output)) != 0:
-        frontend.diagnostics.die("output path must not overwrite the source file")
+    protection_error: str = output_error(output, compiled.inputs)
+    if protection_error != "":
+        frontend.diagnostics.die(protection_error)
     # Emit IR or an object directly, or link a native executable.
     if emission == "llvm":
-        backend.target.llvm_object(ir_text, "", 0, true)
+        ir_error: str = backend.target.llvm_object(ir_text, "", 0, true)
+        if ir_error != "":
+            frontend.diagnostics.die(ir_error)
         core.write_file(output, ir_text)
     elif emission == "object":
-        backend.target.llvm_object(ir_text, output, level, false)
+        object_error: str = backend.target.llvm_object(ir_text, output, level, false)
+        if object_error != "":
+            frontend.diagnostics.die(object_error)
     else:
-        temporary: str = core.from_cstr(wrappers.system.sole_rt_temp_dir())
-        object_path: str = temporary + "/program.o"
-        backend.target.llvm_object(ir_text, object_path, level, false)
+        destination: str = output
+        temporary: str = ""
         if command == "run":
-            output = temporary + "/program"
+            temporary = core.from_cstr(wrappers.system.sole_rt_temp_dir())
+        else:
+            destination = core.from_cstr(wrappers.system.sole_rt_output_path(core.cstr(output)))
+            protection_error = output_error(destination, compiled.inputs)
+            if protection_error != "":
+                frontend.diagnostics.die(protection_error)
+            temporary = core.from_cstr(wrappers.system.sole_rt_output_dir(core.cstr(destination)))
+        object_path: str = temporary + "/program.o"
+        program_path: str = temporary + "/program"
+        native_error: str = backend.target.llvm_object(ir_text, object_path, level, false)
+        if native_error != "":
+            cleanup(temporary)
+            frontend.diagnostics.die(native_error)
         runtime_path: str = home + "/lib/runtime/system.c"
         link_command: str = driver.linker.native_linker() + " " + driver.linker.shell_quote(object_path) + " " + driver.linker.shell_quote(runtime_path) + " -lm"
         l: int64 = 0
         while l < core.len(libraries):
             link_command = link_command + " " + driver.linker.shell_quote("-l" + libraries[l])
             l = l + 1
-        link_command = link_command + " -o " + driver.linker.shell_quote(output)
+        link_command = link_command + " -o " + driver.linker.shell_quote(program_path)
         status: int32 = wrappers.libc.system(core.cstr(link_command))
-        wrappers.libc.unlink(core.cstr(object_path))
         if status != 0:
-            wrappers.libc.rmdir(core.cstr(temporary))
+            cleanup(temporary)
             frontend.diagnostics.die("linking failed")
         if command == "run":
             # Run the temporary executable and preserve its exit status.
-            run_command: str = driver.linker.shell_quote(output)
+            run_command: str = driver.linker.shell_quote(program_path)
             status = wrappers.libc.system(core.cstr(run_command))
-            wrappers.libc.unlink(core.cstr(output))
-            wrappers.libc.rmdir(core.cstr(temporary))
+            cleanup(temporary)
             if (status & 127) != 0:
                 return 128 + (status & 127)
             return (status >> 8) & 255
-        wrappers.libc.rmdir(core.cstr(temporary))
+        protection_error = output_error(destination, compiled.inputs)
+        if protection_error != "":
+            cleanup(temporary)
+            frontend.diagnostics.die(protection_error)
+        if wrappers.libc.rename(core.cstr(program_path), core.cstr(destination)) != 0:
+            cleanup(temporary)
+            frontend.diagnostics.die("cannot publish executable: " + output)
+        cleanup(temporary)
     core.print("Built " + output)
     return 0

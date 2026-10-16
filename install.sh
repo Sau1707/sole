@@ -2,7 +2,7 @@
 set -eu
 
 prefix=${1:-"$HOME/.local"}
-version=${SOLE_VERSION:-0.0.4}
+version=${SOLE_VERSION:-latest}
 if [ "$#" -gt 1 ]; then
     echo "Usage: sh install.sh [/absolute/prefix]" >&2
     exit 1
@@ -13,7 +13,8 @@ case "$prefix" in
 esac
 destination=${DESTDIR:-}$prefix
 case "$version" in
-    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.4." >&2; exit 1 ;;
+    latest) ;;
+    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.5." >&2; exit 1 ;;
 esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo "Prebuilt Sole releases support Linux x86-64 only." >&2
@@ -60,6 +61,18 @@ if [ "$missing" = 1 ]; then install_dependencies; fi
 for tool in curl sha256sum tar install awk gzip mktemp cp mkdir; do
     command -v "$tool" >/dev/null || { echo "Install $tool first." >&2; exit 1; }
 done
+
+if [ "$version" = latest ]; then
+    release_url=$(curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL -o /dev/null -w '%{url_effective}' \
+        https://github.com/Sau1707/sole/releases/latest)
+    case "$release_url" in
+        https://github.com/Sau1707/sole/releases/tag/v*) version=${release_url##*/v} ;;
+        *) echo "Could not determine the latest Sole release." >&2; exit 1 ;;
+    esac
+    case "$version" in
+        ''|*[!0-9.]*) echo "The latest Sole release has an unsupported version: $version" >&2; exit 1 ;;
+    esac
+fi
 
 temp_root=${TMPDIR:-/tmp}
 if [ -z "${TMPDIR:-}" ] && [ -d /tmp/opencode ]; then temp_root=/tmp/opencode; fi

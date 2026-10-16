@@ -22,6 +22,11 @@ def llvm_type(state: frontend.model.State, typ: str) -> str:
         if length < 1 || length > 1000000:
             frontend.diagnostics.fail_at(state, "array size must be between 1 and 1000000")
         return "[" + str(length) + " x " + llvm_type(state, frontend.types.element_type(typ)) + "]"
+    si: int64 = frontend.symbols.sum_index(state, typ)
+    if si >= 0:
+        if state.sums[si].kind == "enum":
+            return "i32"
+        return "%" + typ
     idx: int64 = frontend.symbols.record_index(state, typ)
     if idx < 0:
         frontend.diagnostics.fail_at(state, "unknown type '" + typ + "'")

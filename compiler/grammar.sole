@@ -101,6 +101,8 @@ def token_kind(name: str) -> int32:
         return 5
     if name == "DEDENT":
         return 6
+    if name == "BYTE":
+        return 8
     return -1
 
 
@@ -140,7 +142,7 @@ def load(path: str) -> Grammar:
 
 
 # Choices try alternatives in order; repetitions consume greedily.
-def match(grammar: Grammar, source: model.Tokens, index: int64, position: int64) -> int64:
+def match_node(grammar: Grammar, source: model.Tokens, index: int64, position: int64) -> int64:
     kind: int32 = grammar.kinds[index]
     child: int64 = grammar.children[index]
     if kind == 0 || kind == 1 && child < 0:
@@ -149,7 +151,7 @@ def match(grammar: Grammar, source: model.Tokens, index: int64, position: int64)
         if position >= core.len(source.kind):
             return -1
         if kind == 0:
-            if source.kind[position] != 2 && source.kind[position] != 3 && source.text[position] == grammar.values[index]:
+            if source.kind[position] != 2 && source.kind[position] != 3 && source.kind[position] != 8 && source.text[position] == grammar.values[index]:
                 return position + 1
         else:
             expected: int32 = token_kind(grammar.values[index])
@@ -158,28 +160,28 @@ def match(grammar: Grammar, source: model.Tokens, index: int64, position: int64)
                     return position + 1
         return -1
     if kind == 1:
-        return match(grammar, source, child, position)
+        return match_node(grammar, source, child, position)
     if kind == 2:
         while child >= 0:
-            position = match(grammar, source, child, position)
+            position = match_node(grammar, source, child, position)
             if position < 0:
                 return -1
             child = grammar.siblings[child]
         return position
     if kind == 3:
         while child >= 0:
-            result: int64 = match(grammar, source, child, position)
+            result: int64 = match_node(grammar, source, child, position)
             if result >= 0:
                 return result
             child = grammar.siblings[child]
         return -1
     if kind == 4:
-        result: int64 = match(grammar, source, child, position)
+        result: int64 = match_node(grammar, source, child, position)
         if result >= 0:
             return result
         return position
     while true:
-        result: int64 = match(grammar, source, child, position)
+        result: int64 = match_node(grammar, source, child, position)
         if result < 0:
             return position
         if result == position:
@@ -192,7 +194,7 @@ def check_file(grammar: Grammar, grammar_path: str, path: str) -> void:
     root: int64 = grammar.roots[rule_index(grammar, "program")]
     source: model.Tokens = lexer.lex(core.read_file(path))
     grammar.furthest = 0
-    end: int64 = match(grammar, source, root, 0)
+    end: int64 = match_node(grammar, source, root, 0)
     if end != core.len(source.kind):
         position: int64 = grammar.furthest
         if position >= core.len(source.kind):

@@ -10,6 +10,26 @@ formatter() {
 temporary=$(mktemp -d "$temp_root/sole-format-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
+check_formatting() {
+    input=$1
+    expected=$2
+    cp "$input" "$temporary/original.sole"
+    status=0
+    formatter --check "$input" > "$temporary/log" 2>&1 || status=$?
+    if cmp -s "$temporary/original.sole" "$expected"; then
+        test "$status" -eq 0
+    else
+        test "$status" -eq 1
+    fi
+    cmp "$temporary/original.sole" "$input"
+    formatter "$input" > "$temporary/log"
+    cmp "$expected" "$input"
+    formatter "$input" > "$temporary/log"
+    test ! -s "$temporary/log"
+    cmp "$expected" "$input"
+    formatter --check "$input"
+}
+
 if formatter > "$temporary/log" 2>&1; then
     echo 'FAIL: format accepted missing paths' >&2
     exit 1
@@ -22,19 +42,7 @@ for argument in --check --unknown not-sole.txt; do
     fi
 done
 
-printf 'import core\n# Entry point.\ndef first() -> void:\n    pass\n\n\n\n\ndef second() -> void:\n    pass' > "$temporary/input.sole"
-printf 'import core\n\n\n# Entry point.\ndef first() -> void:\n    pass\n\n\ndef second() -> void:\n    pass' > "$temporary/expected.sole"
-cp "$temporary/input.sole" "$temporary/original.sole"
-if formatter --check "$temporary/input.sole"; then
-    echo 'FAIL: --check accepted unformatted input' >&2
-    exit 1
-fi
-cmp "$temporary/input.sole" "$temporary/original.sole"
-formatter "$temporary/input.sole"
-cmp "$temporary/input.sole" "$temporary/expected.sole"
-formatter --check "$temporary/input.sole"
-formatter "$temporary/input.sole"
-cmp "$temporary/input.sole" "$temporary/expected.sole"
+cp "$root/compiler/tests/format-cases/013/expected" "$temporary/input.sole"
 
 cat > "$temporary/strings.sole" <<'EOF'
 import core
@@ -107,17 +115,7 @@ def main() -> str:
 import os
 """
 EOF
-cp "$temporary/imports.sole" "$temporary/original.sole"
-if formatter --check "$temporary/imports.sole"; then
-    echo 'FAIL: --check accepted unsorted imports' >&2
-    exit 1
-fi
-cmp "$temporary/imports.sole" "$temporary/original.sole"
-formatter "$temporary/imports.sole"
-cmp "$temporary/imports.sole" "$temporary/imports-expected.sole"
-formatter --check "$temporary/imports.sole"
-formatter "$temporary/imports.sole"
-cmp "$temporary/imports.sole" "$temporary/imports-expected.sole"
+check_formatting "$temporary/imports.sole" "$temporary/imports-expected.sole"
 
 printf 'import statistics\r\nimport math\r\nimport os' > "$temporary/imports-crlf.sole"
 printf 'import os\r\nimport math\r\nimport statistics' > "$temporary/imports-crlf-expected.sole"
@@ -169,19 +167,7 @@ for case in "$root"/compiler/tests/format-cases/*; do
         fi
         cmp "$case/source" "$temporary/fixture.sole"
     else
-        status=0
-        formatter --check "$temporary/fixture.sole" > "$temporary/log" 2>&1 || status=$?
-        if cmp -s "$case/source" "$case/expected"; then
-            test "$status" -eq 0
-        else
-            test "$status" -eq 1
-        fi
-        cmp "$case/source" "$temporary/fixture.sole"
-        formatter "$temporary/fixture.sole" > "$temporary/log"
-        cmp "$case/expected" "$temporary/fixture.sole"
-        formatter "$temporary/fixture.sole" > "$temporary/log"
-        test ! -s "$temporary/log"
-        formatter --check "$temporary/fixture.sole"
+        check_formatting "$temporary/fixture.sole" "$case/expected"
     fi
     count=$((count + 1))
 done

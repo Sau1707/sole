@@ -6,20 +6,8 @@ A statically typed, indentation-based language with an LLVM backend. It compiles
 ## Install the released compiler
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install.sh | sh
+curl -fsSL https://github.com/Sau1707/sole/releases/latest/download/install.sh | sh
 ```
-
-Supports Linux x86-64 with glibc 2.39 or newer (for example, Ubuntu 24.04).
-LLVM and its non-glibc shared-library dependencies are bundled. The installer
-installs missing native C build tools using apt, dnf/yum, pacman, or zypper,
-requesting sudo access when needed. Other systems must provide these tools manually.
-
-Sole installs into `~/.local`; add `~/.local/bin` to your `PATH`.
-To disable automatic system package installation, use
-`curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install.sh | SOLE_INSTALL_DEPS=0 sh`.
-`SOLE_CC` selects an existing C compiler. `DESTDIR` stages files without installing
-system packages or checking the host C toolchain. Third-party notices are included
-under `share/sole/licenses`.
 
 
 <br />
@@ -60,3 +48,5 @@ CI bootstraps source releases separately.
 
 `sole syntax file.sole ...` validates syntax without type checking or linking,
 using the bundled EBNF grammar. `--grammar path.ebnf` selects another grammar.
+
+See [language features](docs/language-features.md) for additions available in source builds.

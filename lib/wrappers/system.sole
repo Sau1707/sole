@@ -20,4 +20,14 @@ extern def sole_rt_f64_bits(value: float64) -> uint64
 extern def sole_rt_temp_dir() -> ptr
 
 
+extern def sole_rt_output_dir(output: ptr) -> ptr
+
+
+extern def sole_rt_output_path(output: ptr) -> ptr
+
+
+# Return null on success, otherwise a borrowed error message.
+extern def sole_rt_atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr
+
+
 extern def sole_rt_same_file(first: ptr, second: ptr) -> int32

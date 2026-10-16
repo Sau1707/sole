@@ -38,7 +38,7 @@ def scan(source: str) -> Lines:
                 word: str = core.slice(source, first, word_end)
                 if word == "import":
                     kind = 3
-                elif word == "def" || word == "class" || word == "struct" || word == "extern":
+                elif word == "def" || word == "class" || word == "struct" || word == "enum" || word == "union" || word == "extern":
                     kind = 4
         core.append(lines.kinds, kind)
         while i < end:

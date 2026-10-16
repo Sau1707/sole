@@ -73,6 +73,30 @@ def scan(state: frontend.model.State) -> void:
             scan_function(state, "", false)
         elif frontend.tokens.accept(state, "extern"):
             scan_function(state, "", true)
+        elif frontend.tokens.peek(state) == "enum" || frontend.tokens.peek(state) == "union":
+            sum_kind: str = frontend.tokens.take(state)
+            sum_name: str = frontend.tokens.identifier(state)
+            info: frontend.model.SumInfo = frontend.model.SumInfo(sum_name, sum_kind, [], state.tokens.position - 1)
+            core.append(state.sums, info)
+            frontend.tokens.expect(state, ":")
+            frontend.tokens.expect(state, "<newline>")
+            frontend.tokens.expect(state, "<indent>")
+            frontend.tokens.skip_docstring(state)
+            while frontend.tokens.peek(state) != "<dedent>":
+                member_position: int64 = state.tokens.position
+                variant: frontend.model.VariantInfo = frontend.model.VariantInfo(frontend.tokens.identifier(state), [], [], member_position)
+                if sum_kind == "union":
+                    frontend.tokens.expect(state, "(")
+                    while frontend.tokens.peek(state) != ")":
+                        core.append(variant.names, frontend.tokens.identifier(state))
+                        frontend.tokens.expect(state, ":")
+                        core.append(variant.types, parse_type(state))
+                        if not frontend.tokens.accept(state, ","):
+                            break
+                    frontend.tokens.expect(state, ")")
+                frontend.tokens.expect(state, "<newline>")
+                core.append(info.variants, variant)
+            frontend.tokens.expect(state, "<dedent>")
         elif frontend.tokens.peek(state) == "class" || frontend.tokens.peek(state) == "struct":
             record_kind: str = frontend.tokens.take(state)
             record_name: str = frontend.tokens.identifier(state)

@@ -4,40 +4,18 @@ import frontend.builtins
 import frontend.diagnostics
 import frontend.model
 import frontend.symbols
+import frontend.sumtypes
 import frontend.types
-
-
-# Reject recursive inline record layouts while allowing reference fields.
-def check_layout(state: frontend.model.State, index: int64, path: str[]) -> void:
-    record: frontend.model.RecordInfo = state.records[index]
-    i: int64 = 0
-    while i < core.len(path):
-        if path[i] == record.name:
-            frontend.diagnostics.fail_at(state, "recursive value layout: " + record.name)
-        i = i + 1
-    next_path: str[] = []
-    j: int64 = 0
-    while j < core.len(path):
-        core.append(next_path, path[j])
-        j = j + 1
-    core.append(next_path, record.name)
-    f: int64 = 0
-    while f < core.len(record.types):
-        typ: str = record.types[f]
-        if not frontend.types.dynamic_type(typ):
-            child: int64 = frontend.symbols.record_index(state, frontend.types.element_type(typ))
-            if child >= 0 && state.records[child].kind == "struct":
-                check_layout(state, child, next_path)
-        f = f + 1
 
 
 # Check declaration names, field types, signatures, and record layouts.
 def validate(state: frontend.model.State) -> void:
+    frontend.sumtypes.validate(state)
     # Check record names, field types, and conflicting members.
     i: int64 = 0
     while i < core.len(state.records):
         record: frontend.model.RecordInfo = state.records[i]
-        if frontend.symbols.record_index(state, record.name) != i || frontend.builtins.reserved_name(record.name):
+        if frontend.symbols.record_index(state, record.name) != i || frontend.builtins.reserved_type_name(record.name):
             frontend.diagnostics.fail_at(state, "duplicate or reserved type: " + record.name)
         j: int64 = 0
         while j < core.len(record.names):
@@ -56,8 +34,12 @@ def validate(state: frontend.model.State) -> void:
     # Walk inline record fields to reject infinite-sized value layouts.
     layout_index: int64 = 0
     while layout_index < core.len(state.records):
-        check_layout(state, layout_index, [])
+        frontend.sumtypes.check_layout(state, state.records[layout_index].name, [])
         layout_index = layout_index + 1
+    sum_layout: int64 = 0
+    while sum_layout < core.len(state.sums):
+        frontend.sumtypes.check_layout(state, state.sums[sum_layout].name, [])
+        sum_layout = sum_layout + 1
     # Validate function names, return types, parameters, and foreign signatures.
     f: int64 = 0
     while f < core.len(state.functions):

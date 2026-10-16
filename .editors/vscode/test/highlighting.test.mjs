@@ -37,8 +37,13 @@ test('declarations, annotations, arrays, and extern functions', () => {
     ['4', 'constant.numeric.sole'],
     ['int32', 'storage.type.sole'],
   ]);
-  for (const kind of ['class', 'struct']) {
-    check(`${kind} Point:`, [['Point', 'entity.name.type.sole']]);
+  for (const kind of ['class', 'struct', 'enum', 'union']) {
+    check(`${kind} Point:`, [
+      [kind, 'storage.type.sole'],
+      [kind, 'storage.type.class.python'],
+      ['Point', 'entity.name.type.sole'],
+      ['Point', 'entity.name.type.class.python'],
+    ]);
   }
   check('def café() -> void:', [['café', 'entity.name.function.sole']]);
 });
@@ -123,6 +128,72 @@ test('control flow, booleans, self, calls, and operators', () => {
     ['read', 'entity.name.function.sole'],
     ['+', 'keyword.operator.sole'],
     ['len', 'support.function.builtin.sole'],
+  ]);
+});
+
+test('enum members, union payloads, and named constructors', () => {
+  check('    Number', [['Number', 'variable.other.readwrite.sole']]);
+  check('    Number(value: int64)', [
+    ['Number', 'entity.name.function.sole'],
+    ['value', 'variable.other.readwrite.sole'],
+    ['int64', 'storage.type.sole'],
+  ]);
+  check('    Empty()', [['Empty', 'entity.name.function.sole']]);
+  check('pair = Pair(second=2, first=1)', [
+    ['Pair', 'entity.name.function.sole'],
+    ['second', 'variable.other.readwrite.sole'],
+    ['first', 'variable.other.readwrite.sole'],
+    ['=', 'keyword.operator.assignment.python'],
+    ['2', 'constant.numeric.sole'],
+    ['1', 'constant.numeric.sole'],
+  ]);
+});
+
+test('match cases and range loops', () => {
+  check('match item:', [['match', 'keyword.control.sole'], ['item', 'variable.other.readwrite.sole']]);
+  check('    case Item.Number(value):', [
+    ['case', 'keyword.control.sole'],
+    ['Item', 'variable.other.readwrite.sole'],
+    ['Number', 'entity.name.function.sole'],
+    ['value', 'variable.other.readwrite.sole'],
+  ]);
+  check('    case Kind.Number:', [
+    ['case', 'keyword.control.sole'],
+    ['Kind', 'variable.other.readwrite.sole'],
+    ['Number', 'variable.other.property.sole'],
+  ]);
+  for (const args of ['stop', 'start, stop']) {
+    check(`for i in range(${args}):`, [
+      ['for', 'keyword.control.sole'],
+      ['i', 'variable.other.readwrite.sole'],
+      ['in', 'keyword.control.sole'],
+      ['range', 'support.function.builtin.sole'],
+      ['range', 'support.function.builtin.python'],
+      ['stop', 'variable.other.readwrite.sole'],
+    ]);
+  }
+  check('iterator.range(stop)', [['range', 'entity.name.function.sole']]);
+  for (const word of ['enum_value', 'unionized', 'matches', 'cases', 'format', 'inside', 'range_limit']) {
+    check(word, [[word, 'variable.other.readwrite.sole']]);
+  }
+  check('"enum union match case for in +="', [['enum union match case for in +=', 'string.quoted.double.sole']]);
+  check('# enum union match case for in +=', [['enum union match case for in +=', 'comment.line.number-sign.sole']]);
+});
+
+test('plus assignment is one assignment token rather than arithmetic plus', () => {
+  for (const line of ['total += 1', 'total+=1']) {
+    check(line, [['+=', 'keyword.operator.assignment.python']]);
+    const start = line.indexOf('+=');
+    const { tokens } = grammar.tokenizeLine(line);
+    const matching = tokens.filter(token => token.startIndex < start + 2 && token.endIndex > start);
+    assert.equal(matching.length, 1);
+    assert.equal(matching[0].startIndex, start);
+    assert.equal(matching[0].endIndex, start + 2);
+    assert.ok(!matching[0].scopes.includes('keyword.operator.arithmetic.python'));
+  }
+  check('total = left + right', [
+    ['=', 'keyword.operator.assignment.python'],
+    ['+', 'keyword.operator.arithmetic.python'],
   ]);
 });
 
@@ -225,6 +296,68 @@ test('strings protect comments and keywords, and highlight escapes', () => {
   assert.ok(after.tokens[0].scopes.includes('keyword.control.sole'));
 });
 
+test('byte literals include their prefix and protect comment characters', () => {
+  for (const quote of ["'", '"']) {
+    const scope = `string.quoted.${quote === "'" ? 'single' : 'double'}.byte.sole`;
+    for (const value of ['X', '#', '', 'many']) {
+      const literal = `b${quote}${value}${quote}`;
+      check(`value = ${literal} # comment`, [
+        [literal, scope],
+        [literal, 'string.quoted.single.python'],
+        ['# comment', 'comment.line.number-sign.sole'],
+      ]);
+    }
+  }
+});
+
+test('byte literals highlight only supported escapes and close after escaped quotes', () => {
+  for (const quote of ["'", '"']) {
+    const scope = `string.quoted.${quote === "'" ? 'single' : 'double'}.byte.sole`;
+    for (const escape of [String.raw`\n`, String.raw`\r`, String.raw`\t`, String.raw`\0`,
+      String.raw`\\`, String.raw`\'`, String.raw`\"`]) {
+      const literal = `b${quote}${escape}${quote}`;
+      check(`value = ${literal} + next`, [
+        [literal, scope],
+        [escape, 'constant.character.escape.sole'],
+        [escape, 'constant.character.escape.python'],
+        ['+', 'keyword.operator.sole'],
+        ['next', 'variable.other.readwrite.sole'],
+      ]);
+    }
+    for (const escape of [String.raw`\x41`, String.raw`\u0041`, String.raw`\1`, String.raw`\q`]) {
+      const { tokens } = grammar.tokenizeLine(`b${quote}${escape}${quote}`);
+      assert.ok(tokens.every(token => !token.scopes.includes('constant.character.escape.sole')));
+    }
+  }
+});
+
+test('byte prefixes are lowercase, separate from identifiers, and never triple quoted', () => {
+  for (const quote of ["'", '"']) {
+    for (const prefix of ['B', 'nameb', '_b', 'éb', '1b', 'rb']) {
+      const { tokens } = grammar.tokenizeLine(`${prefix}${quote}X${quote}`);
+      assert.ok(tokens.every(token => !token.scopes.some(scope => scope.includes('.byte.sole'))));
+    }
+    const triple = quote.repeat(3);
+    check(`b${triple}X${triple}`, [
+      ['b', 'variable.other.readwrite.sole'],
+      ['X', `string.quoted.triple.${quote === "'" ? 'single' : 'double'}.sole`],
+    ]);
+    check(`${quote}b${quote}`, [['b', `string.quoted.${quote === "'" ? 'single' : 'double'}.sole`]]);
+    check(`# b${quote}X${quote}`, [['b', 'comment.line.number-sign.sole']]);
+  }
+});
+
+test('unterminated byte literals do not carry highlighting into the next line', () => {
+  for (const quote of ["'", '"']) {
+    for (const content of ['X', '\\']) {
+      const { ruleStack } = grammar.tokenizeLine(`value = b${quote}${content}`);
+      const next = grammar.tokenizeLine('return 0', ruleStack);
+      assert.ok(next.tokens[0].scopes.includes('keyword.control.sole'));
+      assert.equal(ruleStack.depth, 1);
+    }
+  }
+});
+
 test('compiler sources tokenize without leaving open strings', async () => {
   const directory = new URL('../../../compiler/', import.meta.url);
   for (const file of await readdir(directory, { recursive: true })) {
@@ -243,10 +376,14 @@ test('language registration and indentation rules', async () => {
   assert.deepEqual(manifest.contributes.languages[0].extensions, ['.sole']);
   assert.equal(config.comments.lineComment, '#');
   const indent = new RegExp(config.indentationRules.increaseIndentPattern);
-  for (const line of ['def main() -> int32:', '    if true: # comment', 'else:', 'class Point:', 'while true:']) {
+  for (const line of ['def main() -> int32:', '    if true: # comment', 'else:', 'class Point:', 'while true:',
+    'enum Kind:', 'union Item: # variants', 'match item:', '    case Item.Number(value):',
+    '    case Kind.Number:', 'for i in range(stop):', 'for i in range(start, stop):']) {
     assert.ok(indent.test(line), line);
   }
-  for (const line of ['value: int32 = 0', '# if true:', 'print("hello:")', 'extern def read() -> int32']) {
+  for (const line of ['value: int32 = 0', '# if true:', 'print("hello:")', 'extern def read() -> int32',
+    '    Number(value: int64)', '    Empty()', 'Pair(second=2, first=1)', 'total += 1',
+    '# match item:', '"case Kind.Number:"', 'format:', 'matches:']) {
     assert.ok(!indent.test(line), line);
   }
 });

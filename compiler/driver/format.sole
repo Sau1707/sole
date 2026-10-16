@@ -1,5 +1,6 @@
 import core
 import formatter
+import wrappers.system
 
 
 def main() -> int32:
@@ -36,7 +37,11 @@ def main() -> int32:
                     core.print(path + ": needs formatting")
                     status = 1
                 else:
-                    core.write_file(path, formatted)
-                    core.print("Formatted " + path)
+                    error: ptr = wrappers.system.sole_rt_atomic_write_file(core.cstr(path), core.cstr(formatted), core.len(formatted))
+                    if error != ptr(0):
+                        core.print(path + ": error: " + core.from_cstr(error))
+                        status = 1
+                    else:
+                        core.print("Formatted " + path)
         i = i + 1
     return status

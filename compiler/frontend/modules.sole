@@ -83,7 +83,7 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
             depth = depth + 1
         elif kind == 6:
             depth = depth - 1
-        if depth == 0 && kind == 1 && (text == "def" || text == "struct" || text == "class"):
+        if depth == 0 && kind == 1 && (text == "def" || text == "struct" || text == "class" || text == "enum" || text == "union"):
             if has_name(module.names, tokens.text[i + 1]):
                 frontend.diagnostics.module_error(module, i + 1, "duplicate declaration '" + tokens.text[i + 1] + "'")
             core.append(module.names, tokens.text[i + 1])
@@ -181,6 +181,9 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
         a = a + 1
     depth: int32 = 0
     record_scope: bool = false
+    sum_scope: bool = false
+    pattern: bool = false
+    pattern_bindings: bool = false
     line_start: bool = true
     i: int64 = 0
     while i < core.len(tokens.kind) - 1:
@@ -195,8 +198,16 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
         if i > 0:
             previous = tokens.text[i - 1]
         following: str = tokens.text[i + 1]
-        if kind == 1:
-            if has_name(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "class"):
+        label: bool = sum_scope && depth == 1 && (line_start || following == ":" && (previous == "(" || previous == ","))
+        if following == "=" && (previous == "(" || previous == ","):
+            label = true
+        range_syntax: bool = text == "range" && previous == "in"
+        if pattern && text == "(":
+            pattern_bindings = true
+        if kind == 1 && pattern_bindings && (has_name(module.names, text) || has_name(roots, text)):
+            frontend.diagnostics.module_error(module, i, "pattern binding conflicts with a declaration or namespace: " + text)
+        if kind == 1 && not label && not pattern_bindings && not range_syntax:
+            if has_name(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "class" || previous == "enum" || previous == "union" || previous == "for"):
                 frontend.diagnostics.module_error(module, i, "module namespace cannot be rebound: " + text)
             if previous != ".":
                 ends: int64[] = [i]
@@ -245,12 +256,20 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
                             text = module.prefix + text
         if kind == 1 && (original == "class" || original == "struct") && depth == 0:
             record_scope = true
+        if kind == 1 && (original == "enum" || original == "union") && depth == 0:
+            sum_scope = true
+        if kind == 1 && original == "case":
+            pattern = true
+        if pattern && (original == ":" || kind == 4):
+            pattern = false
+            pattern_bindings = false
         if kind == 5:
             depth = depth + 1
         elif kind == 6:
             depth = depth - 1
             if depth == 0:
                 record_scope = false
+                sum_scope = false
         if kind == 4 || kind == 5 || kind == 6:
             line_start = true
         else:
@@ -261,13 +280,14 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
 
 
 # Combine the entry module and its dependencies into one token stream.
-def load_imports(filename: str, source: str) -> frontend.model.Tokens:
+def load_imports(filename: str, source: str, inputs: str[]) -> frontend.model.Tokens:
     modules: frontend.model.ModuleInfo[] = []
     path: str = core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(filename)))
     load_module(modules, path, source)
     output: frontend.model.Tokens = frontend.model.Tokens([], [], [], 0, [])
     i: int64 = 0
     while i < core.len(modules):
+        core.append(inputs, modules[i].path)
         rewrite_module(modules, i, output)
         i = i + 1
     frontend.tokens.token_add(output, "<end>", 0, 1)

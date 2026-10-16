@@ -21,6 +21,7 @@ mkdir -p "$package/share/sole/compiler"
 cp compiler/sole.ebnf "$package/share/sole/compiler/"
 cp -R /usr/share/common-licenses "$package/share/sole/licenses/"
 cp README.md .build/bootstrap-proof.txt "$package/"
+cp -R docs "$package/"
 ldd .build/sole > "$package/dependencies.txt"
 if grep -q 'not found' "$package/dependencies.txt"; then
     cat "$package/dependencies.txt" >&2
@@ -43,5 +44,6 @@ test -f "$package/lib/sole/libLLVM.so.21.1"
 patchelf --set-rpath '$ORIGIN/../lib/sole' "$package/bin/sole"
 test "$("$package/bin/sole" --version)" = "sole $version (self-hosted)"
 mkdir -p dist
+install -m 755 install.sh dist/install.sh
 tar -C .build -czf "dist/$archive.tar.gz" "$archive"
 (cd dist && sha256sum "$archive.tar.gz" > SHA256SUMS)

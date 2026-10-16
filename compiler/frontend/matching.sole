@@ -1,0 +1,104 @@
+import core
+import backend.ir
+import backend.locals
+import frontend.model
+import frontend.tokens
+import frontend.symbols
+import frontend.sumtypes
+import frontend.diagnostics
+
+
+class MatchInfo:
+    subject: frontend.model.Value
+    info: frontend.model.SumInfo
+    tag: str
+    covered: bool[]
+    next: str
+    end: str
+    all_ended: bool
+
+
+def begin(state: frontend.model.State, subject: frontend.model.Value) -> MatchInfo:
+    si: int64 = frontend.symbols.sum_index(state, subject.typ)
+    if si < 0:
+        frontend.diagnostics.fail_at(state, "match requires an enum or union")
+    info: frontend.model.SumInfo = state.sums[si]
+    tag: str = subject.value
+    if info.kind == "union":
+        tag = backend.ir.extract(state, subject, 0)
+    covered: bool[] = []
+    i: int64 = 0
+    while i < core.len(info.variants):
+        core.append(covered, false)
+        i = i + 1
+    frontend.tokens.expect(state, ":")
+    frontend.tokens.expect(state, "<newline>")
+    frontend.tokens.expect(state, "<indent>")
+    return MatchInfo(subject, info, tag, covered, "", backend.ir.fresh(state), true)
+
+
+def begin_arm(state: frontend.model.State, plan: MatchInfo) -> void:
+    frontend.tokens.expect(state, "case")
+    owner_position: int64 = state.tokens.position
+    owner: str = frontend.tokens.identifier(state)
+    if owner != plan.info.name:
+        state.tokens.position = owner_position
+        frontend.diagnostics.fail_at(state, "case belongs to a different type; expected " + plan.info.name)
+    frontend.tokens.expect(state, ".")
+    member_position: int64 = state.tokens.position
+    variant: int64 = frontend.sumtypes.variant_index(state, plan.info, frontend.tokens.identifier(state))
+    if plan.covered[variant]:
+        state.tokens.position = member_position
+        frontend.diagnostics.fail_at(state, "duplicate match case")
+    plan.covered[variant] = true
+    binders: str[] = []
+    if plan.info.kind == "union":
+        frontend.tokens.expect(state, "(")
+        while frontend.tokens.peek(state) != ")":
+            core.append(binders, frontend.tokens.identifier(state))
+            if not frontend.tokens.accept(state, ","):
+                break
+        frontend.tokens.expect(state, ")")
+    payload: frontend.model.VariantInfo = plan.info.variants[variant]
+    if core.len(binders) != core.len(payload.types):
+        frontend.diagnostics.fail_at(state, "wrong number of pattern bindings")
+    yes: str = backend.ir.fresh(state)
+    plan.next = backend.ir.fresh(state)
+    condition: str = backend.ir.instruction(state, "icmp eq i32 " + plan.tag + ", " + str(variant))
+    backend.ir.emit(state, "br i1 " + condition + ", label %" + yes + ", label %" + plan.next)
+    backend.ir.block_label(state, yes)
+    state.depth = state.depth + 1
+    i: int64 = 0
+    offset: int64 = frontend.sumtypes.payload_offset(plan.info, variant)
+    while i < core.len(binders):
+        value: frontend.model.Value = frontend.model.Value(payload.types[i], backend.ir.extract(state, plan.subject, offset + i), "")
+        backend.locals.declare_local(state, binders[i], payload.types[i], value)
+        i = i + 1
+
+
+def end_arm(state: frontend.model.State, plan: MatchInfo) -> void:
+    if not state.ended:
+        plan.all_ended = false
+        backend.ir.emit(state, "br label %" + plan.end)
+    i: int64 = 0
+    while i < core.len(state.depths):
+        if state.depths[i] == state.depth:
+            state.depths[i] = -1
+        i = i + 1
+    state.depth = state.depth - 1
+    backend.ir.block_label(state, plan.next)
+
+
+def finish(state: frontend.model.State, plan: MatchInfo) -> void:
+    frontend.tokens.expect(state, "<dedent>")
+    i: int64 = 0
+    while i < core.len(plan.covered):
+        if not plan.covered[i]:
+            frontend.diagnostics.fail_at(state, "non-exhaustive match; missing " + plan.info.name + "." + plan.info.variants[i].name)
+        i = i + 1
+    backend.ir.emit(state, "call void @llvm.trap()")
+    backend.ir.emit(state, "unreachable")
+    backend.ir.block_label(state, plan.end)
+    if plan.all_ended:
+        backend.ir.emit(state, "unreachable")
+        state.ended = true

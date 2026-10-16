@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.4
+version=0.0.5
 archive="sole-$version-linux-x86_64"
 mkdir -p "$temporary/$archive/bin" "$temporary/$archive/lib/sole" "$temporary/$archive/share/sole"
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
@@ -32,7 +32,12 @@ file=
 output=
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        https://*) file=${1##*/} ;;
+        https://*/releases/latest)
+            printf '%s\n' "${SOLE_TEST_LATEST_URL:-https://github.com/Sau1707/sole/releases/tag/v$SOLE_TEST_VERSION}"
+            exit 0 ;;
+        https://*/releases/download/v*)
+            test "${1%/*}" = "https://github.com/Sau1707/sole/releases/download/v$SOLE_TEST_VERSION"
+            file=${1##*/} ;;
         -o) shift; output=$1 ;;
     esac
     shift
@@ -40,7 +45,7 @@ done
 cp "$SOLE_TEST_DOWNLOADS/$file" "$output"
 EOF
 chmod +x "$temporary/tools/curl"
-export SOLE_TEST_DOWNLOADS="$temporary/downloads" SOLE_VERSION="$version"
+export SOLE_TEST_DOWNLOADS="$temporary/downloads" SOLE_VERSION="$version" SOLE_TEST_VERSION="$version"
 PATH="$temporary/tools:$PATH" sh "$root/install.sh" "$temporary/installed" > "$temporary/log"
 test "$("$temporary/installed/bin/sole" --version)" = "sole $version (self-hosted)"
 test -f "$temporary/installed/share/sole/lib/core.sole"
@@ -61,6 +66,18 @@ test "$("$temporary/relocated/bin/sole" --version)" = "sole $version (self-hoste
 DESTDIR="$temporary/staged" PATH="$temporary/tools:$PATH" sh "$root/install.sh" /usr/local > "$temporary/log"
 test -x "$temporary/staged/usr/local/bin/sole"
 test -f "$temporary/staged/usr/local/share/sole/lib/runtime/core.ll"
+
+(
+    unset SOLE_VERSION
+    DESTDIR="$temporary/latest" PATH="$temporary/tools:$PATH" sh "$root/install.sh" /usr/local > "$temporary/log"
+)
+test -x "$temporary/latest/usr/local/bin/sole"
+if SOLE_VERSION=latest SOLE_TEST_LATEST_URL=https://github.com/Sau1707/sole/releases \
+    PATH="$temporary/tools:$PATH" sh "$root/install.sh" "$temporary/no-release" > "$temporary/log" 2>&1; then
+    echo 'FAIL: installer accepted a missing latest release' >&2
+    exit 1
+fi
+test ! -e "$temporary/no-release"
 
 cat > "$temporary/tools/cc" <<'EOF'
 #!/bin/sh

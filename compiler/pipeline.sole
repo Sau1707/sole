@@ -9,11 +9,17 @@ import frontend.symbols
 import frontend.validation
 
 
+struct Compilation:
+    ir: str
+    inputs: str[]
+
+
 # Coordinate source loading, semantic checks, and LLVM module assembly.
-def generate(filename: str, source: str, home: str) -> str:
+def generate(filename: str, source: str, home: str) -> Compilation:
     # Load dependencies and collect validated declarations.
-    loaded: frontend.model.Tokens = frontend.modules.load_imports(filename, source)
-    state: frontend.model.State = frontend.model.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [], 0, 0, false, "", filename)
+    inputs: str[] = []
+    loaded: frontend.model.Tokens = frontend.modules.load_imports(filename, source, inputs)
+    state: frontend.model.State = frontend.model.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [], [], 0, 0, false, "", filename)
     frontend.declarations.scan(state)
     frontend.validation.validate(state)
     # Emit named LLVM layouts for structs and classes.
@@ -30,6 +36,20 @@ def generate(filename: str, source: str, home: str) -> str:
             i = i + 1
         core.append(record_definitions, "%" + info.name + " = type {" + core.join(fields) + "}\n")
         r = r + 1
+    s: int64 = 0
+    while s < core.len(state.sums):
+        sum: frontend.model.SumInfo = state.sums[s]
+        if sum.kind == "union":
+            layout: str = "%" + sum.name + " = type {i32"
+            v: int64 = 0
+            while v < core.len(sum.variants):
+                p: int64 = 0
+                while p < core.len(sum.variants[v].types):
+                    layout = layout + ", " + backend.types.llvm_type(state, sum.variants[v].types[p])
+                    p = p + 1
+                v = v + 1
+            core.append(record_definitions, layout + "}\n")
+        s = s + 1
     # Lower each function and foreign declaration.
     prologue: str = core.read_file(home + "/lib/runtime/native.ll")
     runtime_declarations: str[] = backend.functions.runtime_declarations(prologue)
@@ -52,4 +72,7 @@ def generate(filename: str, source: str, home: str) -> str:
     # Combine runtime helpers, record layouts, constants, and function bodies.
     runtime_core: str = core.read_file(home + "/lib/runtime/core.ll")
     runtime_core = core.slice(runtime_core, core.len("declare ptr @_sole.alloc64(i64)\n"), core.len(runtime_core))
-    return prologue + runtime_core + core.join(record_definitions) + core.join(state.globals) + core.join(state.definitions)
+    core.append(inputs, home + "/lib/runtime/native.ll")
+    core.append(inputs, home + "/lib/runtime/core.ll")
+    core.append(inputs, home + "/lib/runtime/system.c")
+    return Compilation(prologue + runtime_core + core.join(record_definitions) + core.join(state.globals) + core.join(state.definitions), inputs)

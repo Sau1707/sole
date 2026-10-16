@@ -12,6 +12,16 @@ def foreign_name(name: str) -> str:
     return name
 
 
+# Find a declared enum or union by name.
+def sum_index(state: frontend.model.State, name: str) -> int64:
+    i: int64 = 0
+    while i < core.len(state.sums):
+        if state.sums[i].name == name:
+            return i
+        i = i + 1
+    return -1
+
+
 # Find a declared struct or class by name.
 def record_index(state: frontend.model.State, name: str) -> int64:
     i: int64 = 0

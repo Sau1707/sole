@@ -12,3 +12,7 @@ def reserved_name(name: str) -> bool:
     if core.len(name) >= 5 && core.slice(name, 0, 5) == "_sole":
         return true
     return frontend.types.builtin_type(name) || name == "malloc" || name == "printf" || name == "putchar"
+
+
+def reserved_type_name(name: str) -> bool:
+    return reserved_name(name) || name == "integer" || name == "real"

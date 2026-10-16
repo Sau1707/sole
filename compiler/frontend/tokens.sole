@@ -13,6 +13,8 @@ def token_add(tokens: frontend.model.Tokens, text: str, kind: int32, line: int64
 
 # Inspect the next token without treating literal contents as syntax.
 def peek(state: frontend.model.State) -> str:
+    if state.tokens.kind[state.tokens.position] == 8:
+        return "<byte>"
     if state.tokens.kind[state.tokens.position] == 3:
         return "<string>"
     if state.tokens.kind[state.tokens.position] == 2:
@@ -52,7 +54,7 @@ def skip_docstring(state: frontend.model.State) -> void:
 
 # Identify keywords that cannot be used as names.
 def reserved_keyword(name: str) -> bool:
-    return name == "def" || name == "extern" || name == "import" || name == "class" || name == "struct" || name == "if" || name == "elif" || name == "else" || name == "while" || name == "return" || name == "break" || name == "continue" || name == "pass" || name == "not" || name == "true" || name == "false" || name == "self" || name == "as" || name == "from" || name == "intrinsic" || name == "for" || name == "in" || name == "lambda" || name == "None" || name == "True" || name == "False"
+    return name == "def" || name == "extern" || name == "import" || name == "class" || name == "struct" || name == "enum" || name == "union" || name == "match" || name == "case" || name == "if" || name == "elif" || name == "else" || name == "while" || name == "return" || name == "break" || name == "continue" || name == "pass" || name == "not" || name == "true" || name == "false" || name == "self" || name == "as" || name == "from" || name == "intrinsic" || name == "for" || name == "in" || name == "lambda" || name == "None" || name == "True" || name == "False"
 
 
 # Read an identifier and reject reserved keywords.

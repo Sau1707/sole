@@ -10,6 +10,7 @@ import frontend.diagnostics
 import frontend.model
 import frontend.operators
 import frontend.symbols
+import frontend.sumtypes
 import frontend.tokens
 import frontend.types
 
@@ -19,6 +20,8 @@ def parse_arguments(state: frontend.model.State, types: str[]) -> frontend.model
     values: frontend.model.Value[] = []
     frontend.tokens.expect(state, "(")
     while frontend.tokens.peek(state) != ")":
+        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+            frontend.diagnostics.fail_at(state, "named arguments are only supported for record constructors")
         expected: str = ""
         if core.len(values) < core.len(types):
             expected = types[core.len(values)]
@@ -27,6 +30,51 @@ def parse_arguments(state: frontend.model.State, types: str[]) -> frontend.model
         if not frontend.tokens.accept(state, ","):
             break
     frontend.tokens.expect(state, ")")
+    return values
+
+
+def parse_constructor_arguments(state: frontend.model.State, record: frontend.model.RecordInfo) -> frontend.model.Value[]:
+    values: frontend.model.Value[] = []
+    assigned: bool[] = []
+    i: int64 = 0
+    while i < core.len(record.names):
+        core.append(values, frontend.model.Value("void", "", ""))
+        core.append(assigned, false)
+        i = i + 1
+    frontend.tokens.expect(state, "(")
+    positional: int64 = 0
+    named: bool = false
+    while frontend.tokens.peek(state) != ")":
+        field_index: int64 = positional
+        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+            named = true
+            field_name: str = frontend.tokens.identifier(state)
+            frontend.tokens.expect(state, "=")
+            field_index = 0
+            while field_index < core.len(record.names) && record.names[field_index] != field_name:
+                field_index = field_index + 1
+            if field_index == core.len(record.names):
+                frontend.diagnostics.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
+        else:
+            if named:
+                frontend.diagnostics.fail_at(state, "positional argument cannot follow named constructor arguments")
+            if field_index >= core.len(record.names):
+                frontend.diagnostics.fail_at(state, "wrong number of constructor fields for " + record.name)
+            positional = positional + 1
+        if assigned[field_index]:
+            frontend.diagnostics.fail_at(state, "duplicate constructor field '" + record.names[field_index] + "'")
+        expected: str = record.types[field_index]
+        item: frontend.model.Value = expression(state, 0, expected)
+        values[field_index] = backend.literals.coerce(state, item, expected)
+        assigned[field_index] = true
+        if not frontend.tokens.accept(state, ","):
+            break
+    frontend.tokens.expect(state, ")")
+    i = 0
+    while i < core.len(record.names):
+        if not assigned[i]:
+            frontend.diagnostics.fail_at(state, "missing constructor field '" + record.names[i] + "' for " + record.name)
+        i = i + 1
     return values
 
 
@@ -156,9 +204,7 @@ def named_call(state: frontend.model.State, name: str, receiver: frontend.model.
     ri: int64 = frontend.symbols.record_index(state, name)
     if core.len(receiver) == 0 && ri >= 0:
         record: frontend.model.RecordInfo = state.records[ri]
-        arguments: frontend.model.Value[] = parse_arguments(state, record.types)
-        if core.len(arguments) != core.len(record.types):
-            frontend.diagnostics.fail_at(state, "wrong number of constructor fields for " + name)
+        arguments: frontend.model.Value[] = parse_constructor_arguments(state, record)
         aggregate: str = "poison"
         pointer: str = ""
         if record.kind == "class":
@@ -221,6 +267,8 @@ def parse_expression(state: frontend.model.State, minimum: int32, expected: str)
     is_call: bool = false
     if kind == 3:
         left = backend.literals.string_constant(state, text)
+    elif kind == 8:
+        left = frontend.model.Value("uint8", str(text[0]), "")
     elif text == "-" || text == "~" || text == "not":
         direct_number: bool = state.tokens.kind[state.tokens.position] == 2
         level: int32 = 10
@@ -284,7 +332,18 @@ def parse_expression(state: frontend.model.State, minimum: int32, expected: str)
             n = n + 1
         left = frontend.model.Value(number_kind, text, "")
     elif kind == 1:
-        if frontend.tokens.peek(state) == "(":
+        si: int64 = frontend.symbols.sum_index(state, text)
+        if si >= 0:
+            info: frontend.model.SumInfo = state.sums[si]
+            frontend.tokens.expect(state, ".")
+            variant: int64 = frontend.sumtypes.variant_index(state, info, frontend.tokens.identifier(state))
+            if info.kind == "enum":
+                left = frontend.model.Value(info.name, str(variant), "")
+            else:
+                values: frontend.model.Value[] = parse_arguments(state, info.variants[variant].types)
+                left = frontend.sumtypes.construct(state, info, variant, values)
+                is_call = true
+        elif frontend.tokens.peek(state) == "(":
             left = named_call(state, text, [])
             is_call = true
         else:

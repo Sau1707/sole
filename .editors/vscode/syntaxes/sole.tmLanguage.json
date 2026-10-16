@@ -4,6 +4,7 @@
   "scopeName": "source.sole",
   "patterns": [
     { "include": "#comments" },
+    { "include": "#bytes" },
     { "include": "#strings" },
     {
       "begin": "\\b(import)\\b",
@@ -36,7 +37,7 @@
       ]
     },
     {
-      "match": "\\b(struct|class)[ \\t]+([\\p{L}_][\\p{L}\\p{N}_]*)",
+      "match": "\\b(struct|class|enum|union)[ \\t]+([\\p{L}_][\\p{L}\\p{N}_]*)",
       "captures": {
         "1": { "name": "storage.type.sole storage.type.class.python" },
         "2": { "name": "entity.name.type.sole entity.name.type.class.python" }
@@ -54,12 +55,12 @@
     },
     { "include": "#types" },
     { "match": "\\bextern\\b", "name": "storage.modifier.sole storage.modifier.declaration.python" },
-    { "match": "\\b(if|elif|else|while|return|break|continue|pass)\\b", "name": "keyword.control.sole keyword.control.flow.python" },
+    { "match": "\\b(if|elif|else|while|match|case|for|in|return|break|continue|pass)\\b", "name": "keyword.control.sole keyword.control.flow.python" },
     { "match": "&&|\\|\\||\\bnot\\b", "name": "keyword.operator.logical.sole keyword.operator.logical.python" },
     { "match": "\\b(true|false)\\b", "name": "constant.language.boolean.sole constant.language.python" },
     { "match": "\\bself\\b", "name": "variable.language.self.sole variable.language.special.self.python" },
     { "match": "(?<![\\p{L}\\p{N}_.])(?:0[xX][0-9a-fA-F](?:_?[0-9a-fA-F])*|0[bB][01](?:_?[01])*|0[oO][0-7](?:_?[0-7])*|(?:[0-9](?:_?[0-9])*(?:\\.(?:[0-9](?:_?[0-9])*)?)?|\\.[0-9](?:_?[0-9])*)(?:[eE][+-]?[0-9](?:_?[0-9])*)?)(?![\\p{L}\\p{N}_])", "name": "constant.numeric.sole constant.numeric.python" },
-    { "match": "(?<![\\p{L}\\p{N}_.])\\b(print|len)\\b(?=[ \\t]*\\()", "name": "support.function.builtin.sole support.function.builtin.python" },
+    { "match": "(?<![\\p{L}\\p{N}_.])\\b(print|len|range)\\b(?=[ \\t]*\\()", "name": "support.function.builtin.sole support.function.builtin.python" },
     { "match": "[\\p{L}_][\\p{L}\\p{N}_]*(?=[ \\t]*\\()", "name": "entity.name.function.sole meta.function-call.generic.python" },
     {
       "match": "(\\.)[ \\t]*([\\p{L}_][\\p{L}\\p{N}_]*)(?![\\p{L}\\p{N}_]|[ \\t]*\\()",
@@ -72,8 +73,8 @@
     { "match": "->", "name": "keyword.operator.sole keyword.operator.python" },
     { "match": "==|!=|<=|>=|[<>](?![<>])", "name": "keyword.operator.sole keyword.operator.comparison.python" },
     { "match": "<<|>>|[&|^~]", "name": "keyword.operator.sole keyword.operator.bitwise.python" },
+    { "match": "\\+=|=", "name": "keyword.operator.sole keyword.operator.assignment.python" },
     { "match": "[-+*/%]", "name": "keyword.operator.sole keyword.operator.arithmetic.python" },
-    { "match": "=", "name": "keyword.operator.sole keyword.operator.assignment.python" },
     { "match": "[()]", "name": "punctuation.section.parens.sole" },
     { "match": "[\\[\\]]", "name": "punctuation.section.brackets.sole" },
     { "match": "[:,.]", "name": "punctuation.separator.sole" }
@@ -87,6 +88,16 @@
     "types": {
       "match": "\\b(?:u?int(?:8|16|32|64)|float(?:32|64)|bool|str|void)\\b",
       "name": "storage.type.sole support.type.python"
+    },
+    "bytes": {
+      "patterns": [
+        { "name": "string.quoted.double.byte.sole string.quoted.single.python", "begin": "(?<![\\p{L}\\p{N}_])b\"(?!\"\")", "end": "\"|$", "patterns": [{ "include": "#byte-escapes" }] },
+        { "name": "string.quoted.single.byte.sole string.quoted.single.python", "begin": "(?<![\\p{L}\\p{N}_])b'(?!'')", "end": "'|$", "patterns": [{ "include": "#byte-escapes" }] }
+      ]
+    },
+    "byte-escapes": {
+      "match": "\\\\[nrt0\\\\'\"]",
+      "name": "constant.character.escape.sole constant.character.escape.python"
     },
     "strings": {
       "patterns": [

@@ -52,7 +52,9 @@ def binary_ir(state: frontend.model.State, operator: str, left: frontend.model.V
             if operator != "==" && operator != "!=":
                 frontend.diagnostics.fail_at(state, "only numbers support ordering")
             ri: int64 = frontend.symbols.record_index(state, typ)
-            if ri < 0 || state.records[ri].kind != "class":
+            si: int64 = frontend.symbols.sum_index(state, typ)
+            enum_type: bool = si >= 0 && state.sums[si].kind == "enum"
+            if not enum_type && (ri < 0 || state.records[ri].kind != "class"):
                 frontend.diagnostics.fail_at(state, "this type does not support comparison")
             operation = "icmp eq"
             if operator == "!=":
