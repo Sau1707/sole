@@ -25,7 +25,30 @@ def main() -> int32:
     return 0
 ```
 
-## Bootstrap
+## Install the released compiler
+
+Requires Linux x86-64, glibc, LLVM 21 (`libLLVM.so.21.1`), a native C toolchain,
+`curl`, `tar`, and `sha256sum`. Install your distribution's `llvm-21-dev` and
+build tools first. Then:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install-release.sh -o install-sole.sh
+sh install-sole.sh
+export PATH="$HOME/.local/bin:$PATH"
+sole --version
+```
+
+The installer downloads release **0.0.0**, verifies its SHA-256 checksum, and
+installs the compiler, runtime, and standard library under `~/.local`. Add the
+`export PATH` line to your shell configuration to keep it across sessions.
+Use `sh install-sole.sh /absolute/prefix` for another location, or set
+`SOLE_VERSION` to select a published version. No source build is needed.
+
+From a checkout, `make up` installs this same released compiler and the VS Code
+extension. Override the destination with `make up PREFIX=/absolute/prefix`.
+`make down` removes only the editor extension, leaving the compiler installed.
+
+## Bootstrap from source
 
 Prebuilt Linux x86-64 archives are available on the
 [GitHub releases page](https://github.com/Sau1707/sole/releases). They require
@@ -142,9 +165,11 @@ Use `import wrappers.cmath` for explicit category access, e.g. `wrappers.cmath.s
 
 The [Sole VS Code extension](.editors/vscode/README.md) adds syntax coloring for
 `.sole` files, comment toggling, bracket matching, and indentation support. Run
-`make up` to build and install it, or `make down` to uninstall it and remove local
-extension build dependencies. Requires Node.js 22+, npm, Make, and the VS Code
-`code` CLI. See its README for details and preview instructions.
+`make up` to install the released compiler and build and install the extension,
+or `make down` to uninstall the extension and remove local extension build
+dependencies. Requires Node.js 22+, npm, Make, the VS Code `code` CLI, and the
+release-installation prerequisites above. See its README for details and preview
+instructions.
 
 ## Language principles
 

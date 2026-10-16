@@ -1,5 +1,6 @@
 CODE ?= code
 PREFIX ?= $(HOME)/.local
+SOLE_VERSION ?= 0.0.0
 EXTENSION_DIR := .editors/vscode
 EXTENSION_ID := sole-lang.sole-language
 
@@ -20,6 +21,7 @@ test: bootstrap
 	sh compiler/tests/syntax.sh
 	sh compiler/tests/run.sh
 	sh compiler/tests/format.sh
+	sh compiler/tests/install-release.sh
 
 test-syntax: .build/sole
 	sh compiler/tests/syntax.sh
@@ -32,6 +34,7 @@ up:
 	@node -e 'if (Number(process.versions.node.split(".")[0]) < 22) { console.error("Node.js 22 or newer is required."); process.exit(1); }'
 	@command -v npm >/dev/null || { echo "Install npm first."; exit 1; }
 	@command -v "$(CODE)" >/dev/null || { echo "Install the VS Code CLI or set CODE to its executable."; exit 1; }
+	SOLE_VERSION="$(SOLE_VERSION)" sh install-release.sh "$(PREFIX)"
 	npm --prefix "$(EXTENSION_DIR)" ci
 	npm --prefix "$(EXTENSION_DIR)" test
 	npm --prefix "$(EXTENSION_DIR)" run package
