@@ -17,6 +17,8 @@ test ! -e "$package" || { echo "$package already exists; use a clean packaging d
 mkdir -p "$package/bin" "$package/lib/sole" "$package/share/sole/licenses"
 install -m 755 .build/sole "$package/bin/sole"
 cp -R lib "$package/share/sole/"
+mkdir -p "$package/share/sole/compiler"
+cp compiler/sole.ebnf "$package/share/sole/compiler/"
 cp -R /usr/share/common-licenses "$package/share/sole/licenses/"
 cp README.md .build/bootstrap-proof.txt "$package/"
 ldd .build/sole > "$package/dependencies.txt"

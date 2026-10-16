@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y llvm-21-dev
       - name: Bootstrap from the bundled seed
-        run: make bootstrap SOLE_SEED=1
+        run: sh scripts/bootstrap-ci.sh
         env:
           SOLE_LLVM_LIB: LLVM-21
       - name: Package compiler with bundled libraries
@@ -34,7 +34,9 @@ jobs:
           sh scripts/package-release.sh "$version"
           echo "SOLE_TEST_RELEASE=dist/sole-$version-linux-x86_64.tar.gz" >> "$GITHUB_ENV"
       - name: Test syntax, compiler, installation, and formatter
-        run: make test-suite
+        run: |
+          sha256sum -c .build/bootstrap-proof.txt
+          make test-suite SOLE_COMPILER="$PWD/.build/sole"
       - name: Test release without system LLVM
         run: |
           docker run --rm -e SOLE_TEST_RELEASE -v "$PWD:/source:ro" ubuntu:24.04 sh -eu -c '
@@ -44,6 +46,7 @@ jobs:
             tar -xzf "/source/$SOLE_TEST_RELEASE" -C /work
             package=/work/$(basename "$SOLE_TEST_RELEASE" .tar.gz)
             "$package/bin/sole" --version
+            "$package/bin/sole" syntax /source/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole
             "$package/bin/sole" build /source/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole -o /work/hello
             /work/hello
           '
@@ -85,4 +88,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
             --title "Sole ${GITHUB_REF_NAME#v}" \
-            --notes 'Experimental self-hosted Sole compiler with a built-in formatter. Linux x86-64 with glibc 2.39 or newer. LLVM and its non-glibc dependencies are bundled. Use install.sh to install the release and any missing native C build tools. For manual installation, verify SHA256SUMS and copy bin/, lib/, and share/ into the same prefix. Third-party notices are in share/sole/licenses/. Source archives are available below.'
+            --notes 'Experimental self-hosted Sole compiler with a built-in formatter and EBNF syntax checker (sole syntax). Local development commands use the installed release; source bootstrapping is separate for CI. Linux x86-64 with glibc 2.39 or newer. LLVM and its non-glibc dependencies are bundled. Use install.sh to install the release and any missing native C build tools. For manual installation, verify SHA256SUMS and copy bin/, lib/, and share/ into the same prefix. Third-party notices are in share/sole/licenses/. Source archives are available below.'

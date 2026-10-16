@@ -2,7 +2,7 @@
 set -eu
 
 prefix=${1:-"$HOME/.local"}
-version=${SOLE_VERSION:-0.0.3}
+version=${SOLE_VERSION:-0.0.4}
 if [ "$#" -gt 1 ]; then
     echo "Usage: sh install.sh [/absolute/prefix]" >&2
     exit 1
@@ -13,7 +13,7 @@ case "$prefix" in
 esac
 destination=${DESTDIR:-}$prefix
 case "$version" in
-    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.3." >&2; exit 1 ;;
+    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.4." >&2; exit 1 ;;
 esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo "Prebuilt Sole releases support Linux x86-64 only." >&2

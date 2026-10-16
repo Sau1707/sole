@@ -1,0 +1,30 @@
+import core
+import grammar
+import wrappers.system
+
+
+def main() -> int32:
+    first: int64 = 2
+    grammar_path: str = core.from_cstr(wrappers.system.sole_rt_home()) + "/compiler/sole.ebnf"
+    if core.arg_count() > 2 && core.arg(2) == "--grammar":
+        if core.arg_count() < 5:
+            core.print("Usage: sole syntax [--grammar GRAMMAR.ebnf] file.sole ...")
+            return 1
+        grammar_path = core.arg(3)
+        first = 4
+    if first >= core.arg_count():
+        core.print("Usage: sole syntax [--grammar GRAMMAR.ebnf] file.sole ...")
+        return 1
+    i: int64 = first
+    while i < core.arg_count():
+        path: str = core.arg(i)
+        if core.len(path) < 5 || core.slice(path, core.len(path) - 5, core.len(path)) != ".sole":
+            core.print("error: expected a .sole file: " + path)
+            return 1
+        i = i + 1
+    loaded: grammar.Grammar = grammar.load(grammar_path)
+    i = first
+    while i < core.arg_count():
+        grammar.check_file(loaded, grammar_path, core.arg(i))
+        i = i + 1
+    return 0

@@ -2,7 +2,7 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-compiler=${SOLE_COMPILER:-"$root/.build/sole"}
+compiler=$(command -v "${SOLE_COMPILER:-sole}")
 formatter() {
     "$compiler" format "$@"
 }

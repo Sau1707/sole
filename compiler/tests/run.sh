@@ -3,7 +3,7 @@ set -eu
 ulimit -c 0
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-compiler=${SOLE_COMPILER:-"$root/.build/sole"}
+compiler=$(command -v "${SOLE_COMPILER:-sole}")
 hello="$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole"
 imports="$root/compiler/tests/cases/111-standard_library/source/main.sole"
 . "$root/compiler/tests/temp-root.sh"
@@ -18,6 +18,11 @@ fail() {
 }
 
 for case in "$root"/compiler/tests/cases/*; do
+    mode=$(cat "$case/mode")
+    case "$mode" in
+        run|trap|exit|reject-build|reject-check) ;;
+        *) fail "$(basename "$case") unknown fixture mode: $mode" ;;
+    esac
     work="$temporary/case"
     rm -rf -- "$work"
     mkdir -p "$work/data/0" "$work/data/1"
@@ -27,21 +32,23 @@ for case in "$root"/compiler/tests/cases/*; do
         mv "$source.tmp" "$source"
     done
     entry=$(cat "$case/entry")
-    mode=$(cat "$case/mode")
     optimize=$(cat "$case/optimize")
     command=build
-    case "$mode" in *check) command=check ;; esac
+    case "$mode" in reject-check) command=check ;; esac
     library="$root/lib"
     if [ -f "$case/library-override" ]; then library="$case/library"; fi
     module_env=
     if [ -f "$case/module-env" ]; then module_env=$(cat "$case/module-env"); fi
-    if SOLE_HOME="$root" SOLE_LIB="$library" SOLE_MODULE_TEST="$module_env" \
-        "$compiler" "$command" "$work/source/$entry" "$optimize" -o "$work/program" > "$temporary/compile.log" 2>&1; then
+    status=0
+    SOLE_HOME="$root" SOLE_LIB="$library" SOLE_MODULE_TEST="$module_env" \
+        "$compiler" "$command" "$work/source/$entry" "$optimize" -o "$work/program" > "$temporary/compile.log" 2>&1 || status=$?
+    if [ "$status" -eq 0 ]; then
         case "$mode" in reject-*) fail "$(basename "$case") was accepted" ;; esac
     else
         case "$mode" in
             reject-*)
-                grep -q 'error' "$temporary/compile.log" || fail "$(basename "$case") has no diagnostic"
+                [ "$status" -eq 1 ] || fail "$(basename "$case") compiler exited with status $status, expected 1"
+                grep -Fq 'sole: error: ' "$temporary/compile.log" || fail "$(basename "$case") has no source diagnostic"
                 if [ -f "$case/diagnostic" ]; then
                     grep -Fq -f "$case/diagnostic" "$temporary/compile.log" || fail "$(basename "$case") diagnostic differs"
                 fi
@@ -75,7 +82,7 @@ for case in "$root"/compiler/tests/cases/*; do
     count=$((count + 1))
 done
 
-"$compiler" --version | grep -q 'sole 0.0.3' || fail version
+"$compiler" --version | grep -q 'sole 0.0.4' || fail version
 SOLE_CC=/no/such/linker "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -122,6 +129,11 @@ cmp -s "$temporary/expected" "$temporary/actual" || fail 'interpreter-free execu
 
 mkdir -p "$temporary/installed/bin" "$temporary/installed/share/sole"
 install -m 755 "$compiler" "$temporary/installed/bin/sole"
+compiler_prefix=$(dirname -- "$(dirname -- "$compiler")")
+if [ -d "$compiler_prefix/lib/sole" ]; then
+    mkdir -p "$temporary/installed/lib"
+    cp -R "$compiler_prefix/lib/sole" "$temporary/installed/lib/"
+fi
 cp -R "$root/lib" "$temporary/installed/share/sole/"
 mv "$temporary/installed" "$temporary/relocated"
 unset SOLE_HOME SOLE_LIB
@@ -131,5 +143,4 @@ PATH="$temporary/tools" "$temporary/relocated/bin/sole" build "$imports" -o "$te
 printf '6\ntrue\nhahaha\n97\n' > "$temporary/expected"
 cmp -s "$temporary/expected" "$temporary/actual" || fail 'relocated library'
 cd "$root"
-sha256sum -c .build/bootstrap-proof.txt > "$temporary/compile.log" 2>&1 || fail 'bootstrap proof'
 echo "Passed $count fixture cases, CLI checks, and interpreter-free relocation."

@@ -23,6 +23,8 @@ def contains(text: str, needle: str) -> bool:
 
 
 def repeat(text: str, count: int64) -> str:
+    if text == "" || count <= 0:
+        return ""
     parts: str[] = []
     i: int64 = 0
     while i < count:

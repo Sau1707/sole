@@ -2,34 +2,49 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-compiler=${SOLE_COMPILER:-"$root/.build/sole"}
+compiler=$(command -v "${SOLE_COMPILER:-sole}")
 . "$root/compiler/tests/temp-root.sh"
 temporary=$(mktemp -d "$temp_root/sole-syntax-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-cp "$root/compiler/tests/syntax.sole" "$temporary/main.sole"
-ln -s "$root/compiler/frontend" "$temporary/frontend"
-SOLE_HOME="$root" "$compiler" build "$temporary/main.sole" -o "$temporary/syntax"
+syntax() {
+    SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" "$@"
+}
 
 if [ "$#" -gt 0 ]; then
-    "$temporary/syntax" "$root/compiler/sole.ebnf" "$@"
+    syntax "$@"
     exit 0
 fi
 
-find "$root/compiler" "$root/lib" -path "$root/compiler/tests" -prune -o -type f -name '*.sole' \
-    -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
-if [ -d "$root/examples" ]; then
-    find "$root/examples" -type f -name '*.sole' -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
+for arguments in '' '--grammar' '--grammar missing.ebnf'; do
+    if "$compiler" syntax $arguments > "$temporary/error" 2>&1; then
+        echo 'FAIL: syntax accepted missing arguments' >&2
+        exit 1
+    fi
+    grep -q 'Usage: sole syntax' "$temporary/error"
+done
+printf 'def main() -> int32:\n    return missing_name\n' > "$temporary/syntax-only.sole"
+SOLE_LIB=/no/such/library SOLE_CC=/no/such/linker syntax "$temporary/syntax-only.sole"
+printf 'not source\n' > "$temporary/wrong.txt"
+if syntax "$temporary/wrong.txt" > "$temporary/error" 2>&1; then
+    echo 'FAIL: syntax accepted a non-Sole file' >&2
+    exit 1
 fi
-"$temporary/syntax" "$root/compiler/sole.ebnf" "$root/compiler/tests/syntax.sole"
+grep -q 'expected a .sole file' "$temporary/error"
+
+find "$root/compiler" "$root/lib" -path "$root/compiler/tests" -prune -o -type f -name '*.sole' \
+    -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
+if [ -d "$root/examples" ]; then
+    find "$root/examples" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
+fi
 for fixture in "$root"/compiler/tests/cases/*; do
     case $(cat "$fixture/mode") in reject-*) continue ;; esac
-    find "$fixture" -type f -name '*.sole' -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
+    find "$fixture" -type f -name '*.sole' -exec env SOLE_HOME="$root" "$compiler" syntax --grammar "$root/compiler/sole.ebnf" {} +
 done
 
 reject() {
     printf '%s\n' "$1" > "$temporary/bad.sole"
-    if "$temporary/syntax" "$root/compiler/sole.ebnf" "$temporary/bad.sole" > "$temporary/error" 2>&1; then
+    if syntax "$temporary/bad.sole" > "$temporary/error" 2>&1; then
         echo "FAIL: grammar accepted: $1" >&2
         exit 1
     fi
@@ -66,15 +81,22 @@ reject 'def main() -> int32:
 # Prove that the file, rather than a hard-coded Sole parser, drives acceptance.
 printf 'program = "pass", NEWLINE, EOF;\n' > "$temporary/minimal.ebnf"
 printf 'pass\n' > "$temporary/pass.sole"
-"$temporary/syntax" "$temporary/minimal.ebnf" "$temporary/pass.sole"
-if "$temporary/syntax" "$root/compiler/sole.ebnf" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
+"$compiler" syntax --grammar "$temporary/minimal.ebnf" "$temporary/pass.sole"
+if syntax "$temporary/pass.sole" > "$temporary/error" 2>&1; then
     echo 'FAIL: Sole grammar accepted a module-level pass' >&2
     exit 1
 fi
 printf 'program = missing;\n' > "$temporary/invalid.ebnf"
-if "$temporary/syntax" "$temporary/invalid.ebnf" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
+if "$compiler" syntax --grammar "$temporary/invalid.ebnf" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
     echo 'FAIL: undefined grammar rule accepted' >&2
     exit 1
 fi
 grep -q 'unknown grammar rule missing' "$temporary/error"
+printf 'def main() -> int32:\n    return 0\n' > "$temporary/good.sole"
+syntax "$temporary/good.sole" "$temporary/syntax-only.sole"
+if syntax "$temporary/good.sole" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
+    echo 'FAIL: syntax ignored an invalid later input' >&2
+    exit 1
+fi
+grep -Fq "$temporary/pass.sole:" "$temporary/error"
 echo 'Passed EBNF syntax checks, rejection cases, and grammar-driven acceptance.'

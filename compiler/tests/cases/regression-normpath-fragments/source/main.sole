@@ -1,0 +1,27 @@
+import core
+import os.path
+import strings
+
+
+def main() -> void:
+    core.print(os.path.normpath("") == ".")
+    core.print(os.path.normpath("././") == ".")
+    core.print(os.path.normpath("/") == "/")
+    core.print(os.path.normpath("//") == "//")
+    core.print(os.path.normpath("///") == "/")
+    core.print(os.path.normpath("////") == "/")
+    core.print(os.path.normpath("//host///a/../b/") == "//host/b")
+    core.print(os.path.normpath("///host///a/../b/") == "/host/b")
+    core.print(os.path.normpath("a///b/") == "a/b")
+    core.print(os.path.normpath("a/b/../../") == ".")
+    core.print(os.path.normpath("/a/b/../../") == "/")
+    core.print(os.path.normpath("//a/b/../../") == "//")
+    core.print(os.path.normpath("../../../a/../b/") == "../../../b")
+    core.print(os.path.normpath("/../../a/../b/") == "/b")
+    core.print(os.path.normpath("//../../a/../b/") == "//b")
+    core.print(os.path.normpath("a/b/../../c/d/../e/") == "c/e")
+    core.print(os.path.normpath("a/../../b/../") == "..")
+    core.print(os.path.normpath("a b/é/../🙂/") == "a b/🙂")
+    many: str = strings.repeat("segment/", 2048) + "tail"
+    core.print(os.path.normpath("./" + many + "/") == many)
+    core.print(os.path.normpath("//" + many + "/") == "//" + many)
