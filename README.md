@@ -32,17 +32,22 @@ Requires Linux x86-64, glibc, LLVM 21 (`libLLVM.so.21.1`), a native C toolchain,
 build tools first. Then:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install-release.sh -o install-sole.sh
-sh install-sole.sh
-export PATH="$HOME/.local/bin:$PATH"
-sole --version
+curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install-release.sh | sh
 ```
 
 The installer downloads release **0.0.0**, verifies its SHA-256 checksum, and
-installs the compiler, runtime, and standard library under `~/.local`. Add the
-`export PATH` line to your shell configuration to keep it across sessions.
-Use `sh install-sole.sh /absolute/prefix` for another location, or set
-`SOLE_VERSION` to select a published version. No source build is needed.
+installs the compiler, runtime, and standard library under `~/.local`. No source
+build is needed. If `~/.local/bin` is not already on your `PATH`, add this to your
+shell configuration:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+For another installation location, replace `| sh` with
+`| sh -s -- /absolute/prefix`. To select a published version, use
+`| SOLE_VERSION=0.0.0 sh`. The command executes the downloaded installer; you can
+inspect the script at the same URL before running it.
 
 From a checkout, `make up` installs this same released compiler and the VS Code
 extension. Override the destination with `make up PREFIX=/absolute/prefix`.
