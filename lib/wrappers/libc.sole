@@ -11,3 +11,15 @@ extern def rename(source: ptr, destination: ptr) -> int32
 
 
 extern def getenv(name: ptr) -> ptr
+
+
+extern def strtod(text: ptr, end: ptr) -> float64
+
+
+extern def system(command: ptr) -> int32
+
+
+extern def unlink(path: ptr) -> int32
+
+
+extern def rmdir(path: ptr) -> int32

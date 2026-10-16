@@ -1,16 +1,17 @@
 import core
-import backend.target
+import pipeline
 import driver.format
 import driver.linker
+import wrappers.libc
+import backend.target
+import wrappers.system
 import frontend.diagnostics
-import pipeline
-import platform.system
 
 
 # Parse command-line options and dispatch compilation, linking, or execution.
 def main() -> int32:
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.1 (self-hosted)")
+        core.print("sole 0.0.2 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -52,7 +53,7 @@ def main() -> int32:
             i = i + 1
         i = i + 1
     # Generate LLVM IR and handle validation-only requests.
-    home: str = core.from_cstr(platform.system.sole_rt_home())
+    home: str = core.from_cstr(wrappers.system.sole_rt_home())
     contents: str = core.read_file(filename)
     ir_text: str = pipeline.generate(filename, contents, home)
     if command == "check":
@@ -67,7 +68,7 @@ def main() -> int32:
         suffix = ".o"
     if output == "":
         output = driver.linker.default_output(filename, suffix)
-    if output == filename || platform.system.sole_rt_same_file(core.cstr(filename), core.cstr(output)) != 0:
+    if output == filename || wrappers.system.sole_rt_same_file(core.cstr(filename), core.cstr(output)) != 0:
         frontend.diagnostics.die("output path must not overwrite the source file")
     # Emit IR or an object directly, or link a native executable.
     if emission == "llvm":
@@ -76,7 +77,7 @@ def main() -> int32:
     elif emission == "object":
         backend.target.llvm_object(ir_text, output, level, false)
     else:
-        temporary: str = core.from_cstr(platform.system.sole_rt_temp_dir())
+        temporary: str = core.from_cstr(wrappers.system.sole_rt_temp_dir())
         object_path: str = temporary + "/program.o"
         backend.target.llvm_object(ir_text, object_path, level, false)
         if command == "run":
@@ -88,20 +89,20 @@ def main() -> int32:
             link_command = link_command + " " + driver.linker.shell_quote("-l" + libraries[l])
             l = l + 1
         link_command = link_command + " -o " + driver.linker.shell_quote(output)
-        status: int32 = platform.system.system(core.cstr(link_command))
-        platform.system.unlink(core.cstr(object_path))
+        status: int32 = wrappers.libc.system(core.cstr(link_command))
+        wrappers.libc.unlink(core.cstr(object_path))
         if status != 0:
-            platform.system.rmdir(core.cstr(temporary))
+            wrappers.libc.rmdir(core.cstr(temporary))
             frontend.diagnostics.die("linking failed")
         if command == "run":
             # Run the temporary executable and preserve its exit status.
             run_command: str = driver.linker.shell_quote(output)
-            status = platform.system.system(core.cstr(run_command))
-            platform.system.unlink(core.cstr(output))
-            platform.system.rmdir(core.cstr(temporary))
+            status = wrappers.libc.system(core.cstr(run_command))
+            wrappers.libc.unlink(core.cstr(output))
+            wrappers.libc.rmdir(core.cstr(temporary))
             if (status & 127) != 0:
                 return 128 + (status & 127)
             return (status >> 8) & 255
-        platform.system.rmdir(core.cstr(temporary))
+        wrappers.libc.rmdir(core.cstr(temporary))
     core.print("Built " + output)
     return 0

@@ -2,7 +2,35 @@
 
 Sole is a statically typed, indentation-based language with an LLVM backend. It compiles to **native executables**. The compiler is written in Sole, organized into [feature-specific modules](compiler/) starting at [`compiler/main.sole`](compiler/main.sole).
 
-**Sole 0.0.1 is self-hosting and Python-free.** A native Sole compiler builds its own source again, producing a byte-for-byte identical compiler. Builds, tests, and installation require no Python interpreter or packages. This is still an experimental language, not a production-ready ecosystem.
+**Sole 0.0.2 is self-hosting and Python-free.** A native Sole compiler builds its own source again, producing a byte-for-byte identical compiler. Builds, tests, and installation require no Python interpreter or packages. This is still an experimental language, not a production-ready ecosystem.
+
+```sole
+import core
+
+
+def fibonacci(n: int64) -> int64:
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+
+def main() -> int32:
+    n: int64 = 40
+    result: int64 = fibonacci(n)
+
+    core.print("Recursive Fibonacci benchmark")
+    core.print("n:")
+    core.print(n)
+    core.print("Result:")
+    core.print(result)
+
+    if result != 102334155:
+        core.print("Unexpected result")
+        return 1
+    return 0
+```
+
+Structs and classes:
 
 ```sole
 import core
@@ -35,7 +63,7 @@ build tools first. Then:
 curl -fsSL https://raw.githubusercontent.com/Sau1707/sole/main/install.sh | sh
 ```
 
-The installer downloads release **0.0.1**, verifies its SHA-256 checksum, and
+The installer downloads release **0.0.2**, verifies its SHA-256 checksum, and
 installs the compiler, runtime, and standard library under `~/.local`. No source
 build is needed. If `~/.local/bin` is not already on your `PATH`, add this to your
 shell configuration:
@@ -46,7 +74,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 For another installation location, replace `| sh` with
 `| sh -s -- /absolute/prefix`. To select a published version, use
-`| SOLE_VERSION=0.0.1 sh`. The command executes the downloaded installer; you can
+`| SOLE_VERSION=0.0.2 sh`. The command executes the downloaded installer; you can
 inspect the script at the same URL before running it.
 
 From a checkout, `make up` installs this same released compiler and the VS Code
@@ -90,7 +118,7 @@ sh install.sh /absolute/prefix
 
 `install.sh` and `make install` only download and install verified published
 releases; neither builds nor installs the checkout's compiler. Use
-`SOLE_VERSION=0.0.1` to select a published version.
+`SOLE_VERSION=0.0.2` to select a published version.
 
 Installation places `sole` in `bin/` and its runtime and standard library in
 `share/sole/`. This tree can be moved without rebuilding or setting environment
@@ -176,7 +204,7 @@ If no module exists beside the importing file, Sole searches the entry file's di
 | `lib/core.sole` | Explicitly imported core operations, including `len`, `slice`, `print`, arrays, pointers, and native I/O |
 | `lib/pure/` | Sole-only modules: `math`, `strings`, `ascii`, `bisect`, `statistics`, `os.path` |
 | `lib/impure/` | Sole APIs backed by native services: `files`, `env` |
-| `lib/wrappers/` | Unsafe C declarations: `libc`, `cmath` |
+| `lib/wrappers/` | Unsafe native declarations: `libc`, `cmath`, `llvm`, `system` |
 
 Use `import wrappers.cmath` for explicit category access, e.g. `wrappers.cmath.sqrt(16.0)`. Foreign libraries still require `--link NAME` when not linked by default.
 
@@ -223,6 +251,10 @@ sole format file.sole another.sole
 sole format --check file.sole
 ```
 
+Consecutive imports are sorted shortest first by declaration length (including
+aliases, excluding trailing whitespace and comments). Equal-length imports keep
+their order; blank lines and standalone comments separate import groups.
+
 `--check` reports files that need formatting without modifying them, exiting 1
 if any file would change or an error occurs.
 
@@ -254,7 +286,6 @@ The native formatter is covered by 18 migrated spacing and preservation cases.
 | `compiler/backend/` | LLVM types, values, operators, functions, and target emission |
 | `compiler/types/` | Built-in type implementation classes and shared operation rules |
 | `compiler/driver/` | CLI and linker handling |
-| `compiler/platform/` | Native system bindings |
 | `lib/pure/`, `lib/impure/`, `lib/wrappers/` | Standard-library modules |
 | `bootstrap/sole` | Checksummed native bootstrap seed |
 | `bootstrap.sh` | Native rebuilds and fixed-point verification |

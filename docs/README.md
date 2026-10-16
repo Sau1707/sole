@@ -1,6 +1,6 @@
 # Sole specifications
 
-Short specifications for Sole 0.0.1.
+Short specifications for Sole 0.0.2.
 
 The executable token grammar is [`compiler/sole.ebnf`](../compiler/sole.ebnf). Run
 `make test-syntax` to check it against the source tree and syntax regressions.

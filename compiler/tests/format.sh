@@ -71,6 +71,60 @@ formatter "$temporary/crlf.sole"
 cmp "$temporary/crlf.sole" "$temporary/crlf-expected.sole"
 formatter --check "$temporary/input.sole" "$temporary/strings.sole" "$temporary/crlf.sole"
 
+cat > "$temporary/imports.sole" <<'EOF'
+import frontend.lexer as lexer
+import math
+import core # Keep this long comment with core, without counting it for sorting.
+import os
+
+import strings
+import env
+# Separate group.
+import statistics
+import files
+
+
+def main() -> str:
+    return """import statistics
+import os
+"""
+EOF
+cat > "$temporary/imports-expected.sole" <<'EOF'
+import os
+import math
+import core # Keep this long comment with core, without counting it for sorting.
+import frontend.lexer as lexer
+
+import env
+import strings
+# Separate group.
+import files
+import statistics
+
+
+def main() -> str:
+    return """import statistics
+import os
+"""
+EOF
+cp "$temporary/imports.sole" "$temporary/original.sole"
+if formatter --check "$temporary/imports.sole"; then
+    echo 'FAIL: --check accepted unsorted imports' >&2
+    exit 1
+fi
+cmp "$temporary/imports.sole" "$temporary/original.sole"
+formatter "$temporary/imports.sole"
+cmp "$temporary/imports.sole" "$temporary/imports-expected.sole"
+formatter --check "$temporary/imports.sole"
+formatter "$temporary/imports.sole"
+cmp "$temporary/imports.sole" "$temporary/imports-expected.sole"
+
+printf 'import statistics\r\nimport math\r\nimport os' > "$temporary/imports-crlf.sole"
+printf 'import os\r\nimport math\r\nimport statistics' > "$temporary/imports-crlf-expected.sole"
+formatter "$temporary/imports-crlf.sole"
+cmp "$temporary/imports-crlf.sole" "$temporary/imports-crlf-expected.sole"
+formatter --check "$temporary/imports-crlf.sole"
+
 for malformed in '"""unterminated' 'def broken(' 'def broken([)]'; do
     printf '%s\n' "$malformed" > "$temporary/bad.sole"
     cp "$temporary/bad.sole" "$temporary/original.sole"

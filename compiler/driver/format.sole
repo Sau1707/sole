@@ -33,7 +33,7 @@ def main() -> int32:
             formatted: str = formatter.format_source(source, lines)
             if formatted != source:
                 if check:
-                    core.print(path + ": spacing needs formatting")
+                    core.print(path + ": needs formatting")
                     status = 1
                 else:
                     core.write_file(path, formatted)

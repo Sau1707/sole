@@ -89,6 +89,62 @@ def scan(source: str) -> Lines:
     return lines
 
 
+def import_length(text: str) -> int64:
+    end: int64 = 0
+    while end < core.len(text) && text[end] != 35:
+        end = end + 1
+    while end > 0 && (text[end - 1] == 32 || text[end - 1] == 9):
+        end = end - 1
+    return end
+
+
+def sort_imports(source: str, lines: Lines) -> str:
+    parts: str[] = []
+    copied: int64 = 0
+    i: int64 = 0
+    while i < core.len(lines.kinds):
+        if lines.kinds[i] != 3:
+            i = i + 1
+            continue
+        first: int64 = i
+        imports: str[] = []
+        lengths: int64[] = []
+        endings: str[] = []
+        while i < core.len(lines.kinds) && lines.kinds[i] == 3:
+            end: int64 = core.len(source)
+            if i + 1 < core.len(lines.starts):
+                end = lines.starts[i + 1]
+            content_end: int64 = end
+            if content_end > lines.starts[i] && source[content_end - 1] == 10:
+                content_end = content_end - 1
+                if content_end > lines.starts[i] && source[content_end - 1] == 13:
+                    content_end = content_end - 1
+            text: str = core.slice(source, lines.starts[i], content_end)
+            length: int64 = import_length(text)
+            core.append(endings, core.slice(source, content_end, end))
+            core.append(imports, text)
+            core.append(lengths, length)
+            position: int64 = core.len(imports) - 1
+            while position > 0 && lengths[position - 1] > length:
+                imports[position] = imports[position - 1]
+                lengths[position] = lengths[position - 1]
+                position = position - 1
+            imports[position] = text
+            lengths[position] = length
+            i = i + 1
+        core.append(parts, core.slice(source, copied, lines.starts[first]))
+        j: int64 = 0
+        while j < core.len(imports):
+            core.append(parts, imports[j])
+            core.append(parts, endings[j])
+            j = j + 1
+        copied = core.len(source)
+        if i < core.len(lines.starts):
+            copied = lines.starts[i]
+    core.append(parts, core.slice(source, copied, core.len(source)))
+    return core.join(parts)
+
+
 def format_source(source: str, lines: Lines) -> str:
     newline: str = "\n"
     i: int64 = 1
@@ -121,4 +177,5 @@ def format_source(source: str, lines: Lines) -> str:
             previous = kind
         i = i + 1
     core.append(parts, core.slice(source, copied, core.len(source)))
-    return core.join(parts)
+    formatted: str = core.join(parts)
+    return sort_imports(formatted, scan(formatted))

@@ -65,7 +65,7 @@ for case in "$root"/compiler/tests/cases/*; do
     count=$((count + 1))
 done
 
-"$compiler" --version | grep -q 'sole 0.0.1' || fail version
+"$compiler" --version | grep -q 'sole 0.0.2' || fail version
 SOLE_CC=/no/such/linker "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"

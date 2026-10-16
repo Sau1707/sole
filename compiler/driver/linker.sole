@@ -1,5 +1,5 @@
 import core
-import platform.system
+import wrappers.libc
 
 
 # Quote a command argument without allowing shell expansion.
@@ -18,7 +18,7 @@ def shell_quote(text: str) -> str:
 
 # Choose the configured C linker driver or the system default.
 def native_linker() -> str:
-    configured: ptr = platform.system.getenv(core.cstr("SOLE_CC"))
+    configured: ptr = wrappers.libc.getenv(core.cstr("SOLE_CC"))
     if configured != ptr(0):
         return shell_quote(core.from_cstr(configured))
     return "cc"

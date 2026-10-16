@@ -1,6 +1,6 @@
 CODE ?= code
 PREFIX ?= $(HOME)/.local
-SOLE_VERSION ?= 0.0.1
+SOLE_VERSION ?= 0.0.2
 EXTENSION_DIR := .editors/vscode
 EXTENSION_ID := sole-lang.sole-language
 

@@ -1,12 +1,13 @@
 import core
 import backend.ir
-import frontend.characters
-import frontend.diagnostics
+import wrappers.libc
 import frontend.model
 import frontend.types
-import platform.system
-import types.definition
 import types.registry
+import wrappers.system
+import types.definition
+import frontend.characters
+import frontend.diagnostics
 
 
 # Encode string bytes as an LLVM global and return its string view.
@@ -75,8 +76,8 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
 
 # Encode floating-point literals with exact LLVM bit patterns.
 def float_literal(state: frontend.model.State, text: str, typ: str) -> frontend.model.Value:
-    real_value: float64 = platform.system.strtod(core.cstr(text), ptr(0))
-    bits: uint64 = platform.system.sole_rt_f64_bits(real_value)
+    real_value: float64 = wrappers.libc.strtod(core.cstr(text), ptr(0))
+    bits: uint64 = wrappers.system.sole_rt_f64_bits(real_value)
     digits: str = "0123456789ABCDEF"
     hex: str = "0x"
     i: int64 = 60

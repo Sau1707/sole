@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.1
+version=0.0.2
 archive="sole-$version-linux-x86_64"
 mkdir -p "$temporary/$archive/bin" "$temporary/$archive/share/sole"
 install -m 755 "$root/.build/sole" "$temporary/$archive/bin/sole"

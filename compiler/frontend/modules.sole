@@ -4,7 +4,7 @@ import frontend.builtins
 import frontend.lexer as lexer
 import frontend.model
 import frontend.tokens
-import platform.system
+import wrappers.system
 
 
 # Return a file's containing directory with a trailing separator.
@@ -33,12 +33,12 @@ def module_path(name: str) -> str:
 # Find a module in local, project, or standard-library directories.
 def resolve_import(module: frontend.model.ModuleInfo, name: str, position: int64, entry_directory: str) -> str:
     relative: str = module_path(name)
-    library: str = core.from_cstr(platform.system.sole_rt_lib_home())
+    library: str = core.from_cstr(wrappers.system.sole_rt_lib_home())
     candidates: str[] = [parent_directory(module.path) + relative, entry_directory + relative, library + "/" + relative, library + "/pure/" + relative, library + "/impure/" + relative, library + "/wrappers/" + relative]
     i: int64 = 0
     while i < core.len(candidates):
-        if platform.system.sole_rt_is_file(core.cstr(candidates[i])) != 0:
-            return core.from_cstr(platform.system.sole_rt_realpath(core.cstr(candidates[i])))
+        if wrappers.system.sole_rt_is_file(core.cstr(candidates[i])) != 0:
+            return core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(candidates[i])))
         i = i + 1
     frontend.diagnostics.module_error(module, position, "cannot find module '" + name + "'")
     return ""
@@ -263,7 +263,7 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
 # Combine the entry module and its dependencies into one token stream.
 def load_imports(filename: str, source: str) -> frontend.model.Tokens:
     modules: frontend.model.ModuleInfo[] = []
-    path: str = core.from_cstr(platform.system.sole_rt_realpath(core.cstr(filename)))
+    path: str = core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(filename)))
     load_module(modules, path, source)
     output: frontend.model.Tokens = frontend.model.Tokens([], [], [], 0, [])
     i: int64 = 0
