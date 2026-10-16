@@ -6,8 +6,7 @@ compiler=${SOLE_COMPILER:-"$root/.build/sole"}
 formatter() {
     "$compiler" format "$@"
 }
-temp_root=${TMPDIR:-/tmp}
-if [ -z "${TMPDIR:-}" ] && [ -d /tmp/opencode ]; then temp_root=/tmp/opencode; fi
+. "$root/compiler/tests/temp-root.sh"
 temporary=$(mktemp -d "$temp_root/sole-format-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
@@ -77,6 +76,28 @@ for malformed in '"""unterminated' 'def broken(' 'def broken([)]'; do
     cp "$temporary/bad.sole" "$temporary/original.sole"
     if formatter "$temporary/bad.sole"; then
         echo 'FAIL: malformed input accepted' >&2
+        exit 1
+    fi
+    cmp "$temporary/bad.sole" "$temporary/original.sole"
+done
+
+awk 'BEGIN {
+    print "import core\n\n\ndef first() -> void:"
+    printf "    core.print("
+    for (i = 0; i < 256; i++) printf "("
+    printf "1"
+    for (i = 0; i < 256; i++) printf ")"
+    print ")\n    values: int32[] = [1]\n\n\ndef second() -> void:\n    pass"
+}' > "$temporary/nested.sole"
+cp "$temporary/nested.sole" "$temporary/original.sole"
+formatter --check "$temporary/nested.sole"
+formatter "$temporary/nested.sole"
+cmp "$temporary/nested.sole" "$temporary/original.sole"
+for delimiters in '()[]([)]' '()[]]' '()[]('; do
+    printf '%s\n' "$delimiters" > "$temporary/bad.sole"
+    cp "$temporary/bad.sole" "$temporary/original.sole"
+    if formatter "$temporary/bad.sole" > "$temporary/log" 2>&1; then
+        echo "FAIL: reused delimiter stack accepted $delimiters" >&2
         exit 1
     fi
     cmp "$temporary/bad.sole" "$temporary/original.sole"

@@ -66,7 +66,7 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
         n = n + 1
     module: frontend.model.ModuleInfo = frontend.model.ModuleInfo(path, prefix, tokens, [], [], [], removed, true, [])
     core.append(modules, module)
-    if core.len(tokens.kind) > 1 and tokens.kind[0] == 3 and tokens.kind[1] == 4:
+    if core.len(tokens.kind) > 1 && tokens.kind[0] == 3 && tokens.kind[1] == 4:
         module.removed[0] = true
         module.removed[1] = true
     # Collect declarations, intrinsic exports, and import aliases.
@@ -77,17 +77,17 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
     while i < core.len(tokens.kind):
         kind: int32 = tokens.kind[i]
         text: str = tokens.text[i]
-        if kind == 1 and core.len(text) >= 7 and core.slice(text, 0, 7) == "__sole_":
+        if kind == 1 && core.len(text) >= 7 && core.slice(text, 0, 7) == "__sole_":
             frontend.diagnostics.module_error(module, i, "names beginning with '__sole_' are reserved")
         if kind == 5:
             depth = depth + 1
         elif kind == 6:
             depth = depth - 1
-        if depth == 0 and kind == 1 and (text == "def" or text == "struct" or text == "class"):
+        if depth == 0 && kind == 1 && (text == "def" || text == "struct" || text == "class"):
             if has_name(module.names, tokens.text[i + 1]):
                 frontend.diagnostics.module_error(module, i + 1, "duplicate declaration '" + tokens.text[i + 1] + "'")
             core.append(module.names, tokens.text[i + 1])
-        if depth == 0 and kind == 1 and text == "intrinsic":
+        if depth == 0 && kind == 1 && text == "intrinsic":
             name: str = tokens.text[i + 1]
             if not frontend.builtins.builtin_name(name):
                 frontend.diagnostics.module_error(module, i + 1, "unknown intrinsic '" + name + "'")
@@ -101,12 +101,12 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
             module.removed[i + 1] = true
             module.removed[i + 2] = true
             i = i + 2
-        if depth == 0 and kind == 1 and text == "import":
+        if depth == 0 && kind == 1 && text == "import":
             start: int64 = i
             i = i + 1
             alias: str = ""
             while true:
-                if tokens.kind[i] != 1 or frontend.tokens.reserved_keyword(tokens.text[i]):
+                if tokens.kind[i] != 1 || frontend.tokens.reserved_keyword(tokens.text[i]):
                     frontend.diagnostics.module_error(module, i, "expected a module name")
                 alias = alias + tokens.text[i]
                 i = i + 1
@@ -117,10 +117,10 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
             name: str = alias
             if tokens.text[i] == "as":
                 i = i + 1
-                if tokens.kind[i] != 1 or frontend.tokens.reserved_keyword(tokens.text[i]):
+                if tokens.kind[i] != 1 || frontend.tokens.reserved_keyword(tokens.text[i]):
                     frontend.diagnostics.module_error(module, i, "expected an import alias")
                 alias = tokens.text[i]
-                if core.len(alias) >= 7 and core.slice(alias, 0, 7) == "__sole_":
+                if core.len(alias) >= 7 && core.slice(alias, 0, 7) == "__sole_":
                     frontend.diagnostics.module_error(module, i, "names beginning with '__sole_' are reserved")
                 i = i + 1
             if tokens.kind[i] != 4:
@@ -152,7 +152,7 @@ def load_module(modules: frontend.model.ModuleInfo[], path: str, source: str) ->
 # Extract the first component of a dotted namespace.
 def namespace_root(name: str) -> str:
     i: int64 = 0
-    while i < core.len(name) and name[i] != 46:
+    while i < core.len(name) && name[i] != 46:
         i = i + 1
     return core.slice(name, 0, i)
 
@@ -196,16 +196,14 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
             previous = tokens.text[i - 1]
         following: str = tokens.text[i + 1]
         if kind == 1:
-            if has_name(roots, text) and (following == ":" or previous == "def" or previous == "struct" or previous == "class"):
+            if has_name(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "class"):
                 frontend.diagnostics.module_error(module, i, "module namespace cannot be rebound: " + text)
             if previous != ".":
-                chain: str = text
                 ends: int64[] = [i]
                 parts: str[] = [text]
                 end: int64 = i
-                while end + 2 < core.len(tokens.kind) and tokens.text[end + 1] == "." and tokens.kind[end + 2] == 1:
+                while end + 2 < core.len(tokens.kind) && tokens.text[end + 1] == "." && tokens.kind[end + 2] == 1:
                     end = end + 2
-                    chain = chain + "." + tokens.text[end]
                     core.append(parts, tokens.text[end])
                     core.append(ends, end)
                 matched: int64 = -1
@@ -219,7 +217,7 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
                         if p > 0:
                             prefix = prefix + "."
                         prefix = prefix + parts[p]
-                        if prefix == alias and p + 1 > matched_parts:
+                        if prefix == alias && p + 1 > matched_parts:
                             matched = alias_index
                             matched_parts = p + 1
                         p = p + 1
@@ -238,14 +236,14 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
                 elif has_name(roots, text):
                     frontend.diagnostics.module_error(module, i, "unknown module member")
                 else:
-                    field: bool = record_scope and depth == 1 and line_start and following == ":"
-                    method: bool = record_scope and depth == 1 and previous == "def"
-                    if has_name(module.names, text) and not field and not method:
+                    field: bool = record_scope && depth == 1 && line_start && following == ":"
+                    method: bool = record_scope && depth == 1 && previous == "def"
+                    if has_name(module.names, text) && not field && not method:
                         if has_name(module.intrinsics, text):
                             text = "__sole_intrinsic_" + text
                         else:
                             text = module.prefix + text
-        if kind == 1 and (original == "class" or original == "struct") and depth == 0:
+        if kind == 1 && (original == "class" || original == "struct") && depth == 0:
             record_scope = true
         if kind == 5:
             depth = depth + 1
@@ -253,7 +251,7 @@ def rewrite_module(modules: frontend.model.ModuleInfo[], index: int64, output: f
             depth = depth - 1
             if depth == 0:
                 record_scope = false
-        if kind == 4 or kind == 5 or kind == 6:
+        if kind == 4 || kind == 5 || kind == 6:
             line_start = true
         else:
             line_start = false

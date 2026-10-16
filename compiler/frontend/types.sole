@@ -1,39 +1,44 @@
 import core
 import frontend.characters
 import frontend.diagnostics
+import types.registry
+
+
+def builtin_type(typ: str) -> bool:
+    return types.registry.lookup(typ).llvm != ""
 
 
 # Recognize fixed-size and growable array type names.
 def array_type(typ: str) -> bool:
-    return core.len(typ) > 2 and typ[core.len(typ) - 1] == 93
+    return core.len(typ) > 2 && typ[core.len(typ) - 1] == 93
 
 
 # Extract the base type before an array's brackets.
 def element_type(typ: str) -> str:
     i: int64 = 0
-    while i < core.len(typ) and typ[i] != 91:
+    while i < core.len(typ) && typ[i] != 91:
         i = i + 1
     return core.slice(typ, 0, i)
 
 
 # Recognize growable arrays with empty brackets.
 def dynamic_type(typ: str) -> bool:
-    return array_type(typ) and typ[core.len(typ) - 2] == 91
+    return array_type(typ) && typ[core.len(typ) - 2] == 91
 
 
 # Recognize the supported signed and unsigned integer types.
 def integer_type(typ: str) -> bool:
-    return typ == "int8" or typ == "int16" or typ == "int32" or typ == "int64" or typ == "uint8" or typ == "uint16" or typ == "uint32" or typ == "uint64"
+    return types.registry.lookup(typ).integer()
 
 
 # Recognize the supported floating-point types.
 def float_type(typ: str) -> bool:
-    return typ == "float32" or typ == "float64"
+    return types.registry.lookup(typ).floating()
 
 
 # Distinguish unsigned integer type names.
 def unsigned_type(typ: str) -> bool:
-    return core.len(typ) > 0 and typ[0] == 117
+    return types.registry.lookup(typ).unsigned
 
 
 # Parse a bounded decimal size, allowing underscore separators.
@@ -49,15 +54,6 @@ def decimal(text: str) -> int64:
             result_number = result_number * 10 + int64(text[i] - 48)
         i = i + 1
     return result_number
-
-
-# Return an integer or boolean type's bit width.
-def width(typ: str) -> int64:
-    if typ == "bool":
-        return 1
-    if unsigned_type(typ):
-        return decimal(core.slice(typ, 4, core.len(typ)))
-    return decimal(core.slice(typ, 3, core.len(typ)))
 
 
 # Read the element count from a fixed-size array type.

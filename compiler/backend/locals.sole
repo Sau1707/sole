@@ -11,7 +11,7 @@ import frontend.symbols
 def declare_local(state: frontend.model.State, name: str, typ: str, value: frontend.model.Value) -> void:
     if frontend.symbols.local_index(state, name) >= 0:
         frontend.diagnostics.fail_at(state, "variable is already declared; shadowing is forbidden")
-    if frontend.builtins.reserved_name(name) or frontend.symbols.record_index(state, name) >= 0 or frontend.symbols.function_index(state, name) >= 0:
+    if frontend.builtins.reserved_name(name) || frontend.symbols.record_index(state, name) >= 0 || frontend.symbols.function_index(state, name) >= 0:
         frontend.diagnostics.fail_at(state, "reserved variable name '" + name + "'")
     if typ == "void":
         frontend.diagnostics.fail_at(state, "void is only a return type")

@@ -1,0 +1,6 @@
+import types.definition
+
+
+class uint64:
+    def definition(self) -> types.definition.Type:
+        return types.definition.Type("uint64", "i64", 64, "integer", true)

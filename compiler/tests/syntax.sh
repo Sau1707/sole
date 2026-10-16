@@ -3,8 +3,7 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 compiler=${SOLE_COMPILER:-"$root/.build/sole"}
-temp_root=${TMPDIR:-/tmp}
-if [ -z "${TMPDIR:-}" ] && [ -d /tmp/opencode ]; then temp_root=/tmp/opencode; fi
+. "$root/compiler/tests/temp-root.sh"
 temporary=$(mktemp -d "$temp_root/sole-syntax-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
@@ -13,24 +12,24 @@ ln -s "$root/compiler/frontend" "$temporary/frontend"
 SOLE_HOME="$root" "$compiler" build "$temporary/main.sole" -o "$temporary/syntax"
 
 if [ "$#" -gt 0 ]; then
-    "$temporary/syntax" "$root/sole.ebnf" "$@"
+    "$temporary/syntax" "$root/compiler/sole.ebnf" "$@"
     exit 0
 fi
 
 find "$root/compiler" "$root/lib" -path "$root/compiler/tests" -prune -o -type f -name '*.sole' \
-    -exec "$temporary/syntax" "$root/sole.ebnf" {} +
+    -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
 if [ -d "$root/examples" ]; then
-    find "$root/examples" -type f -name '*.sole' -exec "$temporary/syntax" "$root/sole.ebnf" {} +
+    find "$root/examples" -type f -name '*.sole' -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
 fi
-"$temporary/syntax" "$root/sole.ebnf" "$root/compiler/tests/syntax.sole"
+"$temporary/syntax" "$root/compiler/sole.ebnf" "$root/compiler/tests/syntax.sole"
 for fixture in "$root"/compiler/tests/cases/*; do
     case $(cat "$fixture/mode") in reject-*) continue ;; esac
-    find "$fixture" -type f -name '*.sole' -exec "$temporary/syntax" "$root/sole.ebnf" {} +
+    find "$fixture" -type f -name '*.sole' -exec "$temporary/syntax" "$root/compiler/sole.ebnf" {} +
 done
 
 reject() {
     printf '%s\n' "$1" > "$temporary/bad.sole"
-    if "$temporary/syntax" "$root/sole.ebnf" "$temporary/bad.sole" > "$temporary/error" 2>&1; then
+    if "$temporary/syntax" "$root/compiler/sole.ebnf" "$temporary/bad.sole" > "$temporary/error" 2>&1; then
         echo "FAIL: grammar accepted: $1" >&2
         exit 1
     fi
@@ -59,12 +58,16 @@ reject 'def main() -> int32:
 reject 'import core as return'
 reject 'def main() -> int32:
     return "return" +'
+reject 'def main() -> int32:
+    value: bool = true and false'
+reject 'def main() -> int32:
+    value: bool = true or false'
 
 # Prove that the file, rather than a hard-coded Sole parser, drives acceptance.
 printf 'program = "pass", NEWLINE, EOF;\n' > "$temporary/minimal.ebnf"
 printf 'pass\n' > "$temporary/pass.sole"
 "$temporary/syntax" "$temporary/minimal.ebnf" "$temporary/pass.sole"
-if "$temporary/syntax" "$root/sole.ebnf" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
+if "$temporary/syntax" "$root/compiler/sole.ebnf" "$temporary/pass.sole" > "$temporary/error" 2>&1; then
     echo 'FAIL: Sole grammar accepted a module-level pass' >&2
     exit 1
 fi

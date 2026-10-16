@@ -13,6 +13,7 @@
       },
       "patterns": [
         { "include": "#comments" },
+        { "match": "\\bas\\b", "name": "keyword.control.import.sole keyword.control.import.python" },
         { "match": "[\\p{L}_][\\p{L}\\p{N}_]*", "name": "variable.other.property.sole" },
         { "match": "\\.", "name": "punctuation.separator.sole punctuation.separator.period.python" }
       ]
@@ -54,7 +55,7 @@
     { "include": "#types" },
     { "match": "\\bextern\\b", "name": "storage.modifier.sole storage.modifier.declaration.python" },
     { "match": "\\b(if|elif|else|while|return|break|continue|pass)\\b", "name": "keyword.control.sole keyword.control.flow.python" },
-    { "match": "\\b(and|or|not)\\b", "name": "keyword.operator.logical.sole keyword.operator.logical.python" },
+    { "match": "&&|\\|\\||\\bnot\\b", "name": "keyword.operator.logical.sole keyword.operator.logical.python" },
     { "match": "\\b(true|false)\\b", "name": "constant.language.boolean.sole constant.language.python" },
     { "match": "\\bself\\b", "name": "variable.language.self.sole variable.language.special.self.python" },
     { "match": "(?<![\\p{L}\\p{N}_.])(?:0[xX][0-9a-fA-F](?:_?[0-9a-fA-F])*|0[bB][01](?:_?[01])*|0[oO][0-7](?:_?[0-7])*|(?:[0-9](?:_?[0-9])*(?:\\.(?:[0-9](?:_?[0-9])*)?)?|\\.[0-9](?:_?[0-9])*)(?:[eE][+-]?[0-9](?:_?[0-9])*)?)(?![\\p{L}\\p{N}_])", "name": "constant.numeric.sole constant.numeric.python" },

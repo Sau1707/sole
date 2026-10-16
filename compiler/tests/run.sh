@@ -6,8 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 compiler=${SOLE_COMPILER:-"$root/.build/sole"}
 hello="$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole"
 imports="$root/compiler/tests/cases/111-standard_library/source/main.sole"
-temp_root=${TMPDIR:-/tmp}
-if [ -z "${TMPDIR:-}" ] && [ -d /tmp/opencode ]; then temp_root=/tmp/opencode; fi
+. "$root/compiler/tests/temp-root.sh"
 temporary=$(mktemp -d "$temp_root/sole-tests-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 count=0
@@ -66,7 +65,7 @@ for case in "$root"/compiler/tests/cases/*; do
     count=$((count + 1))
 done
 
-"$compiler" --version | grep -q 'sole 0.0.0' || fail version
+"$compiler" --version | grep -q 'sole 0.0.1' || fail version
 SOLE_CC=/no/such/linker "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -95,7 +94,7 @@ status=0
 "$compiler" run "$temporary/exit.sole" > "$temporary/compile.log" 2>&1 || status=$?
 [ "$status" -eq 7 ] || fail 'run exit status'
 
-cc -Wall -Wextra -Werror -fsyntax-only "$root/runtime/system.c"
+cc -Wall -Wextra -Werror -fsyntax-only "$root/lib/runtime/system.c"
 
 mkdir -p "$temporary/tools"
 for tool in cc as ld; do ln -s "$(command -v "$tool")" "$temporary/tools/$tool"; done
@@ -104,7 +103,9 @@ PATH="$temporary/tools" "$compiler" build "$hello" -o "$temporary/hello" > "$tem
 printf 'Hello from Sole!\n' > "$temporary/expected"
 cmp -s "$temporary/expected" "$temporary/actual" || fail 'interpreter-free executable'
 
-sh "$root/install.sh" "$temporary/installed" > "$temporary/compile.log" 2>&1 || fail install
+mkdir -p "$temporary/installed/bin" "$temporary/installed/share/sole"
+install -m 755 "$compiler" "$temporary/installed/bin/sole"
+cp -R "$root/lib" "$temporary/installed/share/sole/"
 mv "$temporary/installed" "$temporary/relocated"
 unset SOLE_HOME SOLE_LIB
 cd "$temporary"

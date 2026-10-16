@@ -46,14 +46,14 @@ def call_builtin(state: frontend.model.State, name: str) -> frontend.model.Value
         return frontend.model.Value("void", "", "")
     # Check ordinary intrinsic argument types and counts.
     types: str[] = []
-    if name == "arg" or name == "exit":
+    if name == "arg" || name == "exit":
         if name == "arg":
             core.append(types, "int64")
         else:
             core.append(types, "int32")
     elif name == "slice":
         types = ["str", "int64", "int64"]
-    elif name == "read_file" or name == "cstr":
+    elif name == "read_file" || name == "cstr":
         types = ["str"]
     elif name == "write_file":
         types = ["str", "str"]
@@ -63,7 +63,7 @@ def call_builtin(state: frontend.model.State, name: str) -> frontend.model.Value
     expected_count: int64 = 1
     if name == "arg_count":
         expected_count = 0
-    elif name == "append" or name == "write_file":
+    elif name == "write_file":
         expected_count = 2
     elif name == "slice":
         expected_count = 3
@@ -83,12 +83,6 @@ def call_builtin(state: frontend.model.State, name: str) -> frontend.model.Value
         if frontend.types.array_type(value.typ):
             return frontend.model.Value("int64", str(frontend.types.fixed_length(value.typ)), "")
         frontend.diagnostics.fail_at(state, "len requires a string or array")
-    elif name == "append":
-        if not frontend.types.dynamic_type(value.typ):
-            frontend.diagnostics.fail_at(state, "append requires a growable array")
-        item: frontend.model.Value = backend.literals.coerce(state, values[1], frontend.types.element_type(value.typ))
-        backend.ir.append_ir(state, value, item)
-        return frontend.model.Value("void", "", "")
     elif name == "join":
         if value.typ != "str[]":
             frontend.diagnostics.fail_at(state, "join requires str[]")
@@ -143,9 +137,9 @@ def call_builtin(state: frontend.model.State, name: str) -> frontend.model.Value
 
 # Resolve intrinsic calls, casts, constructors, functions, and methods.
 def named_call(state: frontend.model.State, name: str, receiver: frontend.model.Value[]) -> frontend.model.Value:
-    if core.len(receiver) == 0 and core.len(name) > 17 and core.slice(name, 0, 17) == "__sole_intrinsic_":
+    if core.len(receiver) == 0 && core.len(name) > 17 && core.slice(name, 0, 17) == "__sole_intrinsic_":
         return call_builtin(state, core.slice(name, 17, core.len(name)))
-    if core.len(receiver) == 0 and (frontend.types.integer_type(name) or frontend.types.float_type(name) or name == "bool" or name == "ptr" or name == "str"):
+    if core.len(receiver) == 0 && (frontend.types.integer_type(name) || frontend.types.float_type(name) || name == "bool" || name == "ptr" || name == "str"):
         frontend.tokens.expect(state, "(")
         argument: frontend.model.Value = expression(state, 0, name)
         frontend.tokens.expect(state, ")")
@@ -160,7 +154,7 @@ def named_call(state: frontend.model.State, name: str, receiver: frontend.model.
             return frontend.model.Value("str", backend.ir.instruction(state, "call {ptr, i64} @_sole.number_str(i64 " + wide.value + ", i1 " + negative + ")"), "")
         return backend.casts.cast_value(state, argument, name)
     ri: int64 = frontend.symbols.record_index(state, name)
-    if core.len(receiver) == 0 and ri >= 0:
+    if core.len(receiver) == 0 && ri >= 0:
         record: frontend.model.RecordInfo = state.records[ri]
         arguments: frontend.model.Value[] = parse_arguments(state, record.types)
         if core.len(arguments) != core.len(record.types):
@@ -188,11 +182,13 @@ def named_call(state: frontend.model.State, name: str, receiver: frontend.model.
     if fi < 0:
         frontend.diagnostics.fail_at(state, "unknown function '" + name + "'")
     fn: frontend.model.FunctionInfo = state.functions[fi]
-    parameter_types: str[] = []
-    j: int64 = core.len(receiver)
-    while j < core.len(fn.types):
-        core.append(parameter_types, fn.types[j])
-        j = j + 1
+    parameter_types: str[] = fn.types
+    if core.len(receiver) > 0:
+        parameter_types = []
+        j: int64 = core.len(receiver)
+        while j < core.len(fn.types):
+            core.append(parameter_types, fn.types[j])
+            j = j + 1
     values: frontend.model.Value[] = parse_arguments(state, parameter_types)
     if core.len(values) + core.len(receiver) != core.len(fn.types):
         frontend.diagnostics.fail_at(state, "wrong number of arguments for " + name)
@@ -205,7 +201,7 @@ def named_call(state: frontend.model.State, name: str, receiver: frontend.model.
             core.append(parts, ", ")
         core.append(parts, backend.ir.typed(state, values[k]))
         k = k + 1
-    call_text: str = "call " + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(state, fn) + "(" + core.join(parts) + ")"
+    call_text: str = "call " + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(fn) + "(" + core.join(parts) + ")"
     if fn.result == "void":
         backend.ir.emit(state, call_text)
         return frontend.model.Value("void", "", "")
@@ -220,27 +216,27 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
     left: frontend.model.Value = frontend.model.Value("void", "", "")
     if kind == 3:
         left = backend.literals.string_constant(state, text)
-    elif text == "-" or text == "~" or text == "not":
+    elif text == "-" || text == "~" || text == "not":
         direct_number: bool = state.tokens.kind[state.tokens.position] == 2
         level: int32 = 10
         if text == "not":
             level = 3
         operand: frontend.model.Value = expression(state, level, expected)
-        if text == "-" and operand.typ == "integer" and direct_number:
+        if text == "-" && operand.typ == "integer" && direct_number:
             left = frontend.model.Value("integer", "-" + operand.value, "")
         else:
             operand_context: str = ""
-            if frontend.types.integer_type(expected) or frontend.types.float_type(expected):
+            if frontend.types.integer_type(expected) || frontend.types.float_type(expected):
                 operand_context = expected
             operand = backend.literals.coerce(state, operand, operand_context)
             if text == "not":
                 operand = backend.literals.coerce(state, operand, "bool")
                 left = frontend.model.Value("bool", backend.ir.instruction(state, "xor i1 " + operand.value + ", true"), "")
-            elif text == "~" and frontend.types.integer_type(operand.typ):
+            elif text == "~" && frontend.types.integer_type(operand.typ):
                 left = frontend.model.Value(operand.typ, backend.ir.instruction(state, "xor " + backend.ir.typed(state, operand) + ", -1"), "")
-            elif text == "-" and frontend.types.float_type(operand.typ):
+            elif text == "-" && frontend.types.float_type(operand.typ):
                 left = frontend.model.Value(operand.typ, backend.ir.instruction(state, "fneg " + backend.ir.typed(state, operand)), "")
-            elif text == "-" and frontend.types.integer_type(operand.typ):
+            elif text == "-" && frontend.types.integer_type(operand.typ):
                 left = frontend.model.Value(operand.typ, backend.ir.instruction(state, "sub " + backend.types.llvm_type(state, operand.typ) + " 0, " + operand.value), "")
             else:
                 frontend.diagnostics.fail_at(state, "invalid unary operator")
@@ -250,12 +246,13 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
     elif text == "[":
         if not frontend.types.array_type(expected):
             frontend.diagnostics.fail_at(state, "array literals need an array type")
+        element: str = frontend.types.element_type(expected)
         left = frontend.model.Value(expected, "poison", "")
         if frontend.types.dynamic_type(expected):
             left.value = backend.ir.instruction(state, "call ptr @_sole.array_new()")
         count: int64 = 0
         while frontend.tokens.peek(state) != "]":
-            item: frontend.model.Value = backend.literals.coerce(state, expression(state, 0, frontend.types.element_type(expected)), frontend.types.element_type(expected))
+            item: frontend.model.Value = backend.literals.coerce(state, expression(state, 0, element), element)
             if frontend.types.dynamic_type(expected):
                 backend.ir.append_ir(state, left, item)
             else:
@@ -266,16 +263,16 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             if not frontend.tokens.accept(state, ","):
                 break
         frontend.tokens.expect(state, "]")
-        if not frontend.types.dynamic_type(expected) and count != frontend.types.fixed_length(expected):
+        if not frontend.types.dynamic_type(expected) && count != frontend.types.fixed_length(expected):
             frontend.diagnostics.fail_at(state, "wrong number of array elements")
-    elif text == "true" or text == "false":
+    elif text == "true" || text == "false":
         left = frontend.model.Value("bool", text, "")
     elif kind == 2:
         number_kind: str = "integer"
-        hex_number: bool = core.len(text) > 1 and text[0] == 48 and (text[1] == 120 or text[1] == 88)
+        hex_number: bool = core.len(text) > 1 && text[0] == 48 && (text[1] == 120 || text[1] == 88)
         n: int64 = 0
         while n < core.len(text):
-            if text[n] == 46 or not hex_number and (text[n] == 101 or text[n] == 69):
+            if text[n] == 46 || not hex_number && (text[n] == 101 || text[n] == 69):
                 number_kind = "real"
             n = n + 1
         left = frontend.model.Value(number_kind, text, "")
@@ -305,7 +302,7 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
                     frontend.diagnostics.fail_at(state, "this value has no fields")
                 info: frontend.model.RecordInfo = state.records[record_id]
                 field_index: int64 = 0
-                while field_index < core.len(info.names) and info.names[field_index] != member:
+                while field_index < core.len(info.names) && info.names[field_index] != member:
                     field_index = field_index + 1
                 if field_index == core.len(info.names):
                     frontend.diagnostics.fail_at(state, "unknown field '" + member + "'")
@@ -359,13 +356,13 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             if power < minimum:
                 break
             frontend.tokens.take(state)
-            if operator == "and" or operator == "or":
+            if operator == "&&" || operator == "||":
                 left = backend.literals.coerce(state, left, "bool")
                 rhs_label: str = backend.ir.fresh(state)
                 short_label: str = backend.ir.fresh(state)
                 end_label: str = backend.ir.fresh(state)
                 bool_slot: str = backend.ir.slot(state, "bool")
-                if operator == "and":
+                if operator == "&&":
                     backend.ir.emit(state, "br i1 " + left.value + ", label %" + rhs_label + ", label %" + short_label)
                 else:
                     backend.ir.emit(state, "br i1 " + left.value + ", label %" + short_label + ", label %" + rhs_label)
@@ -381,6 +378,6 @@ def expression(state: frontend.model.State, minimum: int32, expected: str) -> fr
             else:
                 right: frontend.model.Value = expression(state, power + 1, expected)
                 left = backend.operators.binary_ir(state, operator, left, right, expected)
-                if power == 3 and frontend.operators.precedence(frontend.tokens.peek(state)) == 3:
+                if power == 3 && frontend.operators.precedence(frontend.tokens.peek(state)) == 3:
                     frontend.diagnostics.fail_at(state, "chained comparisons are not supported")
     return left

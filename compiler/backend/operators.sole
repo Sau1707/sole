@@ -5,24 +5,27 @@ import frontend.model
 import frontend.operators
 import frontend.symbols
 import frontend.types
+import types.definition
+import types.registry
 
 
 # Type-check operands and lower a binary operation to LLVM.
 def binary_ir(state: frontend.model.State, operator: str, left: frontend.model.Value, right: frontend.model.Value, expected: str) -> frontend.model.Value:
     # Give literals a shared numeric context before checking operand types.
     context: str = ""
-    if frontend.types.integer_type(expected) or frontend.types.float_type(expected):
+    if frontend.types.integer_type(expected) || frontend.types.float_type(expected):
         context = expected
-    if left.typ != "integer" and left.typ != "real":
+    if left.typ != "integer" && left.typ != "real":
         context = left.typ
-    elif right.typ != "integer" and right.typ != "real":
+    elif right.typ != "integer" && right.typ != "real":
         context = right.typ
-    elif left.typ == "real" or right.typ == "real":
+    elif left.typ == "real" || right.typ == "real":
         if not frontend.types.float_type(context):
             context = "float64"
     left = backend.literals.coerce(state, left, context)
     right = backend.literals.coerce(state, right, left.typ)
     typ: str = left.typ
+    definition: types.definition.Type = types.registry.lookup(typ)
     # Route string concatenation and equality through runtime helpers.
     if typ == "str":
         ap: str = backend.ir.extract(state, left, 0)
@@ -34,7 +37,7 @@ def binary_ir(state: frontend.model.State, operator: str, left: frontend.model.V
             data: str = backend.ir.instruction(state, "call ptr @_sole.concat(" + arguments + ")")
             count: str = backend.ir.instruction(state, "add i64 " + al + ", " + bl)
             return backend.ir.make_string(state, data, count)
-        if operator == "==" or operator == "!=":
+        if operator == "==" || operator == "!=":
             equality: str = backend.ir.instruction(state, "call i1 @_sole.str_eq(" + arguments + ")")
             if operator == "!=":
                 equality = backend.ir.instruction(state, "xor i1 " + equality + ", true")
@@ -44,90 +47,35 @@ def binary_ir(state: frontend.model.State, operator: str, left: frontend.model.V
     comparison: bool = frontend.operators.precedence(operator) == 3
     operation: str = ""
     if comparison:
-        predicate: str = ""
-        if operator == "==":
-            predicate = "eq"
-        elif operator == "!=":
-            predicate = "ne"
-        elif operator == "<":
-            predicate = "lt"
-        elif operator == "<=":
-            predicate = "le"
-        elif operator == ">":
-            predicate = "gt"
-        elif operator == ">=":
-            predicate = "ge"
-        if frontend.types.float_type(typ):
+        operation = definition.comparison(operator)
+        if operation == "":
+            if operator != "==" && operator != "!=":
+                frontend.diagnostics.fail_at(state, "only numbers support ordering")
+            ri: int64 = frontend.symbols.record_index(state, typ)
+            if ri < 0 || state.records[ri].kind != "class":
+                frontend.diagnostics.fail_at(state, "this type does not support comparison")
+            operation = "icmp eq"
             if operator == "!=":
-                predicate = "une"
-            else:
-                predicate = "o" + predicate
-            operation = "fcmp " + predicate
-        else:
-            if operator != "==" and operator != "!=":
-                if not frontend.types.integer_type(typ):
-                    frontend.diagnostics.fail_at(state, "only numbers support ordering")
-                if frontend.types.unsigned_type(typ):
-                    predicate = "u" + predicate
-                else:
-                    predicate = "s" + predicate
-            elif not frontend.types.integer_type(typ) and typ != "bool" and typ != "ptr":
-                ri: int64 = frontend.symbols.record_index(state, typ)
-                if ri < 0 or state.records[ri].kind != "class":
-                    frontend.diagnostics.fail_at(state, "this type does not support comparison")
-            operation = "icmp " + predicate
+                operation = "icmp ne"
         return frontend.model.Value("bool", backend.ir.instruction(state, operation + " " + backend.ir.typed(state, left) + ", " + right.value), "")
     # Choose the arithmetic or bitwise instruction for the numeric operands.
-    if not frontend.types.integer_type(typ) and not frontend.types.float_type(typ):
+    if not definition.numeric():
         frontend.diagnostics.fail_at(state, "arithmetic requires numeric operands")
-    if operator == "+":
-        operation = "add"
-    elif operator == "-":
-        operation = "sub"
-    elif operator == "*":
-        operation = "mul"
-    elif operator == "/":
-        operation = "sdiv"
-    elif operator == "%":
-        operation = "srem"
-    elif operator == "&":
-        operation = "and"
-    elif operator == "|":
-        operation = "or"
-    elif operator == "^":
-        operation = "xor"
-    elif operator == "<<":
-        operation = "shl"
-    elif operator == ">>":
-        operation = "ashr"
-    if frontend.types.float_type(typ):
-        if operator == "/":
-            operation = "fdiv"
-        elif operator == "%":
-            operation = "frem"
-        elif operator == "+" or operator == "-" or operator == "*":
-            operation = "f" + operation
-        else:
-            frontend.diagnostics.fail_at(state, "bitwise operators require integers")
-    else:
-        if frontend.types.unsigned_type(typ):
-            if operator == "/":
-                operation = "udiv"
-            elif operator == "%":
-                operation = "urem"
-            elif operator == ">>":
-                operation = "lshr"
+    operation = definition.arithmetic(operator)
+    if operation == "":
+        frontend.diagnostics.fail_at(state, "bitwise operators require integers")
+    if definition.integer():
         # Reject integer division by zero, signed overflow, and invalid shifts.
-        if operator == "/" or operator == "%":
+        if operator == "/" || operator == "%":
             valid: str = backend.ir.instruction(state, "icmp ne " + backend.ir.typed(state, right) + ", 0")
-            if not frontend.types.unsigned_type(typ):
-                minimum: str = "-" + str(uint64(1) << uint64(frontend.types.width(typ) - 1))
+            if not definition.unsigned:
+                minimum: str = definition.lower_bound()
                 a_min: str = backend.ir.instruction(state, "icmp eq " + backend.ir.typed(state, left) + ", " + minimum)
                 b_minus: str = backend.ir.instruction(state, "icmp eq " + backend.ir.typed(state, right) + ", -1")
                 overflow: str = backend.ir.instruction(state, "and i1 " + a_min + ", " + b_minus)
                 not_overflow: str = backend.ir.instruction(state, "xor i1 " + overflow + ", true")
                 valid = backend.ir.instruction(state, "and i1 " + valid + ", " + not_overflow)
             backend.ir.checked(state, valid)
-        if operator == "<<" or operator == ">>":
-            backend.ir.checked(state, backend.ir.instruction(state, "icmp ult " + backend.ir.typed(state, right) + ", " + str(frontend.types.width(typ))))
+        if operator == "<<" || operator == ">>":
+            backend.ir.checked(state, backend.ir.instruction(state, "icmp ult " + backend.ir.typed(state, right) + ", " + str(definition.bits)))
     return frontend.model.Value(typ, backend.ir.instruction(state, operation + " " + backend.ir.typed(state, left) + ", " + right.value), "")

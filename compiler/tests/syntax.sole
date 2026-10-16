@@ -27,7 +27,7 @@ def node(grammar: Grammar, kind: int32, value: str, child: int64) -> int64:
 
 def expect(grammar: Grammar, text: str) -> void:
     position: int64 = grammar.source.position
-    if grammar.source.text[position] != text or grammar.source.kind[position] == 0:
+    if grammar.source.text[position] != text || grammar.source.kind[position] == 0:
         diagnostics.die("grammar line " + str(grammar.source.line[position]) + ": expected " + text)
     grammar.source.position = position + 1
 
@@ -41,7 +41,7 @@ def term(grammar: Grammar) -> int64:
         return node(grammar, 0, text, -1)
     if kind == 1:
         return node(grammar, 1, text, -1)
-    if text == "(" or text == "[" or text == "{":
+    if text == "(" || text == "[" || text == "{":
         child: int64 = choice(grammar)
         if text == "(":
             expect(grammar, ")")
@@ -109,7 +109,7 @@ def load(path: str) -> Grammar:
     source: model.Tokens = model.Tokens([], [], [], 0, [])
     i: int64 = 0
     while i < core.len(raw.kind):
-        if raw.kind[i] < 4 or raw.kind[i] == 7:
+        if raw.kind[i] < 4 || raw.kind[i] == 7:
             tokens.token_add(source, raw.text[i], raw.kind[i], raw.line[i])
         i = i + 1
     grammar: Grammar = Grammar(source, [], [], [], [], [], [], 0)
@@ -117,7 +117,7 @@ def load(path: str) -> Grammar:
         if source.kind[source.position] != 1:
             diagnostics.die("expected a grammar rule name")
         name: str = source.text[source.position]
-        if rule_index(grammar, name) >= 0 or token_kind(name) >= 0:
+        if rule_index(grammar, name) >= 0 || token_kind(name) >= 0:
             diagnostics.die("duplicate or reserved grammar rule " + name)
         core.append(grammar.names, name)
         source.position = source.position + 1
@@ -143,18 +143,18 @@ def load(path: str) -> Grammar:
 def match(grammar: Grammar, source: model.Tokens, index: int64, position: int64) -> int64:
     kind: int32 = grammar.kinds[index]
     child: int64 = grammar.children[index]
-    if kind == 0 or kind == 1 and child < 0:
+    if kind == 0 || kind == 1 && child < 0:
         if position > grammar.furthest:
             grammar.furthest = position
         if position >= core.len(source.kind):
             return -1
         if kind == 0:
-            if source.kind[position] != 2 and source.kind[position] != 3 and source.text[position] == grammar.values[index]:
+            if source.kind[position] != 2 && source.kind[position] != 3 && source.text[position] == grammar.values[index]:
                 return position + 1
         else:
             expected: int32 = token_kind(grammar.values[index])
             if source.kind[position] == expected:
-                if expected != 1 or not tokens.reserved_keyword(source.text[position]):
+                if expected != 1 || not tokens.reserved_keyword(source.text[position]):
                     return position + 1
         return -1
     if kind == 1:

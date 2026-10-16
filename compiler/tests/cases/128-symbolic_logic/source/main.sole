@@ -1,0 +1,35 @@
+import core
+
+
+def mark(value: int32, result: bool) -> bool:
+    core.print(value)
+    return result
+
+
+def main() -> int32:
+    core.print(false&&false)
+    core.print(false&&true)
+    core.print(true&&false)
+    core.print(true&&true)
+    core.print(false||false)
+    core.print(false||true)
+    core.print(true||false)
+    core.print(true||true)
+    core.print(true||false&&false)
+    core.print((true||false)&&false)
+    core.print(not false&&true)
+    core.print(not true||true)
+    core.print(false&&mark(90, true))
+    core.print(true||mark(91, false))
+    core.print(true&&mark(1, false))
+    core.print(false||mark(2, true))
+    core.print(mark(3, false)&&mark(93, true)||mark(4, true))
+    core.print(mark(5, true)||mark(95, false)&&mark(96, true))
+    core.print(uint8(6)&uint8(3))
+    core.print(uint8(6)|uint8(3))
+    core.print(uint8(6)^uint8(3))
+    and: bool = true
+    or: bool = false
+    core.print(and && not or)
+    core.print("and or && ||")
+    return 0

@@ -26,6 +26,6 @@ def native_linker() -> str:
 
 # Replace the source extension with the requested output suffix.
 def default_output(filename: str, suffix: str) -> str:
-    if core.len(filename) > 5 and core.slice(filename, core.len(filename) - 5, core.len(filename)) == ".sole":
+    if core.len(filename) > 5 && core.slice(filename, core.len(filename) - 5, core.len(filename)) == ".sole":
         return core.slice(filename, 0, core.len(filename) - 5) + suffix
     return filename + suffix

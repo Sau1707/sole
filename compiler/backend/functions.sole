@@ -22,7 +22,7 @@ def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInf
     prefix: str = "define "
     if fn.external:
         prefix = "declare "
-    header: str = prefix + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(state, fn) + "(" + core.join(parameter_parts) + ") nobuiltin"
+    header: str = prefix + backend.types.llvm_type(state, fn.result) + " @" + backend.ir.function_symbol(fn) + "(" + core.join(parameter_parts) + ") nobuiltin"
     if fn.external:
         # Reuse compatible declarations of the same foreign symbol.
         previous: int64 = 0
@@ -30,8 +30,8 @@ def compile_function(state: frontend.model.State, fn: frontend.model.FunctionInf
             other: frontend.model.FunctionInfo = state.functions[previous]
             if other.name == fn.name:
                 break
-            if other.external and frontend.symbols.foreign_name(other.name) == frontend.symbols.foreign_name(fn.name):
-                if backend.types.llvm_type(state, other.result) != backend.types.llvm_type(state, fn.result) or core.len(other.types) != core.len(fn.types):
+            if other.external && frontend.symbols.foreign_name(other.name) == frontend.symbols.foreign_name(fn.name):
+                if backend.types.llvm_type(state, other.result) != backend.types.llvm_type(state, fn.result) || core.len(other.types) != core.len(fn.types):
                     frontend.diagnostics.fail_at(state, "conflicting external declaration: " + frontend.symbols.foreign_name(fn.name))
                 p: int64 = 0
                 while p < core.len(fn.types):

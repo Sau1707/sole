@@ -1,0 +1,44 @@
+import core
+
+
+struct Scalars:
+    signed: int16
+    unsigned: uint16
+    real: float32
+    flag: bool
+    text: str
+
+
+def identity(value: int16) -> int16:
+    return value
+
+
+def noop() -> void:
+    pass
+
+
+def main() -> int32:
+    a: int8 = int8(-8)
+    b: int16 = int16(-16)
+    c: int32 = int32(-32)
+    d: int64 = int64(-64)
+    e: uint8 = uint8(8)
+    f: uint16 = uint16(16)
+    g: uint32 = uint32(32)
+    h: uint64 = uint64(64)
+    x: float32 = float32(1.5)
+    y: float64 = float64(x)
+    flag: bool = bool(true)
+    message: str = str(int64(42))
+    address: ptr = ptr(uint64(0))
+    values: int16[2] = [b, identity(b)]
+    record: Scalars = Scalars(values[1], f, x, flag, message)
+    core.print(int64(a) + int64(c) + d + int64(e) + int64(g) + int64(h))
+    core.print(record.signed)
+    core.print(record.unsigned)
+    core.print(y == float64(1.5))
+    core.print(record.flag)
+    core.print(record.text)
+    core.print(uint64(address))
+    noop()
+    return 0

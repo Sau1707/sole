@@ -41,5 +41,5 @@ def main() -> int32:
     core.print(small)
     core.print(uint64(18446744073709551615))
     core.print(factorial(10))
-    core.print(true and not false)
+    core.print(true && not false)
     return 0

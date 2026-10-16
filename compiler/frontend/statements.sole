@@ -50,7 +50,7 @@ def compile_if(state: frontend.model.State) -> void:
     if not no_ended:
         backend.ir.emit(state, "br label %" + end)
     backend.ir.block_label(state, end)
-    if yes_ended and no_ended:
+    if yes_ended && no_ended:
         backend.ir.emit(state, "unreachable")
         state.ended = true
 
@@ -98,7 +98,7 @@ def statement(state: frontend.model.State) -> void:
             backend.ir.emit(state, "ret " + backend.ir.typed(state, returned))
         state.ended = true
         frontend.tokens.expect(state, "<newline>")
-    elif frontend.tokens.peek(state) == "break" or frontend.tokens.peek(state) == "continue":
+    elif frontend.tokens.peek(state) == "break" || frontend.tokens.peek(state) == "continue":
         keyword: str = frontend.tokens.take(state)
         if core.len(state.loop_tests) == 0:
             frontend.diagnostics.fail_at(state, keyword + " requires a loop")
@@ -110,7 +110,7 @@ def statement(state: frontend.model.State) -> void:
         frontend.tokens.expect(state, "<newline>")
     elif frontend.tokens.accept(state, "pass"):
         frontend.tokens.expect(state, "<newline>")
-    elif state.tokens.kind[state.tokens.position] == 1 and state.tokens.text[state.tokens.position + 1] == ":":
+    elif state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == ":":
         name: str = frontend.tokens.identifier(state)
         frontend.tokens.expect(state, ":")
         local_type: str = frontend.declarations.parse_type(state)
@@ -122,7 +122,7 @@ def statement(state: frontend.model.State) -> void:
         start: int64 = state.tokens.position
         left: frontend.model.Value = frontend.expressions.expression(state, 0, "")
         if frontend.tokens.accept(state, "="):
-            if left.pointer == "" or state.tokens.text[start] == "self" and state.tokens.position == start + 2:
+            if left.pointer == "" || state.tokens.text[start] == "self" && state.tokens.position == start + 2:
                 frontend.diagnostics.fail_at(state, "assignment requires mutable storage")
             right: frontend.model.Value = backend.literals.coerce(state, frontend.expressions.expression(state, 0, left.typ), left.typ)
             backend.ir.emit(state, "store " + backend.ir.typed(state, right) + ", ptr " + left.pointer)

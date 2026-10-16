@@ -1,0 +1,6 @@
+import types.definition
+
+
+class uint8:
+    def definition(self) -> types.definition.Type:
+        return types.definition.Type("uint8", "i8", 8, "integer", true)

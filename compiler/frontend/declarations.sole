@@ -71,7 +71,7 @@ def scan(state: frontend.model.State) -> void:
             scan_function(state, "", false)
         elif frontend.tokens.accept(state, "extern"):
             scan_function(state, "", true)
-        elif frontend.tokens.peek(state) == "class" or frontend.tokens.peek(state) == "struct":
+        elif frontend.tokens.peek(state) == "class" || frontend.tokens.peek(state) == "struct":
             record_kind: str = frontend.tokens.take(state)
             record_name: str = frontend.tokens.identifier(state)
             record: frontend.model.RecordInfo = frontend.model.RecordInfo(record_name, record_kind, [], [])

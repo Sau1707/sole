@@ -70,6 +70,21 @@ test('imports distinguish keywords and module names', () => {
   assert.ok(next.tokens[0].scopes.includes('variable.other.readwrite.sole'));
 });
 
+test('import aliases use import keyword coloring', () => {
+  check('import frontend.lexer as lexer', [
+    ['import', 'keyword.control.import.sole'],
+    ['import', 'keyword.control.import.python'],
+    ['as', 'keyword.control.import.sole'],
+    ['as', 'keyword.control.import.python'],
+    ['frontend', 'variable.other.property.sole'],
+    ['lexer', 'variable.other.property.sole'],
+  ]);
+  check('import assets as assets_alias', [
+    ['assets', 'variable.other.property.sole'],
+    ['assets_alias', 'variable.other.property.sole'],
+  ]);
+});
+
 test('all dotted import components use the same property coloring', () => {
   for (const module of ['backend.ir', 'backend.literals', 'backend.types',
     'frontend.diagnostics', 'frontend.model', 'frontend.types', 'os.path',
@@ -95,10 +110,10 @@ test('all dotted import components use the same property coloring', () => {
 });
 
 test('control flow, booleans, self, calls, and operators', () => {
-  check('if true and not false:', [
+  check('if true && not false:', [
     ['if', 'keyword.control.sole'],
     ['true', 'constant.language.boolean.sole'],
-    ['and', 'keyword.operator.logical.sole'],
+    ['&&', 'keyword.operator.logical.sole'],
     ['not', 'keyword.operator.logical.sole'],
     ['false', 'constant.language.boolean.sole'],
   ]);
@@ -138,6 +153,23 @@ test('variable declarations, parameters, references, and fields', () => {
   ]);
 });
 
+test('symbolic logical operators stay distinct from bitwise operators', () => {
+  check('true&&false||not false', [
+    ['&&', 'keyword.operator.logical.sole'],
+    ['||', 'keyword.operator.logical.sole'],
+    ['not', 'keyword.operator.logical.sole'],
+  ]);
+  check('a & b | c', [
+    ['&', 'keyword.operator.bitwise.python'],
+    ['|', 'keyword.operator.bitwise.python'],
+  ]);
+  check('and && or', [
+    ['and', 'variable.other.readwrite.sole'],
+    ['or', 'variable.other.readwrite.sole'],
+  ]);
+  check('"and or && ||"', [['and or && ||', 'string.quoted.double.sole']]);
+});
+
 test('Python-compatible scopes for shared syntax', () => {
   check('def add(self, amount: int32) -> int32:', [
     ['def', 'storage.type.function.python'],
@@ -147,10 +179,10 @@ test('Python-compatible scopes for shared syntax', () => {
     ['int32', 'support.type.python'],
   ]);
   check('class Counter:', [['class', 'storage.type.class.python'], ['Counter', 'entity.name.type.class.python']]);
-  check('if true and not false:', [
+  check('if true && not false:', [
     ['if', 'keyword.control.flow.python'],
     ['true', 'constant.language.python'],
-    ['and', 'keyword.operator.logical.python'],
+    ['&&', 'keyword.operator.logical.python'],
   ]);
   check('print(self.read() + 42) # comment', [
     ['print', 'support.function.builtin.python'],

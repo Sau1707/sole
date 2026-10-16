@@ -45,14 +45,14 @@ def expect(state: frontend.model.State, text: str) -> void:
 
 # Skip an optional docstring at the start of a block.
 def skip_docstring(state: frontend.model.State) -> void:
-    if state.tokens.kind[state.tokens.position] == 3 and state.tokens.kind[state.tokens.position + 1] == 4:
+    if state.tokens.kind[state.tokens.position] == 3 && state.tokens.kind[state.tokens.position + 1] == 4:
         take(state)
         take(state)
 
 
 # Identify keywords that cannot be used as names.
 def reserved_keyword(name: str) -> bool:
-    return name == "def" or name == "extern" or name == "import" or name == "class" or name == "struct" or name == "if" or name == "elif" or name == "else" or name == "while" or name == "return" or name == "break" or name == "continue" or name == "pass" or name == "and" or name == "or" or name == "not" or name == "true" or name == "false" or name == "self" or name == "as" or name == "from" or name == "intrinsic" or name == "for" or name == "in" or name == "lambda" or name == "None" or name == "True" or name == "False"
+    return name == "def" || name == "extern" || name == "import" || name == "class" || name == "struct" || name == "if" || name == "elif" || name == "else" || name == "while" || name == "return" || name == "break" || name == "continue" || name == "pass" || name == "not" || name == "true" || name == "false" || name == "self" || name == "as" || name == "from" || name == "intrinsic" || name == "for" || name == "in" || name == "lambda" || name == "None" || name == "True" || name == "False"
 
 
 # Read an identifier and reject reserved keywords.

@@ -2,11 +2,11 @@ import core
 
 
 def isabs(path: str) -> bool:
-    return core.len(path) > 0 and core.slice(path, 0, 1) == "/"
+    return core.len(path) > 0 && core.slice(path, 0, 1) == "/"
 
 
 def join(a: str, b: str) -> str:
-    if isabs(b) or core.len(a) == 0:
+    if isabs(b) || core.len(a) == 0:
         return b
     if core.slice(a, core.len(a) - 1, core.len(a)) == "/":
         return a + b
@@ -15,17 +15,17 @@ def join(a: str, b: str) -> str:
 
 def basename(path: str) -> str:
     i: int64 = core.len(path)
-    while i > 0 and core.slice(path, i - 1, i) != "/":
+    while i > 0 && core.slice(path, i - 1, i) != "/":
         i = i - 1
     return core.slice(path, i, core.len(path))
 
 
 def dirname(path: str) -> str:
     i: int64 = core.len(path)
-    while i > 0 and core.slice(path, i - 1, i) != "/":
+    while i > 0 && core.slice(path, i - 1, i) != "/":
         i = i - 1
     end: int64 = i
-    while end > 0 and core.slice(path, end - 1, end) == "/":
+    while end > 0 && core.slice(path, end - 1, end) == "/":
         end = end - 1
     if end == 0:
         return core.slice(path, 0, i)
@@ -36,20 +36,20 @@ def normpath(path: str) -> str:
     prefix: str = ""
     if isabs(path):
         prefix = "/"
-        if core.len(path) >= 2 and core.slice(path, 0, 2) == "//":
-            if core.len(path) == 2 or core.slice(path, 2, 3) != "/":
+        if core.len(path) >= 2 && core.slice(path, 0, 2) == "//":
+            if core.len(path) == 2 || core.slice(path, 2, 3) != "/":
                 prefix = "//"
     parts: str[] = []
     count: int64 = 0
     start: int64 = 0
     i: int64 = 0
     while i <= core.len(path):
-        if i == core.len(path) or core.slice(path, i, i + 1) == "/":
+        if i == core.len(path) || core.slice(path, i, i + 1) == "/":
             part: str = core.slice(path, start, i)
-            if part != "" and part != ".":
-                if part == ".." and count > 0 and parts[count - 1] != "..":
+            if part != "" && part != ".":
+                if part == ".." && count > 0 && parts[count - 1] != "..":
                     count = count - 1
-                elif part != ".." or prefix == "":
+                elif part != ".." || prefix == "":
                     if count == core.len(parts):
                         core.append(parts, part)
                     else:

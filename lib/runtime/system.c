@@ -48,7 +48,7 @@ const char *sole_rt_home(void) {
                 char candidate[PATH_MAX], runtime[PATH_MAX];
                 int length = snprintf(candidate, sizeof(candidate), "%s%s", executable, suffixes[i]);
                 if (length < 0 || length >= (int)sizeof(candidate)) continue;
-                length = snprintf(runtime, sizeof(runtime), "%s/runtime/core.ll", candidate);
+                length = snprintf(runtime, sizeof(runtime), "%s/lib/runtime/core.ll", candidate);
                 if (length < 0 || length >= (int)sizeof(runtime)) continue;
                 struct stat info;
                 if (stat(runtime, &info) == 0 && S_ISREG(info.st_mode) && realpath(candidate, home)) return home;

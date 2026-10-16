@@ -26,7 +26,11 @@
         "extensions": [
           ".sole"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/sole.svg",
+          "dark": "./icons/sole.svg"
+        }
       }
     ],
     "grammars": [

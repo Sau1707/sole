@@ -30,8 +30,8 @@ pass_stmt = "pass", NEWLINE;
 variable_decl = IDENTIFIER, ":", type_name, "=", expression, NEWLINE;
 expression_stmt = expression, ["=", expression], NEWLINE;
 
-expression = conjunction, {"or", conjunction};
-conjunction = negation, {"and", negation};
+expression = conjunction, {"||", conjunction};
+conjunction = negation, {"&&", negation};
 negation = "not", negation | comparison;
 comparison = bit_or, [("==" | "!=" | "<" | "<=" | ">" | ">="), bit_or];
 bit_or = bit_xor, {"|", bit_xor};

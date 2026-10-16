@@ -4,14 +4,16 @@ import backend.types
 import frontend.diagnostics
 import frontend.model
 import frontend.types
+import types.definition
+import types.registry
 
 
 # Emit explicit numeric or pointer conversions with required range checks.
 def cast_value(state: frontend.model.State, value: frontend.model.Value, destination: str) -> frontend.model.Value:
     # Resolve literal types before selecting a conversion instruction.
-    if value.typ == "integer" or value.typ == "real":
+    if value.typ == "integer" || value.typ == "real":
         literal_context: str = ""
-        if value.typ == "integer" and (frontend.types.integer_type(destination) or frontend.types.float_type(destination)) or value.typ == "real" and frontend.types.float_type(destination):
+        if value.typ == "integer" && (frontend.types.integer_type(destination) || frontend.types.float_type(destination)) || value.typ == "real" && frontend.types.float_type(destination):
             literal_context = destination
         value = backend.literals.coerce(state, value, literal_context)
     source_type: str = value.typ
@@ -19,54 +21,25 @@ def cast_value(state: frontend.model.State, value: frontend.model.Value, destina
         return value
     source_ir: str = backend.types.llvm_type(state, source_type)
     dest_ir: str = backend.types.llvm_type(state, destination)
-    operation: str = ""
-    if source_type == "ptr" and frontend.types.integer_type(destination):
-        operation = "ptrtoint"
-    elif frontend.types.integer_type(source_type) and destination == "ptr":
-        operation = "inttoptr"
-    elif destination == "bool":
-        if frontend.types.float_type(source_type):
-            return frontend.model.Value("bool", backend.ir.instruction(state, "fcmp une " + backend.ir.typed(state, value) + ", 0.0"), "")
-        if frontend.types.integer_type(source_type):
-            return frontend.model.Value("bool", backend.ir.instruction(state, "icmp ne " + backend.ir.typed(state, value) + ", 0"), "")
-    elif (frontend.types.integer_type(source_type) or source_type == "bool") and frontend.types.integer_type(destination):
-        if frontend.types.width(source_type) == frontend.types.width(destination):
-            return frontend.model.Value(destination, value.value, "")
-        if frontend.types.width(source_type) > frontend.types.width(destination):
-            operation = "trunc"
-        elif frontend.types.unsigned_type(source_type) or source_type == "bool":
-            operation = "zext"
-        else:
-            operation = "sext"
-    elif (frontend.types.integer_type(source_type) or source_type == "bool") and frontend.types.float_type(destination):
-        operation = "sitofp"
-        if frontend.types.unsigned_type(source_type) or source_type == "bool":
-            operation = "uitofp"
-    elif frontend.types.float_type(source_type) and frontend.types.integer_type(destination):
+    source_definition: types.definition.Type = types.registry.lookup(source_type)
+    dest_definition: types.definition.Type = types.registry.lookup(destination)
+    operation: str = source_definition.conversion(dest_definition)
+    if operation == "identity":
+        return frontend.model.Value(destination, value.value, "")
+    if operation == "fcmp une" || operation == "icmp ne":
+        zero: str = "0"
+        if source_definition.floating():
+            zero = "0.0"
+        return frontend.model.Value("bool", backend.ir.instruction(state, operation + " " + backend.ir.typed(state, value) + ", " + zero), "")
+    if operation == "fptosi" || operation == "fptoui":
         # Guard float-to-integer conversions against NaN and range overflow.
-        bits: int64 = frontend.types.width(destination)
-        low_text: str = "0"
-        high_number: uint64 = uint64(1) << uint64(bits - 1)
-        high_text: str = str(high_number)
-        if frontend.types.unsigned_type(destination):
-            if bits == 64:
-                high_text = "18446744073709551616"
-            else:
-                high_text = str(uint64(1) << uint64(bits))
-        else:
-            low_text = "-" + high_text
+        low_text: str = dest_definition.lower_bound()
+        high_text: str = dest_definition.upper_bound()
         low_value: frontend.model.Value = backend.literals.float_literal(state, low_text, source_type)
         high_value: frontend.model.Value = backend.literals.float_literal(state, high_text, source_type)
         above: str = backend.ir.instruction(state, "fcmp oge " + backend.ir.typed(state, value) + ", " + low_value.value)
         below: str = backend.ir.instruction(state, "fcmp olt " + backend.ir.typed(state, value) + ", " + high_value.value)
         backend.ir.checked(state, backend.ir.instruction(state, "and i1 " + above + ", " + below))
-        operation = "fptosi"
-        if frontend.types.unsigned_type(destination):
-            operation = "fptoui"
-    elif frontend.types.float_type(source_type) and frontend.types.float_type(destination):
-        operation = "fpext"
-        if destination == "float32":
-            operation = "fptrunc"
     if operation == "":
         frontend.diagnostics.fail_at(state, "cannot cast " + source_type + " to " + destination)
     return frontend.model.Value(destination, backend.ir.instruction(state, operation + " " + source_ir + " " + value.value + " to " + dest_ir), "")

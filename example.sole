@@ -1,0 +1,41 @@
+import core
+
+
+class Task:
+    title: str
+    done: bool
+
+    def complete(self) -> void:
+        self.done = true
+
+    def display(self) -> void:
+        if self.done:
+            core.print("[x] " + self.title)
+        else:
+            core.print("[ ] " + self.title)
+
+
+def main() -> int32:
+    tasks: Task[] = []
+    core.append(tasks, Task("Install Sole", false))
+    core.append(tasks, Task("Run example.sole", false))
+    core.append(tasks, Task("Build something new", false))
+
+    tasks[0].complete()
+    tasks[1].complete()
+
+    core.print("Sole task list")
+    core.print("--------------")
+
+    completed: int32 = 0
+    i: int64 = 0
+    while i < core.len(tasks):
+        tasks[i].display()
+        if tasks[i].done:
+            completed = completed + 1
+        i = i + 1
+
+    core.print("")
+    core.print("Completed tasks:")
+    core.print(completed)
+    return 0

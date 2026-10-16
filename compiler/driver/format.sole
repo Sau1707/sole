@@ -16,7 +16,7 @@ def main() -> int32:
     i: int64 = first
     while i < core.arg_count():
         path: str = core.arg(i)
-        if core.len(path) < 5 or core.slice(path, core.len(path) - 5, core.len(path)) != ".sole":
+        if core.len(path) < 5 || core.slice(path, core.len(path) - 5, core.len(path)) != ".sole":
             core.print("error: expected a .sole file: " + path)
             return 1
         i = i + 1

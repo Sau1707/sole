@@ -9,6 +9,10 @@ builds three compiler generations, and requires stages 2 and 3 to be identical.
 No interpreter or Python package is used. Like any bootstrapping compiler, the
 native seed is a trusted binary input, not a source-only bootstrap.
 
+The compiler sources use `&&` and `||` for boolean operations. If an older
+`.build/sole` cannot parse them, run `./bootstrap.sh --seed` from the repository
+root to rebuild with the current bundled seed.
+
 Use `SOLE_BOOTSTRAP=/absolute/path/to/sole ../bootstrap.sh` with another compatible
 native compiler. `SOLE_LLVM_LIB` selects the LLVM library used by newly linked
 compilers; it does not change the bundled seed's shared-library requirements.

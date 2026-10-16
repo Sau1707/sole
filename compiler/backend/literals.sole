@@ -5,6 +5,8 @@ import frontend.diagnostics
 import frontend.model
 import frontend.types
 import platform.system
+import types.definition
+import types.registry
 
 
 # Encode string bytes as an LLVM global and return its string view.
@@ -25,20 +27,20 @@ def string_constant(state: frontend.model.State, text: str) -> frontend.model.Va
 
 # Parse an integer literal and check it against its contextual type.
 def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend.model.Value:
-    negative: bool = core.len(text) > 0 and text[0] == 45
+    negative: bool = core.len(text) > 0 && text[0] == 45
     offset: int64 = 0
     if negative:
         offset = 1
     base: uint64 = 10
-    if core.len(text) > offset + 2 and text[offset] == 48:
+    if core.len(text) > offset + 2 && text[offset] == 48:
         prefix: uint8 = text[offset + 1]
-        if prefix == 120 or prefix == 88:
+        if prefix == 120 || prefix == 88:
             base = 16
             offset = offset + 2
-        elif prefix == 98 or prefix == 66:
+        elif prefix == 98 || prefix == 66:
             base = 2
             offset = offset + 2
-        elif prefix == 111 or prefix == 79:
+        elif prefix == 111 || prefix == 79:
             base = 8
             offset = offset + 2
     magnitude: uint64 = 0
@@ -48,11 +50,11 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
             d: uint64 = 255
             if frontend.characters.digit(byte):
                 d = uint64(byte - 48)
-            elif byte >= 97 and byte <= 102:
+            elif byte >= 97 && byte <= 102:
                 d = uint64(byte - 97 + 10)
-            elif byte >= 65 and byte <= 70:
+            elif byte >= 65 && byte <= 70:
                 d = uint64(byte - 65 + 10)
-            if d >= base or magnitude > (uint64(18446744073709551615) - d) / base:
+            if d >= base || magnitude > (uint64(18446744073709551615) - d) / base:
                 frontend.diagnostics.fail_at(state, "integer literal is invalid or too large")
             magnitude = magnitude * base + d
         offset = offset + 1
@@ -61,15 +63,9 @@ def number_literal(state: frontend.model.State, text: str, typ: str) -> frontend
         if negative:
             signed_value = "-" + signed_value
         return float_literal(state, signed_value, typ)
-    bits: int64 = frontend.types.width(typ)
-    maximum: uint64 = uint64(18446744073709551615)
-    if not frontend.types.unsigned_type(typ):
-        maximum = uint64(1) << uint64(bits - 1)
-        if not negative:
-            maximum = maximum - 1
-    elif bits < 64:
-        maximum = (uint64(1) << uint64(bits)) - 1
-    if magnitude > maximum or negative and frontend.types.unsigned_type(typ):
+    definition: types.definition.Type = types.registry.lookup(typ)
+    maximum: uint64 = definition.maximum(negative)
+    if magnitude > maximum || negative && definition.unsigned:
         frontend.diagnostics.fail_at(state, "integer literal does not fit " + typ)
     output_number: str = str(magnitude)
     if negative:
@@ -97,7 +93,7 @@ def float_literal(state: frontend.model.State, text: str, typ: str) -> frontend.
 def coerce(state: frontend.model.State, value: frontend.model.Value, expected: str) -> frontend.model.Value:
     if value.typ == "integer":
         destination: str = expected
-        if not frontend.types.integer_type(destination) and not frontend.types.float_type(destination):
+        if not frontend.types.integer_type(destination) && not frontend.types.float_type(destination):
             destination = "int64"
         value = number_literal(state, value.value, destination)
     if value.typ == "real":
@@ -105,6 +101,6 @@ def coerce(state: frontend.model.State, value: frontend.model.Value, expected: s
         if frontend.types.float_type(expected):
             destination_float = expected
         value = float_literal(state, value.value, destination_float)
-    if expected != "" and value.typ != expected:
+    if expected != "" && value.typ != expected:
         frontend.diagnostics.fail_at(state, "expected " + expected + ", got " + value.typ + "; use an explicit cast")
     return value

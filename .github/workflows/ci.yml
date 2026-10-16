@@ -29,11 +29,7 @@ jobs:
         env:
           SOLE_LLVM_LIB: LLVM-21
       - name: Test syntax, compiler, installation, and formatter
-        run: |
-          sh compiler/tests/syntax.sh
-          sh compiler/tests/run.sh
-          sh compiler/tests/format.sh
-          sh compiler/tests/install-release.sh
+        run: make test-suite
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,7 +45,9 @@ jobs:
           version=${GITHUB_REF_NAME#v}
           test "$(.build/sole --version)" = "sole $version (self-hosted)"
           archive="sole-$version-linux-x86_64"
-          sh install.sh "$PWD/.build/$archive"
+          mkdir -p ".build/$archive/bin" ".build/$archive/share/sole"
+          install -m 755 .build/sole ".build/$archive/bin/sole"
+          cp -R lib ".build/$archive/share/sole/"
           cp README.md .build/bootstrap-proof.txt ".build/$archive/"
           mkdir -p dist
           tar -C .build -czf "dist/$archive.tar.gz" "$archive"

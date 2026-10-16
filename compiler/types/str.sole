@@ -1,0 +1,6 @@
+import types.definition
+
+
+class str:
+    def definition(self) -> types.definition.Type:
+        return types.definition.Type("str", "{ptr, i64}", 0, "str", false)

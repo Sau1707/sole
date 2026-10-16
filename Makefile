@@ -1,40 +1,44 @@
 CODE ?= code
 PREFIX ?= $(HOME)/.local
-SOLE_VERSION ?= 0.0.0
+SOLE_VERSION ?= 0.0.1
 EXTENSION_DIR := .editors/vscode
 EXTENSION_ID := sole-lang.sole-language
 
-.PHONY: all bootstrap test test-syntax install up down format
+.PHONY: all bootstrap test test-suite test-syntax install up down format
 
 all: bootstrap
 
 format: .build/sole
 	find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -exec .build/sole format {} +
 
-.build/sole: bootstrap.sh $(shell find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -print) $(wildcard runtime/*.ll runtime/*.c)
+.build/sole: bootstrap.sh $(shell find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -print) $(wildcard lib/runtime/*.ll lib/runtime/*.c)
 	./bootstrap.sh
 
 bootstrap:
 	./bootstrap.sh
 
 test: bootstrap
+	$(MAKE) test-suite
+
+test-suite:
 	sh compiler/tests/syntax.sh
+	sh compiler/tests/types.sh
 	sh compiler/tests/run.sh
 	sh compiler/tests/format.sh
-	sh compiler/tests/install-release.sh
+	sh compiler/tests/install.sh
 
 test-syntax: .build/sole
 	sh compiler/tests/syntax.sh
 
 install:
-	sh install.sh "$(PREFIX)"
+	SOLE_VERSION="$(SOLE_VERSION)" sh install.sh "$(PREFIX)"
 
 up:
 	@command -v node >/dev/null || { echo "Install Node.js 22 or newer first."; exit 1; }
 	@node -e 'if (Number(process.versions.node.split(".")[0]) < 22) { console.error("Node.js 22 or newer is required."); process.exit(1); }'
 	@command -v npm >/dev/null || { echo "Install npm first."; exit 1; }
 	@command -v "$(CODE)" >/dev/null || { echo "Install the VS Code CLI or set CODE to its executable."; exit 1; }
-	SOLE_VERSION="$(SOLE_VERSION)" sh install-release.sh "$(PREFIX)"
+	SOLE_VERSION="$(SOLE_VERSION)" sh install.sh "$(PREFIX)"
 	npm --prefix "$(EXTENSION_DIR)" ci
 	npm --prefix "$(EXTENSION_DIR)" test
 	npm --prefix "$(EXTENSION_DIR)" run package

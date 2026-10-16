@@ -12,18 +12,19 @@ def scan(source: str) -> Lines:
     quote: uint8 = 0
     triple: bool = false
     delimiters: uint8[] = []
+    depth: int64 = 0
     i: int64 = 0
     while i < core.len(source):
         start: int64 = i
         end: int64 = i
-        while end < core.len(source) and source[end] != 10:
+        while end < core.len(source) && source[end] != 10:
             end = end + 1
         core.append(lines.starts, start)
         first: int64 = start
-        while first < end and (source[first] == 32 or source[first] == 9 or source[first] == 13):
+        while first < end && (source[first] == 32 || source[first] == 9 || source[first] == 13):
             first = first + 1
         kind: int32 = 2
-        if quote == 0 and core.len(delimiters) == 0:
+        if quote == 0 && depth == 0:
             if first == end:
                 kind = 0
             elif source[first] == 35:
@@ -32,12 +33,12 @@ def scan(source: str) -> Lines:
             elif first == start:
                 kind = 5
                 word_end: int64 = first
-                while word_end < end and source[word_end] >= 97 and source[word_end] <= 122:
+                while word_end < end && source[word_end] >= 97 && source[word_end] <= 122:
                     word_end = word_end + 1
                 word: str = core.slice(source, first, word_end)
                 if word == "import":
                     kind = 3
-                elif word == "def" or word == "class" or word == "struct" or word == "extern":
+                elif word == "def" || word == "class" || word == "struct" || word == "extern":
                     kind = 4
         core.append(lines.kinds, kind)
         while i < end:
@@ -49,35 +50,33 @@ def scan(source: str) -> Lines:
                 if byte == quote:
                     if not triple:
                         quote = 0
-                    elif i + 2 < end and source[i + 1] == quote and source[i + 2] == quote:
+                    elif i + 2 < end && source[i + 1] == quote && source[i + 2] == quote:
                         quote = 0
                         i = i + 2
             elif byte == 35:
                 break
-            elif byte == 34 or byte == 39:
+            elif byte == 34 || byte == 39:
                 quote = byte
-                triple = i + 2 < end and source[i + 1] == byte and source[i + 2] == byte
+                triple = i + 2 < end && source[i + 1] == byte && source[i + 2] == byte
                 if triple:
                     i = i + 2
-            elif byte == 40 or byte == 91:
-                core.append(delimiters, byte)
-            elif byte == 41 or byte == 93:
-                count: int64 = core.len(delimiters)
-                if count == 0:
+            elif byte == 40 || byte == 91:
+                if depth == core.len(delimiters):
+                    core.append(delimiters, byte)
+                else:
+                    delimiters[depth] = byte
+                depth = depth + 1
+            elif byte == 41 || byte == 93:
+                if depth == 0:
                     lines.error = "unmatched closing delimiter"
                     return lines
-                opening: uint8 = delimiters[count - 1]
-                if byte == 41 and opening != 40 or byte == 93 and opening != 91:
+                opening: uint8 = delimiters[depth - 1]
+                if byte == 41 && opening != 40 || byte == 93 && opening != 91:
                     lines.error = "mismatched closing delimiter"
                     return lines
-                remaining: uint8[] = []
-                d: int64 = 0
-                while d < count - 1:
-                    core.append(remaining, delimiters[d])
-                    d = d + 1
-                delimiters = remaining
+                depth = depth - 1
             i = i + 1
-        if quote != 0 and not triple:
+        if quote != 0 && not triple:
             lines.error = "unterminated string"
             return lines
         i = end
@@ -85,7 +84,7 @@ def scan(source: str) -> Lines:
             i = i + 1
     if quote != 0:
         lines.error = "unterminated triple-quoted string"
-    elif core.len(delimiters) != 0:
+    elif depth != 0:
         lines.error = "unclosed delimiter"
     return lines
 
@@ -94,7 +93,7 @@ def format_source(source: str, lines: Lines) -> str:
     newline: str = "\n"
     i: int64 = 1
     while i < core.len(source):
-        if source[i - 1] == 13 and source[i] == 10:
+        if source[i - 1] == 13 && source[i] == 10:
             newline = "\r\n"
             break
         i = i + 1
@@ -105,15 +104,15 @@ def format_source(source: str, lines: Lines) -> str:
     while i < core.len(lines.kinds):
         kind: int32 = lines.kinds[i]
         if kind >= 3:
-            required: bool = previous == 3 or previous == 4 or kind == 4 and previous != 0
-            if previous == 3 and kind == 3:
+            required: bool = previous == 3 || previous == 4 || kind == 4 && previous != 0
+            if previous == 3 && kind == 3:
                 required = false
             if required:
                 anchor: int64 = i
-                while anchor > 0 and lines.kinds[anchor - 1] == 1:
+                while anchor > 0 && lines.kinds[anchor - 1] == 1:
                     anchor = anchor - 1
                 start: int64 = anchor
-                while start > 0 and lines.kinds[start - 1] == 0:
+                while start > 0 && lines.kinds[start - 1] == 0:
                     start = start - 1
                 if anchor - start != 2:
                     core.append(parts, core.slice(source, copied, lines.starts[start]))

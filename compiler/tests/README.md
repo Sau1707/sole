@@ -17,6 +17,10 @@ The harness also covers CLI errors, output protection, IR/object emission,
 runtime C warnings, bootstrap hashes, and an installation moved to a
 different prefix and run with only native toolchain executables on `PATH`.
 
+`types.sh` builds `types.sole` against the compiler's type classes. It checks
+native representations, signedness, arithmetic and comparison instructions,
+casts, invalid operations, and integer bounds for every built-in type.
+
 Set `SOLE_COMPILER` to test another native compiler. Temporary directories honor
 `TMPDIR` and are removed on exit. Rejection and trap fixtures must fail; rejection
 fixtures must also emit an error diagnostic.
@@ -24,7 +28,7 @@ fixtures must also emit an error diagnostic.
 ## Syntax grammar
 
 `make test-syntax` builds `syntax.sole` with the native compiler and reads
-[`sole.ebnf`](../../sole.ebnf) to validate compiler, library, example (when present),
+[`sole.ebnf`](../sole.ebnf) to validate compiler, library, example (when present),
 and successful fixture sources. `make test` runs this before the compiler suite.
 To check specific files, run `sh compiler/tests/syntax.sh path/to/file.sole ...`.
 

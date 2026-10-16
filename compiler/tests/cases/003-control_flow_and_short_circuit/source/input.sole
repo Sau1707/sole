@@ -10,10 +10,10 @@ def classify(x: int32) -> int32:
     else:
         return 0
 def main() -> int32:
-    core.print(false and side_effect())
-    core.print(true or side_effect())
-    core.print(true and side_effect())
-    core.print(false or side_effect())
+    core.print(false && side_effect())
+    core.print(true || side_effect())
+    core.print(true && side_effect())
+    core.print(false || side_effect())
     core.print(not 1 == 2)
     i: int32 = 0
     while i < 8:

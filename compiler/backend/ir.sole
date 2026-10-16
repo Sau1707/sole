@@ -47,7 +47,7 @@ def checked(state: frontend.model.State, condition: str) -> void:
 
 
 # Choose a function's native symbol, preserving foreign C names.
-def function_symbol(state: frontend.model.State, fn: frontend.model.FunctionInfo) -> str:
+def function_symbol(fn: frontend.model.FunctionInfo) -> str:
     if fn.external:
         return frontend.symbols.foreign_name(fn.name)
     return "_sole.fn." + fn.name
