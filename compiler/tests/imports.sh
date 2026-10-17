@@ -220,10 +220,6 @@ reject 'expected an import name or alias' <<'EOF'
 from package.models import Point as def
 EOF
 
-reject "names beginning with '__sole_' are reserved" <<'EOF'
-from package.models import Point as __sole_hidden
-EOF
-
 for name in __sole_ __sole_hidden; do
     for source in "def $name() -> int32:
     return 0" "import package.models as $name" "from package.models import Point as $name"; do

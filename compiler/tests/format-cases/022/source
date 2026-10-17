@@ -1,0 +1,24 @@
+import core
+
+
+class Box:
+    value: int32
+    def read(self) -> int32:
+        """Read the stored value."""
+        return self.value
+
+
+def first(
+    value: int32
+) -> str:
+    """Return text containing declaration-like lines."""
+    return """literal text
+def fake() -> void:
+
+
+
+class Fake:
+"""
+
+
+extern def second() -> void

@@ -1,0 +1,27 @@
+enum Kind:
+    Number
+    Text
+
+
+union Item:
+    Number(value: int64)
+    Text(value: str)
+    Empty()
+
+
+def Number() -> int64:
+    return 9
+
+
+def value() -> int64:
+    return 10
+
+
+def score(item: Item) -> int64:
+    match item:
+        case Item.Number(n):
+            return n
+        case Item.Text(s):
+            return 2
+        case Item.Empty():
+            return 0

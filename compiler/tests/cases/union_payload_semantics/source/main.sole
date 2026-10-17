@@ -1,0 +1,42 @@
+import core
+
+
+struct Data:
+    value: int64
+
+
+class Box:
+    value: int64
+    def set(self, value: int64) -> void:
+        self.value = value
+
+
+union Payload:
+    Value(data: Data)
+    Shared(box: Box, items: int64[])
+
+
+def main() -> int32:
+    original: Payload = Payload.Value(Data(value=7))
+    match original:
+        case Payload.Value(data):
+            data.value = 99
+        case Payload.Shared(box, items):
+            return 1
+    match original:
+        case Payload.Value(data):
+            if data.value != 7:
+                return 2
+        case Payload.Shared(box, items):
+            return 3
+    shared: Box = Box(value=1)
+    array: int64[] = []
+    match Payload.Shared(shared, array):
+        case Payload.Value(data):
+            return 4
+        case Payload.Shared(box, items):
+            box.set(10)
+            core.append(items, 20)
+    if shared.value != 10 || core.len(array) != 1 || array[0] != 20:
+        return 5
+    return 0

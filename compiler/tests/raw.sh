@@ -11,7 +11,6 @@ trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 export SOLE_HOME="$root" SOLE_LIB="$root/lib"
 
 cp "$root/compiler/tests/raw.sole" "$temporary/main.sole"
-ln -s "$root/compiler/raw" "$temporary/raw"
 ln -s "$root/compiler/codegen" "$temporary/codegen"
 for optimize in 0 2; do
     "$compiler" build "$temporary/main.sole" "-O$optimize" --link "$llvm_library" -o "$temporary/raw-test"

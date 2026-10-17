@@ -119,3 +119,21 @@ extern def posix_spawnp(child: ptr, executable: ptr, actions: ptr, attributes: p
 
 
 extern def waitpid(child: int32, status: ptr, options: int32) -> int32
+
+
+extern def fopen(path: ptr, mode: ptr) -> ptr
+
+
+extern def fseek(file: ptr, offset: int64, origin: int32) -> int32
+
+
+extern def ftell(file: ptr) -> int64
+
+
+extern def fread(data: ptr, size: uint64, count: uint64, file: ptr) -> uint64
+
+
+extern def fwrite(data: ptr, size: uint64, count: uint64, file: ptr) -> uint64
+
+
+extern def fclose(file: ptr) -> int32

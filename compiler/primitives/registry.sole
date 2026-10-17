@@ -1,42 +1,35 @@
 import primitives.str as scalar_str
 import primitives.ptr as scalar_ptr
-import primitives.int8 as scalar_int8
+import primitives.int as scalar_int
 import primitives.bool as scalar_bool
 import primitives.void as scalar_void
-import primitives.int16 as scalar_int16
-import primitives.int32 as scalar_int32
-import primitives.int64 as scalar_int64
-import primitives.uint8 as scalar_uint8
-import primitives.uint16 as scalar_uint16
-import primitives.uint32 as scalar_uint32
-import primitives.uint64 as scalar_uint64
-import primitives.float32 as scalar_float32
-import primitives.float64 as scalar_float64
+import primitives.uint as scalar_uint
+import primitives.float as scalar_float
 import primitives.definition as scalar_definition
 
 
 def lookup(name: str) -> scalar_definition.Type:
     """TODO: Document this function."""
     if name == "int8":
-        return scalar_int8.int8().definition()
+        return scalar_int.int8().definition()
     if name == "int16":
-        return scalar_int16.int16().definition()
+        return scalar_int.int16().definition()
     if name == "int32":
-        return scalar_int32.int32().definition()
+        return scalar_int.int32().definition()
     if name == "int64":
-        return scalar_int64.int64().definition()
+        return scalar_int.int64().definition()
     if name == "uint8":
-        return scalar_uint8.uint8().definition()
+        return scalar_uint.uint8().definition()
     if name == "uint16":
-        return scalar_uint16.uint16().definition()
+        return scalar_uint.uint16().definition()
     if name == "uint32":
-        return scalar_uint32.uint32().definition()
+        return scalar_uint.uint32().definition()
     if name == "uint64":
-        return scalar_uint64.uint64().definition()
+        return scalar_uint.uint64().definition()
     if name == "float32":
-        return scalar_float32.float32().definition()
+        return scalar_float.float32().definition()
     if name == "float64":
-        return scalar_float64.float64().definition()
+        return scalar_float.float64().definition()
     if name == "bool":
         return scalar_bool.bool().definition()
     if name == "str":

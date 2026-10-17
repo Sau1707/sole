@@ -1,5 +1,4 @@
 import core
-import wrappers.libc
 import runtime.system as system
 
 
@@ -35,7 +34,7 @@ def run(executable: str, arguments: str[]) -> Result:
     status: int32 = 0
     error: int32 = system.process_run(argv[0], core.address(argv[0]), core.address(status))
     if error != 0:
-        return Result(-1, 0, core.from_cstr(wrappers.libc.strerror(error)))
+        return Result(-1, 0, core.from_cstr(¢.strerror(error)))
     if (status & 127) != 0:
         return Result(-1, status & 127, "")
     return Result((status >> 8) & 255, 0, "")

@@ -56,13 +56,19 @@ def check_types(context: ptr) -> void:
     require(llvm.LLVMConstIntGetSExtValue(llvm.LLVMConstInt(i8, 255, 0)) == -1, "signed constant interpretation")
 
 
-def integer_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> void:
-    """Build native integer operations with LLVM's signedness-specific API."""
+def binary_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> ptr:
+    """Create a binary function and position the builder at its entry block."""
     parameters: ptr[2] = [typ, typ]
     signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
     function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_" + name), signature)
     block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
     llvm.LLVMPositionBuilderAtEnd(builder, block)
+    return function
+
+
+def integer_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> void:
+    """Build native integer operations with LLVM's signedness-specific API."""
+    function: ptr = binary_function(context, module, builder, typ, name)
     left: ptr = llvm.LLVMGetParam(function, 0)
     right: ptr = llvm.LLVMGetParam(function, 1)
     label: ptr = core.cstr("result")
@@ -99,11 +105,7 @@ def integer_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: st
 
 def floating_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> void:
     """Build raw floating-point operations without fast-math assumptions."""
-    parameters: ptr[2] = [typ, typ]
-    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
-    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_" + name), signature)
-    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
-    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    function: ptr = binary_function(context, module, builder, typ, name)
     left: ptr = llvm.LLVMGetParam(function, 0)
     right: ptr = llvm.LLVMGetParam(function, 1)
     label: ptr = core.cstr("result")
@@ -118,19 +120,24 @@ def floating_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: s
         result = llvm.LLVMBuildFDiv(builder, left, right, label)
     elif name == "frem":
         result = llvm.LLVMBuildFRem(builder, left, right, label)
-    elif name == "fneg":
-        result = llvm.LLVMBuildFNeg(builder, left, label)
     require(result != ptr(0), "floating-point operation: " + name)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def negation_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build floating-point negation with a unary signature."""
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(typ), 1, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_fneg"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    value: ptr = llvm.LLVMGetParam(function, 0)
+    result: ptr = llvm.LLVMBuildFNeg(builder, value, core.cstr("result"))
     llvm.LLVMBuildRet(builder, result)
 
 
 def memory_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
     """Build memory accesses, pointer arithmetic, and atomic operations."""
-    parameters: ptr[2] = [typ, typ]
-    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
-    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_memory"), signature)
-    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
-    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    function: ptr = binary_function(context, module, builder, typ, "memory")
     left: ptr = llvm.LLVMGetParam(function, 0)
     right: ptr = llvm.LLVMGetParam(function, 1)
     label: ptr = core.cstr("")
@@ -234,14 +241,11 @@ def comparison_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> vo
 
 def aggregate_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
     """Build struct and vector values using raw LLVM aggregates."""
-    parameters: ptr[2] = [typ, typ]
-    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
-    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_aggregate"), signature)
-    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
-    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    function: ptr = binary_function(context, module, builder, typ, "aggregate")
     left: ptr = llvm.LLVMGetParam(function, 0)
     right: ptr = llvm.LLVMGetParam(function, 1)
     label: ptr = core.cstr("")
+    parameters: ptr[2] = [typ, typ]
     record: ptr = llvm.LLVMStructTypeInContext(context, core.address(parameters[0]), 2, 0)
     record = llvm.LLVMBuildInsertValue(builder, llvm.LLVMGetPoison(record), left, 0, label)
     left = llvm.LLVMBuildExtractValue(builder, record, 0, label)
@@ -286,9 +290,10 @@ def main() -> int32:
     names: str[] = ["add", "sub", "mul", "sdiv", "udiv", "srem", "urem", "and", "or", "xor", "shl", "ashr", "lshr"]
     for i in range(core.len(names)):
         integer_function(context, module, builder, i64, names[i])
-    names = ["fadd", "fsub", "fmul", "fdiv", "frem", "fneg"]
+    names = ["fadd", "fsub", "fmul", "fdiv", "frem"]
     for i in range(core.len(names)):
         floating_function(context, module, builder, llvm.LLVMDoubleTypeInContext(context), names[i])
+    negation_function(context, module, builder, llvm.LLVMDoubleTypeInContext(context))
     memory_function(context, module, builder, i64)
     branch_function(context, module, builder, i64)
     intrinsic_function(context, module, builder, i64)

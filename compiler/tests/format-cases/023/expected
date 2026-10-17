@@ -1,0 +1,18 @@
+import os
+import math
+import core # Keep this long comment with core, without counting it for sorting.
+import frontend.lexer as lexer
+
+import env
+import strings
+
+# Separate group.
+import files
+import statistics
+
+
+def main() -> str:
+    """TODO: Document this function."""
+    return """import statistics
+import os
+"""

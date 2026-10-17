@@ -62,6 +62,9 @@ def lex(text: str) -> lexical_tokens.Tokens:
             i = i + 1
             line = line + 1
             beginning = true
+        elif byte == 194 && i + 1 < core.len(text) && text[i + 1] == 162:
+            tokens.add("¢", 7, line)
+            i = i + 2
         elif characters.letter(byte) && not byte_literal:
             start: int64 = i
             i = i + 1

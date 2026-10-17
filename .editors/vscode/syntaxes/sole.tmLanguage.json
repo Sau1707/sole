@@ -7,6 +7,14 @@
     { "include": "#bytes" },
     { "include": "#strings" },
     {
+      "match": "(¢)[ \\t]*(\\.)[ \\t]*([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "variable.language.c-api.sole" },
+        "2": { "name": "punctuation.accessor.sole" },
+        "3": { "name": "support.function.builtin.sole" }
+      }
+    },
+    {
       "begin": "\\b(import|from)\\b",
       "end": "$",
       "beginCaptures": {

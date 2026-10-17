@@ -15,6 +15,19 @@ export SOLE_HOME="$PWD" SOLE_LIB="$PWD/lib"
 seed_home=$(mktemp -d "$PWD/.build/seed-home-XXXXXX")
 trap 'rm -rf -- "$seed_home"' EXIT HUP INT TERM
 cp -R "$PWD/lib" "$seed_home/lib"
+cp -R "$PWD/compiler" "$seed_home/compiler"
+
+# Older seeds use explicit imports for the built-in C namespace.
+find "$seed_home/compiler" "$seed_home/lib" -path "$seed_home/compiler/tests" -prune -o -type f -name '*.sole' -print |
+while IFS= read -r source; do
+    if grep -q '¢[.]' "$source"; then
+        {
+            printf 'import raw.c as bootstrap_c_api\n'
+            sed 's/¢[.]/bootstrap_c_api./g' "$source"
+        } > "$seed_home/translated.sole"
+        mv "$seed_home/translated.sole" "$source"
+    fi
+done
 seed_prefix=$(dirname -- "$(dirname -- "$(command -v "$seed")")")
 seed_resources=${SOLE_BOOTSTRAP_HOME:-$seed_prefix/share/sole}
 if [ -f "$seed_resources/lib/runtime/system.c" ]; then
@@ -22,7 +35,8 @@ if [ -f "$seed_resources/lib/runtime/system.c" ]; then
     cp "$seed_resources/lib/runtime/native.ll" "$seed_home/lib/runtime/native.ll"
 fi
 ln -s "$seed_home/lib/runtime" "$seed_home/runtime"
-SOLE_HOME="$seed_home" "$seed" build compiler/main.sole --link "$llvm_library" -o .build/sole-stage1
+ln -s "$seed_home/compiler/raw" "$seed_home/lib/raw"
+SOLE_HOME="$seed_home" SOLE_LIB="$seed_home/lib" "$seed" build "$seed_home/compiler/main.sole" --link "$llvm_library" -o .build/sole-stage1
 .build/sole-stage1 build compiler/main.sole --link "$llvm_library" -o .build/sole-stage2
 .build/sole-stage2 build compiler/main.sole --link "$llvm_library" -o .build/sole-stage3
 cmp .build/sole-stage2 .build/sole-stage3

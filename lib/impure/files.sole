@@ -1,5 +1,4 @@
 import core
-import wrappers.libc
 import runtime.system as system
 
 
@@ -39,9 +38,9 @@ def atomic_write(path: str, contents: str) -> str:
 
 def remove(path: str) -> bool:
     """TODO: Document this function."""
-    return wrappers.libc.remove(core.cstr(path)) == 0
+    return ¢.remove(core.cstr(path)) == 0
 
 
 def rename(source: str, destination: str) -> bool:
     """TODO: Document this function."""
-    return wrappers.libc.rename(core.cstr(source), core.cstr(destination)) == 0
+    return ¢.rename(core.cstr(source), core.cstr(destination)) == 0

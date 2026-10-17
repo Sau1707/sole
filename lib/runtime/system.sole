@@ -1,59 +1,58 @@
 import core
 import os.path
-import wrappers.libc as c
 import runtime.linux as linux
 
 
 def fail(message: str) -> void:
     """Report a runtime failure on standard error and exit unsuccessfully."""
     text: str = "sole: " + message + "\n"
-    c.write(2, core.cstr(text), uint64(core.len(text)))
+    ¢.write(2, core.cstr(text), uint64(core.len(text)))
     core.exit(1)
 
 
 def error_message() -> str:
     """Copy libc's error message before another call can replace it."""
-    return "" + core.from_cstr(c.strerror(linux.errno()))
+    return "" + core.from_cstr(¢.strerror(linux.errno()))
 
 
 def is_file(path: ptr) -> bool:
     """Follow symlinks and recognize regular files using the platform ABI."""
     info: linux.Stat = linux.stat_buffer()
-    return c.stat(path, core.address(info)) == 0 && (info.mode & 61440) == 32768
+    return ¢.stat(path, core.address(info)) == 0 && (info.mode & 61440) == 32768
 
 
 def home() -> str:
     """Locate compiler resources relative to the executable or explicit override."""
-    configured: ptr = c.getenv(core.cstr("SOLE_HOME"))
+    configured: ptr = ¢.getenv(core.cstr("SOLE_HOME"))
     if configured != ptr(0):
         return core.from_cstr(configured)
-    buffer: ptr = c.malloc(4096)
+    buffer: ptr = ¢.malloc(4096)
     if buffer == ptr(0):
         fail("out of memory")
-    size: int64 = c.readlink(core.cstr("/proc/self/exe"), buffer, 4095)
+    size: int64 = ¢.readlink(core.cstr("/proc/self/exe"), buffer, 4095)
     executable: str = ""
     if size > 0 && size < 4095:
         zero: uint8 = 0
-        c.memcpy(ptr(uint64(buffer) + uint64(size)), core.address(zero), 1)
+        ¢.memcpy(ptr(uint64(buffer) + uint64(size)), core.address(zero), 1)
         executable = "" + core.from_cstr(buffer)
-    c.free(buffer)
+    ¢.free(buffer)
     if executable != "":
         directory: str = os.path.split(executable)[0]
         suffixes: str[] = ["../share/sole", ".."]
         for i in range(core.len(suffixes)):
             candidate: str = directory + suffixes[i]
             if is_file(core.cstr(candidate + "/lib/runtime/core.ll")):
-                resolved: ptr = c.realpath(core.cstr(candidate), ptr(0))
+                resolved: ptr = ¢.realpath(core.cstr(candidate), ptr(0))
                 if resolved != ptr(0):
                     text: str = "" + core.from_cstr(resolved)
-                    c.free(resolved)
+                    ¢.free(resolved)
                     return text
     return "."
 
 
 def lib_home() -> str:
     """Respect a library override, otherwise use the compiler resource tree."""
-    configured: ptr = c.getenv(core.cstr("SOLE_LIB"))
+    configured: ptr = ¢.getenv(core.cstr("SOLE_LIB"))
     if configured != ptr(0):
         return core.from_cstr(configured)
     path: str = home() + "/lib"
@@ -64,7 +63,7 @@ def lib_home() -> str:
 
 def realpath(path: ptr) -> ptr:
     """Resolve a path or terminate with libc's resolution error."""
-    resolved: ptr = c.realpath(path, ptr(0))
+    resolved: ptr = ¢.realpath(path, ptr(0))
     if resolved == ptr(0):
         fail(error_message())
     return resolved
@@ -74,32 +73,32 @@ def same_file(first: ptr, second: ptr) -> bool:
     """Compare filesystem identity while following symlinks."""
     a: linux.Stat = linux.stat_buffer()
     b: linux.Stat = linux.stat_buffer()
-    return c.stat(first, core.address(a)) == 0 && c.stat(second, core.address(b)) == 0 && a.device == b.device && a.inode == b.inode
+    return ¢.stat(first, core.address(a)) == 0 && ¢.stat(second, core.address(b)) == 0 && a.device == b.device && a.inode == b.inode
 
 
 def temp_dir() -> str:
     """Create a private temporary directory using the configured temporary root."""
-    configured: ptr = c.getenv(core.cstr("TMPDIR"))
+    configured: ptr = ¢.getenv(core.cstr("TMPDIR"))
     root: str = "/tmp"
     if configured != ptr(0):
         root = core.from_cstr(configured)
-    elif c.access(core.cstr("/tmp/opencode"), 2) == 0:
+    elif ¢.access(core.cstr("/tmp/opencode"), 2) == 0:
         root = "/tmp/opencode"
     path: ptr = core.cstr(root + "/sole-XXXXXX")
-    if c.mkdtemp(path) == ptr(0):
+    if ¢.mkdtemp(path) == ptr(0):
         fail("cannot create temporary directory")
     return core.from_cstr(path)
 
 
 def resolve_output(path: ptr) -> ptr:
     """Resolve existing outputs but reject dangling symlinks and lookup failures."""
-    resolved: ptr = c.realpath(path, ptr(0))
+    resolved: ptr = ¢.realpath(path, ptr(0))
     if resolved != ptr(0):
         return resolved
     if linux.errno() != 2:
         return ptr(0)
     info: linux.Stat = linux.stat_buffer()
-    if c.lstat(path, core.address(info)) == 0:
+    if ¢.lstat(path, core.address(info)) == 0:
         error: int32 = 2
         if (info.mode & 61440) == 40960:
             error = 67
@@ -107,7 +106,7 @@ def resolve_output(path: ptr) -> ptr:
         return ptr(0)
     if linux.errno() != 2:
         return ptr(0)
-    return c.strdup(path)
+    return ¢.strdup(path)
 
 
 def output_path(path: str) -> str:
@@ -120,16 +119,16 @@ def output_path(path: str) -> str:
             message = "dangling output symlink"
         fail(path + ": " + message)
     text: str = "" + core.from_cstr(resolved)
-    c.free(resolved)
+    ¢.free(resolved)
     return text
 
 
 def output_dir(output: str) -> str:
     """Create private staging storage on the output destination's filesystem."""
     path: ptr = core.cstr(os.path.split(output)[0] + ".sole-output-XXXXXX")
-    if c.mkdtemp(path) == ptr(0):
+    if ¢.mkdtemp(path) == ptr(0):
         message: str = error_message()
-        c.free(path)
+        ¢.free(path)
         fail(message)
     return core.from_cstr(path)
 
@@ -145,27 +144,27 @@ def atomic_write_file(path: ptr, data: ptr, length: int64) -> str:
         return error_message()
     original: linux.Stat = linux.stat_buffer()
     message: str = ""
-    if c.stat(resolved, core.address(original)) != 0:
+    if ¢.stat(resolved, core.address(original)) != 0:
         message = error_message()
     elif (original.mode & 61440) != 32768:
         message = "cannot atomically format a non-regular file"
     elif original.links != 1:
         message = "cannot atomically format a file with multiple hard links"
-    elif c.access(resolved, 2) != 0:
+    elif ¢.access(resolved, 2) != 0:
         message = error_message()
     if message != "":
-        c.free(resolved)
+        ¢.free(resolved)
         return message
     temporary: ptr = core.cstr(os.path.split(core.from_cstr(resolved))[0] + ".sole-format-XXXXXX")
-    descriptor: int32 = c.mkstemp(temporary)
+    descriptor: int32 = ¢.mkstemp(temporary)
     if descriptor < 0:
         message = error_message()
-        c.free(temporary)
-        c.free(resolved)
+        ¢.free(temporary)
+        ¢.free(resolved)
         return message
     written: int64 = 0
     while written < length:
-        count: int64 = c.write(descriptor, ptr(uint64(data) + uint64(written)), uint64(length - written))
+        count: int64 = ¢.write(descriptor, ptr(uint64(data) + uint64(written)), uint64(length - written))
         if count < 0 && linux.errno() == 4:
             continue
         if count <= 0:
@@ -175,28 +174,28 @@ def atomic_write_file(path: ptr, data: ptr, length: int64) -> str:
             break
         written = written + count
     staged: linux.Stat = linux.stat_buffer()
-    if message == "" && c.fstat(descriptor, core.address(staged)) != 0:
+    if message == "" && ¢.fstat(descriptor, core.address(staged)) != 0:
         message = error_message()
-    if message == "" && (staged.uid != original.uid || staged.gid != original.gid) && c.fchown(descriptor, original.uid, original.gid) != 0:
+    if message == "" && (staged.uid != original.uid || staged.gid != original.gid) && ¢.fchown(descriptor, original.uid, original.gid) != 0:
         message = error_message()
-    if message == "" && c.fchmod(descriptor, original.mode & 4095) != 0:
+    if message == "" && ¢.fchmod(descriptor, original.mode & 4095) != 0:
         message = error_message()
-    if message == "" && c.fsync(descriptor) != 0:
+    if message == "" && ¢.fsync(descriptor) != 0:
         message = error_message()
-    if c.close(descriptor) != 0 && message == "":
+    if ¢.close(descriptor) != 0 && message == "":
         message = error_message()
     current: linux.Stat = linux.stat_buffer()
     if message == "":
-        if c.lstat(resolved, core.address(current)) != 0:
+        if ¢.lstat(resolved, core.address(current)) != 0:
             message = error_message()
         elif current.device != original.device || current.inode != original.inode || current.links != 1:
             message = "file changed while formatting"
-    if message == "" && c.rename(temporary, resolved) != 0:
+    if message == "" && ¢.rename(temporary, resolved) != 0:
         message = error_message()
     if message != "":
-        c.unlink(temporary)
-    c.free(temporary)
-    c.free(resolved)
+        ¢.unlink(temporary)
+    ¢.free(temporary)
+    ¢.free(resolved)
     return message
 
 
@@ -206,10 +205,10 @@ def process_run(executable: ptr, arguments: ptr, status: ptr) -> int32:
     if environment == ptr(0):
         return 38
     child: int32 = 0
-    error: int32 = c.posix_spawnp(core.address(child), executable, ptr(0), ptr(0), arguments, environment)
+    error: int32 = ¢.posix_spawnp(core.address(child), executable, ptr(0), ptr(0), arguments, environment)
     if error != 0:
         return error
-    while c.waitpid(child, status, 0) < 0:
+    while ¢.waitpid(child, status, 0) < 0:
         error = linux.errno()
         if error != 4:
             return error
@@ -219,5 +218,5 @@ def process_run(executable: ptr, arguments: ptr, status: ptr) -> int32:
 def f64_bits(value: float64) -> uint64:
     """Reinterpret a native double without numeric conversion or aliasing violations."""
     bits: uint64 = 0
-    c.memcpy(core.address(bits), core.address(value), 8)
+    ¢.memcpy(core.address(bits), core.address(value), 8)
     return bits

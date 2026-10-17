@@ -1,5 +1,4 @@
 import core
-import raw.c
 import files
 import process
 import driver.format
@@ -22,16 +21,16 @@ def output_error(output: str, inputs: str[]) -> str:
 
 def cleanup(temporary: str) -> void:
     """TODO: Document this function."""
-    raw.c.unlink(core.cstr(temporary + "/program.o"))
-    raw.c.unlink(core.cstr(temporary + "/program"))
-    if raw.c.rmdir(core.cstr(temporary)) != 0:
+    ¢.unlink(core.cstr(temporary + "/program.o"))
+    ¢.unlink(core.cstr(temporary + "/program"))
+    if ¢.rmdir(core.cstr(temporary)) != 0:
         core.print("sole: warning: cannot remove temporary directory: " + temporary)
 
 
 def main() -> int32:
     """Parse command-line options and dispatch compilation, linking, or execution."""
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.8 (self-hosted)")
+        core.print("sole 0.0.9 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -153,7 +152,7 @@ def main() -> int32:
         if protection_error != "":
             cleanup(temporary)
             diagnostics.die(protection_error)
-        if raw.c.rename(core.cstr(program_path), core.cstr(destination)) != 0:
+        if ¢.rename(core.cstr(program_path), core.cstr(destination)) != 0:
             cleanup(temporary)
             diagnostics.die("cannot publish executable: " + output)
         cleanup(temporary)

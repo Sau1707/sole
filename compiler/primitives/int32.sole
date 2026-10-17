@@ -1,7 +1,0 @@
-import primitives.definition as scalar_definition
-
-
-class int32:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("int32", 32, "integer", false)

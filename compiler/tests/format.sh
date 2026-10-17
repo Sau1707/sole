@@ -3,9 +3,6 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
-formatter() {
-    "$compiler" format "$@"
-}
 . "$root/compiler/tests/temp-root.sh"
 temporary=$(mktemp -d "$temp_root/sole-format-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
@@ -15,28 +12,28 @@ check_formatting() {
     expected=$2
     cp "$input" "$temporary/original.sole"
     status=0
-    formatter --check "$input" > "$temporary/log" 2>&1 || status=$?
+    "$compiler" format --check "$input" > "$temporary/log" 2>&1 || status=$?
     if cmp -s "$temporary/original.sole" "$expected"; then
         test "$status" -eq 0
     else
         test "$status" -eq 1
     fi
     cmp "$temporary/original.sole" "$input"
-    formatter "$input" > "$temporary/log"
+    "$compiler" format "$input" > "$temporary/log"
     cmp "$expected" "$input"
-    formatter "$input" > "$temporary/log"
+    "$compiler" format "$input" > "$temporary/log"
     test ! -s "$temporary/log"
     cmp "$expected" "$input"
-    formatter --check "$input"
+    "$compiler" format --check "$input"
 }
 
-if formatter > "$temporary/log" 2>&1; then
+if "$compiler" format > "$temporary/log" 2>&1; then
     echo 'FAIL: format accepted missing paths' >&2
     exit 1
 fi
 grep -q 'Usage: sole format' "$temporary/log"
 for argument in --check --unknown not-sole.txt; do
-    if formatter "$argument" > "$temporary/log" 2>&1; then
+    if "$compiler" format "$argument" > "$temporary/log" 2>&1; then
         echo "FAIL: format accepted $argument without a source file" >&2
         exit 1
     fi
@@ -44,93 +41,24 @@ done
 
 cp "$root/compiler/tests/format-cases/013/expected" "$temporary/input.sole"
 
-cat > "$temporary/strings.sole" <<'EOF'
-import core
-
-
-class Box:
-    value: int32
-    def read(self) -> int32:
-        """Read the stored value."""
-        return self.value
-
-
-def first(
-    value: int32
-) -> str:
-    """Return text containing declaration-like lines."""
-    return """literal text
-def fake() -> void:
-
-
-
-class Fake:
-"""
-
-
-extern def second() -> void
-EOF
-cp "$temporary/strings.sole" "$temporary/original.sole"
-formatter --check "$temporary/strings.sole"
-formatter "$temporary/strings.sole"
-cmp "$temporary/strings.sole" "$temporary/original.sole"
+cp "$root/compiler/tests/format-cases/022/source" "$temporary/strings.sole"
 
 printf 'import core\r\ndef main() -> void:\r\n    # Body comment.\r\n    pass' > "$temporary/crlf.sole"
 printf 'import core\r\n\r\n\r\ndef main() -> void:\r\n\r\n    # Body comment.\r\n    """TODO: Document this function."""\r\n    pass' > "$temporary/crlf-expected.sole"
-formatter "$temporary/crlf.sole"
+"$compiler" format "$temporary/crlf.sole"
 cmp "$temporary/crlf.sole" "$temporary/crlf-expected.sole"
-formatter --check "$temporary/input.sole" "$temporary/strings.sole" "$temporary/crlf.sole"
-
-cat > "$temporary/imports.sole" <<'EOF'
-import frontend.lexer as lexer
-import math
-import core # Keep this long comment with core, without counting it for sorting.
-import os
-
-import strings
-import env
-# Separate group.
-import statistics
-import files
-
-
-def main() -> str:
-    return """import statistics
-import os
-"""
-EOF
-cat > "$temporary/imports-expected.sole" <<'EOF'
-import os
-import math
-import core # Keep this long comment with core, without counting it for sorting.
-import frontend.lexer as lexer
-
-import env
-import strings
-
-# Separate group.
-import files
-import statistics
-
-
-def main() -> str:
-    """TODO: Document this function."""
-    return """import statistics
-import os
-"""
-EOF
-check_formatting "$temporary/imports.sole" "$temporary/imports-expected.sole"
+"$compiler" format --check "$temporary/input.sole" "$temporary/strings.sole" "$temporary/crlf.sole"
 
 printf 'import statistics\r\nimport math\r\nimport os' > "$temporary/imports-crlf.sole"
 printf 'import os\r\nimport math\r\nimport statistics' > "$temporary/imports-crlf-expected.sole"
-formatter "$temporary/imports-crlf.sole"
+"$compiler" format "$temporary/imports-crlf.sole"
 cmp "$temporary/imports-crlf.sole" "$temporary/imports-crlf-expected.sole"
-formatter --check "$temporary/imports-crlf.sole"
+"$compiler" format --check "$temporary/imports-crlf.sole"
 
 for malformed in '"""unterminated' 'def broken(' 'def broken([)]'; do
     printf '%s\n' "$malformed" > "$temporary/bad.sole"
     cp "$temporary/bad.sole" "$temporary/original.sole"
-    if formatter "$temporary/bad.sole"; then
+    if "$compiler" format "$temporary/bad.sole"; then
         echo 'FAIL: malformed input accepted' >&2
         exit 1
     fi
@@ -146,13 +74,13 @@ awk 'BEGIN {
     print ")\n    values: int32[] = [1]\n\n\ndef second() -> void:\n    \"\"\"Do nothing.\"\"\"\n    pass"
 }' > "$temporary/nested.sole"
 cp "$temporary/nested.sole" "$temporary/original.sole"
-formatter --check "$temporary/nested.sole"
-formatter "$temporary/nested.sole"
+"$compiler" format --check "$temporary/nested.sole"
+"$compiler" format "$temporary/nested.sole"
 cmp "$temporary/nested.sole" "$temporary/original.sole"
 for delimiters in '()[]([)]' '()[]]' '()[]('; do
     printf '%s\n' "$delimiters" > "$temporary/bad.sole"
     cp "$temporary/bad.sole" "$temporary/original.sole"
-    if formatter "$temporary/bad.sole" > "$temporary/log" 2>&1; then
+    if "$compiler" format "$temporary/bad.sole" > "$temporary/log" 2>&1; then
         echo "FAIL: reused delimiter stack accepted $delimiters" >&2
         exit 1
     fi
@@ -165,7 +93,7 @@ count=0
 for case in "$root"/compiler/tests/format-cases/*; do
     cp "$case/source" "$temporary/fixture.sole"
     if [ -f "$case/invalid" ]; then
-        if formatter "$temporary/fixture.sole" > "$temporary/log" 2>&1; then
+        if "$compiler" format "$temporary/fixture.sole" > "$temporary/log" 2>&1; then
             echo "FAIL: invalid formatter case $case was accepted" >&2
             exit 1
         fi
@@ -189,8 +117,8 @@ def main() -> int32:
     core.print(box.read())
     return 0
 EOF
-formatter "$temporary/executable.sole" > "$temporary/log"
-formatter --check "$temporary/executable.sole"
+"$compiler" format "$temporary/executable.sole" > "$temporary/log"
+"$compiler" format --check "$temporary/executable.sole"
 "$compiler" build "$temporary/executable.sole" -o "$temporary/executable" > "$temporary/log"
 "$temporary/executable" > "$temporary/output"
 printf '42\n' > "$temporary/expected-output"

@@ -9,6 +9,8 @@ temporary=$(mktemp -d "$temp_root/sole-output-safety-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 mkdir -p "$temporary/home" "$temporary/source" "$temporary/aliases" "$temporary/output" "$temporary/tmp"
 cp -R "$root/lib" "$temporary/home/lib"
+mkdir -p "$temporary/home/compiler"
+cp -R "$root/compiler/raw" "$temporary/home/compiler/"
 export SOLE_HOME="$temporary/home" SOLE_LIB="$temporary/home/lib" TMPDIR="$temporary/tmp"
 
 fail() {
@@ -33,7 +35,8 @@ printf 'def answer() -> int32:\n    return 0\n' > "$temporary/source/leaf.sole"
 printf '# An imported module without emitted tokens.\n' > "$temporary/source/empty.sole"
 
 for input in "$temporary/source/"*.sole "$temporary/home/lib/runtime/native.ll" \
-    "$temporary/home/lib/runtime/core.ll" "$temporary/home/lib/runtime/io.sole"; do
+    "$temporary/home/lib/runtime/core.ll" "$temporary/home/lib/runtime/io.sole" \
+    "$temporary/home/compiler/raw/c.sole"; do
     cp "$input" "$temporary/original"
     rm -f "$temporary/aliases/symlink" "$temporary/aliases/hardlink"
     ln -s "$input" "$temporary/aliases/symlink"

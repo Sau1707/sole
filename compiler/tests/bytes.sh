@@ -79,8 +79,8 @@ for command in syntax check build; do
 '" 'unterminated byte literal at line 2'
 done
 
+printf 'def main() -> int32:\n    return b"A"\n' > "$temporary/type.sole"
 for command in check build; do
-    printf 'def main() -> int32:\n    return b"A"\n' > "$temporary/type.sole"
     status=0
     "$compiler" "$command" "$temporary/type.sole" > "$temporary/error" 2>&1 || status=$?
     test "$status" -eq 1

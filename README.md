@@ -34,6 +34,27 @@ def main() -> int32:
 
 <br />
 
+### Built-in C API
+
+Use `¢.name` to call compiler-declared C functions without imports:
+
+```sole
+def main() -> int32:
+    data: ptr = ¢.malloc(64)
+    ¢.free(data)
+    return ¢.abs(-7) - 7
+```
+
+Available functions and signatures are defined in `compiler/raw/c.sole`, including
+libc, libm, POSIX, and dynamic-loader bindings. Names and argument types are checked
+at compile time; arbitrary external symbols are not discovered automatically.
+`¢` is a reserved namespace, not a value, and its members cannot be rebound.
+Foreign pointer operations remain unsafe and follow the platform C ABI (currently
+Linux x86-64 with glibc). Existing `import raw.c` calls remain supported.
+
+LLVM is separate: use `import raw.llvm` and explicitly link the LLVM library when
+calling it. Ordinary C API calls do not add an LLVM dependency to your executable.
+
 ### Local Development
 
 ```sh

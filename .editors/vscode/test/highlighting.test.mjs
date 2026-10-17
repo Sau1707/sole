@@ -48,6 +48,17 @@ test('declarations, annotations, arrays, and extern functions', () => {
   check('def café() -> void:', [['café', 'entity.name.function.sole']]);
 });
 
+test('built-in C namespace distinguishes calls from strings and comments', () => {
+  check('data = ¢.malloc(64)', [
+    ['¢', 'variable.language.c-api.sole'],
+    ['.', 'punctuation.accessor.sole'],
+    ['malloc', 'support.function.builtin.sole'],
+  ]);
+  check('¢ . free(data)', [['free', 'support.function.builtin.sole']]);
+  check('"¢.malloc"', [['¢.malloc', 'string.quoted.double.sole']]);
+  check('# ¢.malloc', [['¢.malloc', 'comment.line.number-sign.sole']]);
+});
+
 test('imports distinguish keywords and module names', () => {
   for (const module of ['core', 'math', 'strings', 'ascii', 'café', '_helpers']) {
     const line = `import ${module} # comment`;

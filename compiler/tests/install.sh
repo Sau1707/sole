@@ -6,23 +6,25 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.8
+version=0.0.9
 archive="sole-$version-linux-x86_64"
-mkdir -p "$temporary/$archive/bin" "$temporary/$archive/lib/sole" "$temporary/$archive/share/sole"
-compiler=$(command -v "${SOLE_COMPILER:-sole}")
-install -m 755 "$compiler" "$temporary/$archive/bin/sole"
-compiler_prefix=$(dirname -- "$(dirname -- "$compiler")")
-if [ -d "$compiler_prefix/lib/sole" ]; then
-    cp -R "$compiler_prefix/lib/sole/." "$temporary/$archive/lib/sole/"
-fi
-cp -R "$root/lib" "$temporary/$archive/share/sole/"
-mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
-cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
-printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
 mkdir "$temporary/downloads" "$temporary/tools"
-tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
     cp "$SOLE_TEST_RELEASE" "$temporary/downloads/$archive.tar.gz"
+else
+    mkdir -p "$temporary/$archive/bin" "$temporary/$archive/lib/sole" "$temporary/$archive/share/sole"
+    compiler=$(command -v "${SOLE_COMPILER:-sole}")
+    install -m 755 "$compiler" "$temporary/$archive/bin/sole"
+    compiler_prefix=$(dirname -- "$(dirname -- "$compiler")")
+    if [ -d "$compiler_prefix/lib/sole" ]; then
+        cp -R "$compiler_prefix/lib/sole/." "$temporary/$archive/lib/sole/"
+    fi
+    cp -R "$root/lib" "$temporary/$archive/share/sole/"
+    mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
+    cp -R "$root/compiler/raw" "$temporary/$archive/share/sole/compiler/"
+    cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
+    printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
+    tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
 fi
 (cd "$temporary/downloads" && sha256sum "$archive.tar.gz" > SHA256SUMS)
 cat > "$temporary/tools/curl" <<'EOF'
@@ -51,6 +53,8 @@ test "$("$temporary/installed/bin/sole" --version)" = "sole $version (self-hoste
 test -f "$temporary/installed/share/sole/lib/core.sole"
 test -f "$temporary/installed/share/sole/lib/runtime/system.sole"
 test -f "$temporary/installed/share/sole/compiler/syntax/parser/sole.ebnf"
+test -f "$temporary/installed/share/sole/compiler/raw/c.sole"
+test -f "$temporary/installed/share/sole/compiler/raw/llvm.sole"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
     test -f "$temporary/installed/lib/sole/libLLVM.so.21.1"
     test -f "$temporary/installed/share/sole/licenses/common-licenses/Apache-2.0"
@@ -62,6 +66,24 @@ test "$("$temporary/relocated/bin/sole" --version)" = "sole $version (self-hoste
 "$temporary/relocated/bin/sole" syntax "$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole"
 "$temporary/relocated/bin/sole" build "$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole" -o "$temporary/hello"
 "$temporary/hello" > "$temporary/hello.log"
+
+cat > "$temporary/main.sole" <<'EOF'
+import raw.llvm as llvm
+import env
+
+
+def main() -> int32:
+    if ¢.sqrt(16.0) != 4.0 || ¢.abs(-9) != 9:
+        return 1
+    if not env.has("SOLE_INSTALLED_BINDINGS_TEST"):
+        return 2
+    return 0
+EOF
+(
+    unset SOLE_HOME SOLE_LIB
+    "$temporary/relocated/bin/sole" build "$temporary/main.sole" -o "$temporary/bindings"
+    SOLE_INSTALLED_BINDINGS_TEST=1 "$temporary/bindings"
+)
 
 DESTDIR="$temporary/staged" PATH="$temporary/tools:$PATH" sh "$root/install.sh" /usr/local > "$temporary/log"
 test -x "$temporary/staged/usr/local/bin/sole"

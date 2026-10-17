@@ -1,0 +1,25 @@
+import primitives.definition as scalar_definition
+
+
+class uint8:
+    def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
+        return scalar_definition.Type("uint8", 8, "integer", true)
+
+
+class uint16:
+    def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
+        return scalar_definition.Type("uint16", 16, "integer", true)
+
+
+class uint32:
+    def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
+        return scalar_definition.Type("uint32", 32, "integer", true)
+
+
+class uint64:
+    def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
+        return scalar_definition.Type("uint64", 64, "integer", true)

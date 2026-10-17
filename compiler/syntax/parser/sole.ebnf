@@ -52,7 +52,7 @@ sum = product, {("+" | "-"), product};
 product = unary, {("*" | "/" | "%"), unary};
 unary = ("-" | "~"), unary | postfix;
 postfix = primary, {".", IDENTIFIER | "[", expression, "]" | "(", [call_arguments], ")"};
-primary = NUMBER | STRING | BYTE | "true" | "false" | "self" | IDENTIFIER | "(", expression, ")" | "[", [arguments], "]";
+primary = NUMBER | STRING | BYTE | "true" | "false" | "self" | IDENTIFIER | "¢", ".", IDENTIFIER | "(", expression, ")" | "[", [arguments], "]";
 arguments = expression, {",", expression}, [","];
 call_arguments = argument, {",", argument}, [","];
 argument = IDENTIFIER, "=", expression | expression;

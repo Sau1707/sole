@@ -1,5 +1,4 @@
 import core
-import raw.c
 import codegen.llvm.ir as ir
 import runtime.system as system
 import codegen.llvm.context as context
@@ -79,8 +78,8 @@ def float_literal(state: context.State, text: str, typ: str) -> context.Value:
     """Encode floating-point literals with exact LLVM bit patterns."""
     start: ptr = core.cstr(text)
     end: ptr = ptr(0)
-    real_value: float64 = raw.c.strtod(start, core.address(end))
-    if end == start || raw.c.strlen(end) != 0:
+    real_value: float64 = ¢.strtod(start, core.address(end))
+    if end == start || ¢.strlen(end) != 0:
         diagnostics.fail_at(state, "invalid floating-point literal")
     bits: uint64 = system.f64_bits(real_value)
     digits: str = "0123456789ABCDEF"

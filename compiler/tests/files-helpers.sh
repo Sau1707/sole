@@ -8,6 +8,7 @@ temporary=$(mktemp -d "$temp_root/sole-files-helpers-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 export SOLE_HOME="$root" SOLE_LIB="$root/lib"
 
+printf 'original\n' > "$temporary/expected"
 for optimize in -O0 -O2; do
     "$compiler" build "$root/compiler/tests/files-helpers.sole" "$optimize" -o "$temporary/program"
     mkdir "$temporary/data"
@@ -24,7 +25,6 @@ for optimize in -O0 -O2; do
     test ! -e "$temporary/data/missing"
     test ! -s "$temporary/data/target"
     test "$(stat -c %a "$temporary/data/target")" = 640
-    printf 'original\n' > "$temporary/expected"
     cmp "$temporary/data/hard" "$temporary/expected"
     cmp "$temporary/data/alias" "$temporary/expected"
     test -z "$(find "$temporary/data" -name '.sole-format-*' -print)"

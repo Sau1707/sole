@@ -1,0 +1,13 @@
+struct Pair:
+    first: int32
+    second: int32
+
+
+struct Box:
+    small: uint8
+    items: int16[]
+
+
+struct Labels:
+    identity: int32
+    models: int32

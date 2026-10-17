@@ -29,7 +29,7 @@ def resolve_import(module: module_model.ModuleInfo, name: str, position: int64, 
     """Find a module in local, project, or standard-library directories."""
     relative: str = module_path(name)
     library: str = system.lib_home()
-    candidates: str[] = [parent_directory(module.path) + relative, entry_directory + relative, library + "/" + relative, library + "/pure/" + relative, library + "/impure/" + relative, library + "/wrappers/" + relative]
+    candidates: str[] = [parent_directory(module.path) + relative, entry_directory + relative, library + "/" + relative, library + "/pure/" + relative, library + "/impure/" + relative, library + "/wrappers/" + relative, system.home() + "/compiler/" + relative]
     for i in range(core.len(candidates)):
         if files.is_file(candidates[i]):
             return files.realpath(candidates[i])
@@ -197,7 +197,7 @@ def namespace_root(name: str) -> str:
     return parts[0]
 
 
-def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lexical_tokens.Tokens) -> void:
+def rewrite_module(modules: module_model.ModuleInfo[], index: int64, c_index: int64, output: lexical_tokens.Tokens) -> void:
     """Qualify module references and copy tokens with their source locations."""
     module: module_model.ModuleInfo = modules[index]
     tokens: lexical_tokens.Tokens = module.tokens
@@ -225,6 +225,21 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, output: lex
         previous: str = ""
         if i > 0:
             previous = tokens.text[i - 1]
+        if kind == 7 && text == "¢":
+            if i + 2 >= core.len(tokens.kind) || tokens.text[i + 1] != "." || tokens.kind[i + 2] != 1 || token_helpers.reserved_keyword(tokens.text[i + 2]):
+                diagnostics.module_error(module, i, "expected a C API name after '¢.'")
+            after: str = tokens.text[i + 3]
+            if previous == "def" || previous == "struct" || previous == "class" || previous == "enum" || previous == "union" || previous == "for" || after == ":" || after == "=" || after == "+=":
+                diagnostics.module_error(module, i, "C API names cannot be declared or rebound")
+            api: module_model.ModuleInfo = modules[c_index]
+            member: str = tokens.text[i + 2]
+            if not arrays.contains(api.names, member):
+                diagnostics.module_error(module, i + 2, "C API has no declaration '" + member + "'")
+            output.add(api.prefix + member, 1, source_line)
+            output.files[core.len(output.files) - 1] = module.path
+            i = i + 3
+            line_start = false
+            continue
         following: str = tokens.text[i + 1]
         label: bool = sum_scope && depth == 1 && (line_start || following == ":" && (previous == "(" || previous == ","))
         if following == "=" && (previous == "(" || previous == ","):
@@ -319,13 +334,15 @@ def load_imports(filename: str, source: str, inputs: str[]) -> lexical_tokens.To
     modules: module_model.ModuleInfo[] = []
     path: str = files.realpath(filename)
     load_module(modules, path, source)
+    c_path: str = files.realpath(system.home() + "/compiler/raw/c.sole")
+    c_index: int64 = load_module(modules, c_path, core.read_file(c_path))
     runtime_path: str = files.realpath(system.home() + "/lib/runtime/io.sole")
     runtime_index: int64 = load_module(modules, runtime_path, core.read_file(runtime_path))
     modules[runtime_index].prefix = "__sole_mruntime__"
     output: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], 0, [])
     for i in range(core.len(modules)):
         core.append(inputs, modules[i].path)
-        rewrite_module(modules, i, output)
+        rewrite_module(modules, i, c_index, output)
     output.add("<end>", 0, 1)
     output.files[core.len(output.files) - 1] = path
     return output

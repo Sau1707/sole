@@ -1,0 +1,16 @@
+import frontend.lexer as lexer
+import math
+import core # Keep this long comment with core, without counting it for sorting.
+import os
+
+import strings
+import env
+# Separate group.
+import statistics
+import files
+
+
+def main() -> str:
+    return """import statistics
+import os
+"""

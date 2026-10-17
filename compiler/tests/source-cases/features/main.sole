@@ -1,0 +1,52 @@
+enum Direction:
+    Left
+    Right
+
+
+struct Span:
+    first: int64
+    second: int64
+
+
+union Node:
+    Span(span: Span, direction: Direction)
+    Empty()
+
+
+class Counter:
+    calls: int64
+    def record(self) -> void:
+        self.calls = self.calls + 1
+
+
+def choose(counter: Counter, n: int64) -> Node:
+    counter.record()
+    if n == 0:
+        return Node.Empty()
+    return Node.Span(Span(second=n, first=1), Direction.Left)
+
+
+def main() -> int32:
+    counter: Counter = Counter(calls=0)
+    total: int64 = 0
+    for i in range(0, 5):
+        match choose(counter, i):
+            case Node.Span(span, direction):
+                match direction:
+                    case Direction.Left:
+                        if span.second == 1:
+                            continue
+                        if span.second == 4:
+                            break
+                        total += span.first + span.second
+                    case Direction.Right:
+                        return 99
+            case Node.Empty():
+                total += 10
+    if counter.calls != 5 || total != 17:
+        return 1
+    i: int64 = 3
+    span: Span = Span(first=i, second=total)
+    if span.first != 3 || span.second != 17:
+        return 2
+    return 0

@@ -1,5 +1,4 @@
 import core
-import wrappers.libc as c
 
 
 struct Stat:
@@ -31,20 +30,20 @@ def stat_buffer() -> Stat:
 def errno() -> int32:
     """Read the calling thread's libc error number."""
     value: int32 = 0
-    c.memcpy(core.address(value), c.__errno_location(), 4)
+    ¢.memcpy(core.address(value), ¢.__errno_location(), 4)
     return value
 
 
 def set_errno(value: int32) -> void:
     """Restore an error number after releasing temporary resources."""
-    c.memcpy(c.__errno_location(), core.address(value), 4)
+    ¢.memcpy(¢.__errno_location(), core.address(value), 4)
 
 
 def environment() -> ptr:
     """Load libc's current environment vector without caching its storage."""
-    symbol: ptr = c.dlsym(ptr(0), core.cstr("environ"))
+    symbol: ptr = ¢.dlsym(ptr(0), core.cstr("environ"))
     if symbol == ptr(0):
         return ptr(0)
     value: ptr = ptr(0)
-    c.memcpy(core.address(value), symbol, 8)
+    ¢.memcpy(core.address(value), symbol, 8)
     return value

@@ -20,7 +20,7 @@ extern double raw_fsub(double, double);
 extern double raw_fmul(double, double);
 extern double raw_fdiv(double, double);
 extern double raw_frem(double, double);
-extern double raw_fneg(double, double);
+extern double raw_fneg(double);
 extern uint64_t raw_memory(uint64_t, uint64_t);
 extern int64_t raw_branch(int64_t, int64_t);
 extern uint64_t raw_popcount(uint64_t);
@@ -54,7 +54,7 @@ int main(void) {
     REQUIRE(raw_fmul(1.5, 2.0) == 3.0);
     REQUIRE(raw_fdiv(1.5, 2.0) == 0.75);
     REQUIRE(raw_frem(5.5, 2.0) == 1.5);
-    REQUIRE(raw_fneg(1.5, 0.0) == -1.5);
+    REQUIRE(raw_fneg(1.5) == -1.5);
     REQUIRE(raw_memory(20, 21) == 42);
     REQUIRE(raw_memory(UINT64_MAX, 0) == 0);
     REQUIRE(raw_branch(-5, 3) == -2);
