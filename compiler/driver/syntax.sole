@@ -1,13 +1,13 @@
 import core
 import strings
-import wrappers.system
+import runtime.system as system
 import syntax.parser.grammar as grammar
 
 
 def main() -> int32:
     """TODO: Document this function."""
     first: int64 = 2
-    grammar_path: str = core.from_cstr(wrappers.system.sole_rt_home()) + "/compiler/syntax/parser/sole.ebnf"
+    grammar_path: str = system.home() + "/compiler/syntax/parser/sole.ebnf"
     if core.arg_count() > 2 && core.arg(2) == "--grammar":
         if core.arg_count() < 5:
             core.print("Usage: sole syntax [--grammar GRAMMAR.ebnf] file.sole ...")

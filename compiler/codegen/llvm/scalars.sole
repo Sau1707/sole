@@ -1,0 +1,133 @@
+import primitives.definition as scalar_definition
+
+
+def representation(typ: scalar_definition.Type) -> str:
+    """Map primitive representations to LLVM types."""
+    if typ.integer() || typ.category == "bool":
+        return "i" + str(typ.bits)
+    if typ.floating():
+        if typ.bits == 32:
+            return "float"
+        return "double"
+    if typ.category == "ptr":
+        return "ptr"
+    if typ.category == "str":
+        return "{ptr, i64}"
+    if typ.category == "void":
+        return "void"
+    return ""
+
+
+def arithmetic(typ: scalar_definition.Type, operator: str) -> str:
+    """Select an LLVM arithmetic or bitwise instruction."""
+    if not typ.numeric():
+        return ""
+    if typ.floating():
+        if operator == "+":
+            return "fadd"
+        if operator == "-":
+            return "fsub"
+        if operator == "*":
+            return "fmul"
+        if operator == "/":
+            return "fdiv"
+        if operator == "%":
+            return "frem"
+        return ""
+    if operator == "+":
+        return "add"
+    if operator == "-":
+        return "sub"
+    if operator == "*":
+        return "mul"
+    if operator == "/":
+        if typ.unsigned:
+            return "udiv"
+        return "sdiv"
+    if operator == "%":
+        if typ.unsigned:
+            return "urem"
+        return "srem"
+    if operator == "&":
+        return "and"
+    if operator == "|":
+        return "or"
+    if operator == "^":
+        return "xor"
+    if operator == "<<":
+        return "shl"
+    if operator == ">>":
+        if typ.unsigned:
+            return "lshr"
+        return "ashr"
+    return ""
+
+
+def comparison(typ: scalar_definition.Type, operator: str) -> str:
+    """Select an LLVM comparison with the required signedness and NaN rules."""
+    predicate: str = ""
+    if operator == "==":
+        predicate = "eq"
+    elif operator == "!=":
+        predicate = "ne"
+    elif operator == "<":
+        predicate = "lt"
+    elif operator == "<=":
+        predicate = "le"
+    elif operator == ">":
+        predicate = "gt"
+    elif operator == ">=":
+        predicate = "ge"
+    else:
+        return ""
+    if typ.floating():
+        if operator == "!=":
+            return "fcmp une"
+        return "fcmp o" + predicate
+    if operator == "==" || operator == "!=":
+        if typ.integer() || typ.category == "bool" || typ.category == "ptr":
+            return "icmp " + predicate
+        return ""
+    if not typ.integer():
+        return ""
+    if typ.unsigned:
+        return "icmp u" + predicate
+    return "icmp s" + predicate
+
+
+def conversion(source: scalar_definition.Type, destination: scalar_definition.Type) -> str:
+    """Select an LLVM primitive conversion instruction."""
+    if source.name == destination.name:
+        return "identity"
+    if source.category == "ptr" && destination.integer():
+        return "ptrtoint"
+    if source.integer() && destination.category == "ptr":
+        return "inttoptr"
+    if destination.category == "bool":
+        if source.floating():
+            return "fcmp une"
+        if source.integer():
+            return "icmp ne"
+    if source.integer() || source.category == "bool":
+        if destination.integer():
+            if source.bits == destination.bits:
+                return "identity"
+            if source.bits > destination.bits:
+                return "trunc"
+            if source.unsigned || source.category == "bool":
+                return "zext"
+            return "sext"
+        if destination.floating():
+            if source.unsigned || source.category == "bool":
+                return "uitofp"
+            return "sitofp"
+    if source.floating():
+        if destination.integer():
+            if destination.unsigned:
+                return "fptoui"
+            return "fptosi"
+        if destination.floating():
+            if source.bits > destination.bits:
+                return "fptrunc"
+            return "fpext"
+    return ""

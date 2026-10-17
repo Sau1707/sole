@@ -1,11 +1,11 @@
 import core
+import raw.c
 import files
 import process
 import driver.format
 import driver.syntax
 import driver.linker
-import wrappers.libc
-import wrappers.system
+import runtime.system as system
 import driver.pipeline as pipeline
 import codegen.llvm.target as target
 import diagnostics.report as diagnostics
@@ -22,16 +22,16 @@ def output_error(output: str, inputs: str[]) -> str:
 
 def cleanup(temporary: str) -> void:
     """TODO: Document this function."""
-    wrappers.libc.unlink(core.cstr(temporary + "/program.o"))
-    wrappers.libc.unlink(core.cstr(temporary + "/program"))
-    if wrappers.libc.rmdir(core.cstr(temporary)) != 0:
+    raw.c.unlink(core.cstr(temporary + "/program.o"))
+    raw.c.unlink(core.cstr(temporary + "/program"))
+    if raw.c.rmdir(core.cstr(temporary)) != 0:
         core.print("sole: warning: cannot remove temporary directory: " + temporary)
 
 
 def main() -> int32:
     """Parse command-line options and dispatch compilation, linking, or execution."""
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.7 (self-hosted)")
+        core.print("sole 0.0.8 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
@@ -80,7 +80,7 @@ def main() -> int32:
         diagnostics.die("run requires binary emission")
 
     # Generate LLVM IR and handle validation-only requests.
-    home: str = core.from_cstr(wrappers.system.sole_rt_home())
+    home: str = system.home()
     contents: str = core.read_file(filename)
     compiled: pipeline.Compilation = pipeline.generate(filename, contents, home)
     ir_text: str = compiled.ir
@@ -117,21 +117,20 @@ def main() -> int32:
         destination: str = output
         temporary: str = ""
         if command == "run":
-            temporary = core.from_cstr(wrappers.system.sole_rt_temp_dir())
+            temporary = system.temp_dir()
         else:
-            destination = core.from_cstr(wrappers.system.sole_rt_output_path(core.cstr(output)))
+            destination = system.output_path(output)
             protection_error = output_error(destination, compiled.inputs)
             if protection_error != "":
                 diagnostics.die(protection_error)
-            temporary = core.from_cstr(wrappers.system.sole_rt_output_dir(core.cstr(destination)))
+            temporary = system.output_dir(destination)
         object_path: str = temporary + "/program.o"
         program_path: str = temporary + "/program"
         native_error: str = target.llvm_object(ir_text, object_path, level, false)
         if native_error != "":
             cleanup(temporary)
             diagnostics.die(native_error)
-        runtime_path: str = home + "/lib/runtime/system.c"
-        link_arguments: str[] = [object_path, runtime_path, "-lm"]
+        link_arguments: str[] = [object_path, "-lm", "-ldl"]
         for l in range(core.len(libraries)):
             core.append(link_arguments, "-l" + libraries[l])
         core.append(link_arguments, "-o")
@@ -154,7 +153,7 @@ def main() -> int32:
         if protection_error != "":
             cleanup(temporary)
             diagnostics.die(protection_error)
-        if wrappers.libc.rename(core.cstr(program_path), core.cstr(destination)) != 0:
+        if raw.c.rename(core.cstr(program_path), core.cstr(destination)) != 0:
             cleanup(temporary)
             diagnostics.die("cannot publish executable: " + output)
         cleanup(temporary)

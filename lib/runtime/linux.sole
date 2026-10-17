@@ -1,0 +1,50 @@
+import core
+import wrappers.libc as c
+
+
+struct Stat:
+    device: uint64
+    inode: uint64
+    links: uint64
+    mode: uint32
+    uid: uint32
+    gid: uint32
+    padding: int32
+    rdevice: uint64
+    size: int64
+    block_size: int64
+    blocks: int64
+    access_time: int64
+    access_nanoseconds: int64
+    modify_time: int64
+    modify_nanoseconds: int64
+    change_time: int64
+    change_nanoseconds: int64
+    reserved: int64[3]
+
+
+def stat_buffer() -> Stat:
+    """Allocate the Linux x86-64 glibc stat layout with zeroed fields."""
+    return Stat(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [0, 0, 0])
+
+
+def errno() -> int32:
+    """Read the calling thread's libc error number."""
+    value: int32 = 0
+    c.memcpy(core.address(value), c.__errno_location(), 4)
+    return value
+
+
+def set_errno(value: int32) -> void:
+    """Restore an error number after releasing temporary resources."""
+    c.memcpy(c.__errno_location(), core.address(value), 4)
+
+
+def environment() -> ptr:
+    """Load libc's current environment vector without caching its storage."""
+    symbol: ptr = c.dlsym(ptr(0), core.cstr("environ"))
+    if symbol == ptr(0):
+        return ptr(0)
+    value: ptr = ptr(0)
+    c.memcpy(core.address(value), symbol, 8)
+    return value

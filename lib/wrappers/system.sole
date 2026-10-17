@@ -1,37 +1,60 @@
-
-# Locate compiler resources and the standard library.
-extern def sole_rt_home() -> ptr
-
-
-extern def sole_rt_lib_home() -> ptr
+import core
+import runtime.system as system
 
 
-# Resolve filesystem paths and identify regular files.
-extern def sole_rt_realpath(path: ptr) -> ptr
+def sole_rt_home() -> ptr:
+    """Preserve the library's legacy resource-location interface."""
+    return core.cstr(system.home())
 
 
-extern def sole_rt_is_file(path: ptr) -> int32
+def sole_rt_lib_home() -> ptr:
+    """Preserve the library's legacy library-location interface."""
+    return core.cstr(system.lib_home())
 
 
-# Inspect native floating-point bits.
-extern def sole_rt_f64_bits(value: float64) -> uint64
+def sole_rt_realpath(path: ptr) -> ptr:
+    """Resolve a path through the Sole runtime implementation."""
+    return system.realpath(path)
 
 
-# Manage temporary outputs and protect source files from overwrites.
-extern def sole_rt_temp_dir() -> ptr
+def sole_rt_is_file(path: ptr) -> int32:
+    """Preserve the integer result used by existing library callers."""
+    return int32(system.is_file(path))
 
 
-extern def sole_rt_output_dir(output: ptr) -> ptr
+def sole_rt_f64_bits(value: float64) -> uint64:
+    """Expose the existing bit-reinterpretation helper without C glue."""
+    return system.f64_bits(value)
 
 
-extern def sole_rt_output_path(output: ptr) -> ptr
+def sole_rt_temp_dir() -> ptr:
+    """Return a C-string view of a newly created temporary directory."""
+    return core.cstr(system.temp_dir())
 
 
-# Return null on success, otherwise a borrowed error message.
-extern def sole_rt_atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr
+def sole_rt_output_dir(output: ptr) -> ptr:
+    """Create staging storage using the Sole runtime implementation."""
+    return core.cstr(system.output_dir(core.from_cstr(output)))
 
 
-extern def sole_rt_same_file(first: ptr, second: ptr) -> int32
+def sole_rt_output_path(output: ptr) -> ptr:
+    """Resolve an output using the Sole runtime implementation."""
+    return core.cstr(system.output_path(core.from_cstr(output)))
 
 
-extern def sole_rt_process_run(executable: ptr, arguments: ptr, status: ptr) -> int32
+def sole_rt_atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr:
+    """Preserve null-on-success behavior for existing library callers."""
+    message: str = system.atomic_write_file(path, data, length)
+    if message == "":
+        return ptr(0)
+    return core.cstr(message)
+
+
+def sole_rt_same_file(first: ptr, second: ptr) -> int32:
+    """Compare filesystem identity through the Sole runtime implementation."""
+    return int32(system.same_file(first, second))
+
+
+def sole_rt_process_run(executable: ptr, arguments: ptr, status: ptr) -> int32:
+    """Spawn and wait through the Sole runtime implementation."""
+    return system.process_run(executable, arguments, status)

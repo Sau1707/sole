@@ -14,7 +14,7 @@ esac
 destination=${DESTDIR:-}$prefix
 case "$version" in
     latest) ;;
-    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.7." >&2; exit 1 ;;
+    ''|*[!0-9.]*) echo "SOLE_VERSION must be a numeric version, such as 0.0.8." >&2; exit 1 ;;
 esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo "Prebuilt Sole releases support Linux x86-64 only." >&2

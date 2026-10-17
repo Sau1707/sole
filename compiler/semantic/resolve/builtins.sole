@@ -2,11 +2,6 @@ import core
 import semantic.types.query as type_query
 
 
-def builtin_name(name: str) -> bool:
-    """Recognize the compiler-supported intrinsic names."""
-    return name == "print" || name == "len" || name == "append" || name == "join" || name == "slice" || name == "cstr" || name == "from_cstr" || name == "address" || name == "arg_count" || name == "arg" || name == "read_file" || name == "write_file" || name == "exit"
-
-
 def reserved_name(name: str) -> bool:
     """Protect builtin types and runtime symbols from conflicting declarations."""
     if core.len(name) >= 5 && core.slice(name, 0, 5) == "_sole":

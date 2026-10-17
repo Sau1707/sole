@@ -1,81 +1,81 @@
 import core
-import wrappers.llvm
+import raw.llvm
 
 
 def llvm_object(text: str, output: str, level: int32, check_only: bool) -> str:
     """Verify LLVM IR and optionally optimize it into a native object file."""
 
     # Parse and verify the generated module before target-specific work.
-    context: ptr = wrappers.llvm.LLVMContextCreate()
-    buffer: ptr = wrappers.llvm.LLVMCreateMemoryBufferWithMemoryRangeCopy(core.cstr(text), uint64(core.len(text)), core.cstr("sole"))
+    context: ptr = raw.llvm.LLVMContextCreate()
+    buffer: ptr = raw.llvm.LLVMCreateMemoryBufferWithMemoryRangeCopy(core.cstr(text), uint64(core.len(text)), core.cstr("sole"))
     module_handle: ptr = ptr(0)
     error_message: ptr = ptr(0)
     error: str = ""
 
     # LLVMParseIRInContext consumes the memory buffer on both outcomes.
-    if wrappers.llvm.LLVMParseIRInContext(context, buffer, core.address(module_handle), core.address(error_message)) != 0:
+    if raw.llvm.LLVMParseIRInContext(context, buffer, core.address(module_handle), core.address(error_message)) != 0:
         error = "" + core.from_cstr(error_message)
-        wrappers.llvm.LLVMDisposeMessage(error_message)
-        wrappers.llvm.LLVMContextDispose(context)
+        raw.llvm.LLVMDisposeMessage(error_message)
+        raw.llvm.LLVMContextDispose(context)
         return error
-    if wrappers.llvm.LLVMVerifyModule(module_handle, 2, core.address(error_message)) != 0:
+    if raw.llvm.LLVMVerifyModule(module_handle, 2, core.address(error_message)) != 0:
         error = "" + core.from_cstr(error_message)
     if error_message != ptr(0):
-        wrappers.llvm.LLVMDisposeMessage(error_message)
+        raw.llvm.LLVMDisposeMessage(error_message)
         error_message = ptr(0)
     if error != "" || check_only:
-        wrappers.llvm.LLVMDisposeModule(module_handle)
-        wrappers.llvm.LLVMContextDispose(context)
+        raw.llvm.LLVMDisposeModule(module_handle)
+        raw.llvm.LLVMContextDispose(context)
         return error
 
     # Create the native target machine and apply its memory layout.
-    wrappers.llvm.LLVMInitializeX86TargetInfo()
-    wrappers.llvm.LLVMInitializeX86Target()
-    wrappers.llvm.LLVMInitializeX86TargetMC()
-    wrappers.llvm.LLVMInitializeX86AsmPrinter()
-    triple: ptr = wrappers.llvm.LLVMGetDefaultTargetTriple()
+    raw.llvm.LLVMInitializeX86TargetInfo()
+    raw.llvm.LLVMInitializeX86Target()
+    raw.llvm.LLVMInitializeX86TargetMC()
+    raw.llvm.LLVMInitializeX86AsmPrinter()
+    triple: ptr = raw.llvm.LLVMGetDefaultTargetTriple()
     target_handle: ptr = ptr(0)
-    if wrappers.llvm.LLVMGetTargetFromTriple(triple, core.address(target_handle), core.address(error_message)) != 0:
+    if raw.llvm.LLVMGetTargetFromTriple(triple, core.address(target_handle), core.address(error_message)) != 0:
         error = "" + core.from_cstr(error_message)
-        wrappers.llvm.LLVMDisposeMessage(error_message)
-        wrappers.llvm.LLVMDisposeMessage(triple)
-        wrappers.llvm.LLVMDisposeModule(module_handle)
-        wrappers.llvm.LLVMContextDispose(context)
+        raw.llvm.LLVMDisposeMessage(error_message)
+        raw.llvm.LLVMDisposeMessage(triple)
+        raw.llvm.LLVMDisposeModule(module_handle)
+        raw.llvm.LLVMContextDispose(context)
         return error
     relocation: int32 = 2
-    machine: ptr = wrappers.llvm.LLVMCreateTargetMachine(target_handle, triple, core.cstr("generic"), core.cstr(""), level, relocation, 0)
+    machine: ptr = raw.llvm.LLVMCreateTargetMachine(target_handle, triple, core.cstr("generic"), core.cstr(""), level, relocation, 0)
     if machine == ptr(0):
-        wrappers.llvm.LLVMDisposeMessage(triple)
-        wrappers.llvm.LLVMDisposeModule(module_handle)
-        wrappers.llvm.LLVMContextDispose(context)
+        raw.llvm.LLVMDisposeMessage(triple)
+        raw.llvm.LLVMDisposeModule(module_handle)
+        raw.llvm.LLVMContextDispose(context)
         return "cannot create LLVM target machine"
-    wrappers.llvm.LLVMSetTarget(module_handle, triple)
-    wrappers.llvm.LLVMDisposeMessage(triple)
-    layout_handle: ptr = wrappers.llvm.LLVMCreateTargetDataLayout(machine)
-    layout: ptr = wrappers.llvm.LLVMCopyStringRepOfTargetData(layout_handle)
-    wrappers.llvm.LLVMSetDataLayout(module_handle, layout)
-    wrappers.llvm.LLVMDisposeMessage(layout)
-    wrappers.llvm.LLVMDisposeTargetData(layout_handle)
+    raw.llvm.LLVMSetTarget(module_handle, triple)
+    raw.llvm.LLVMDisposeMessage(triple)
+    layout_handle: ptr = raw.llvm.LLVMCreateTargetDataLayout(machine)
+    layout: ptr = raw.llvm.LLVMCopyStringRepOfTargetData(layout_handle)
+    raw.llvm.LLVMSetDataLayout(module_handle, layout)
+    raw.llvm.LLVMDisposeMessage(layout)
+    raw.llvm.LLVMDisposeTargetData(layout_handle)
 
     # Apply the requested LLVM optimization pipeline.
     if level > 0:
         passes: str = "default<O" + str(level) + ">"
-        options: ptr = wrappers.llvm.LLVMCreatePassBuilderOptions()
-        pass_error: ptr = wrappers.llvm.LLVMRunPasses(module_handle, core.cstr(passes), machine, options)
-        wrappers.llvm.LLVMDisposePassBuilderOptions(options)
+        options: ptr = raw.llvm.LLVMCreatePassBuilderOptions()
+        pass_error: ptr = raw.llvm.LLVMRunPasses(module_handle, core.cstr(passes), machine, options)
+        raw.llvm.LLVMDisposePassBuilderOptions(options)
         if pass_error != ptr(0):
-            error_message = wrappers.llvm.LLVMGetErrorMessage(pass_error)
+            error_message = raw.llvm.LLVMGetErrorMessage(pass_error)
             error = "" + core.from_cstr(error_message)
-            wrappers.llvm.LLVMDisposeErrorMessage(error_message)
+            raw.llvm.LLVMDisposeErrorMessage(error_message)
             error_message = ptr(0)
 
     # Write the object file and release LLVM resources.
     if error == "":
-        if wrappers.llvm.LLVMTargetMachineEmitToFile(machine, module_handle, core.cstr(output), 1, core.address(error_message)) != 0:
+        if raw.llvm.LLVMTargetMachineEmitToFile(machine, module_handle, core.cstr(output), 1, core.address(error_message)) != 0:
             error = "" + core.from_cstr(error_message)
         if error_message != ptr(0):
-            wrappers.llvm.LLVMDisposeMessage(error_message)
-    wrappers.llvm.LLVMDisposeTargetMachine(machine)
-    wrappers.llvm.LLVMDisposeModule(module_handle)
-    wrappers.llvm.LLVMContextDispose(context)
+            raw.llvm.LLVMDisposeMessage(error_message)
+    raw.llvm.LLVMDisposeTargetMachine(machine)
+    raw.llvm.LLVMDisposeModule(module_handle)
+    raw.llvm.LLVMContextDispose(context)
     return error

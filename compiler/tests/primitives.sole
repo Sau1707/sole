@@ -1,0 +1,35 @@
+import core
+import primitives.registry as registry
+import primitives.intrinsics as intrinsics
+
+
+def require(condition: bool, description: str) -> void:
+    """Reject invalid primitive metadata without importing the backend."""
+    if not condition:
+        core.print("FAIL: " + description)
+        core.exit(1)
+
+
+def main() -> int32:
+    """Verify primitive recognition independently of LLVM lowering."""
+    names: str[] = ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "bool", "ptr", "str", "void"]
+    for i in range(core.len(names)):
+        require(registry.lookup(names[i]).known(), names[i] + " is a primitive")
+    require(not registry.lookup("").known(), "empty name is not a primitive")
+    require(not registry.lookup("Point").known(), "user types are not primitives")
+    require(not registry.lookup("int64[]").known(), "arrays are not primitives")
+    require(registry.lookup("int64").numeric(), "integers are numeric")
+    require(registry.lookup("float32").numeric(), "floats are numeric")
+    require(not registry.lookup("bool").numeric(), "booleans are not numeric")
+    require(not registry.lookup("ptr").numeric(), "pointers are not numeric")
+    require(not registry.lookup("str").numeric(), "strings are not numeric")
+    require(not registry.lookup("void").numeric(), "void is not numeric")
+    names = ["print", "len", "append", "slice", "join", "cstr", "from_cstr", "address", "arg_count", "arg", "read_file", "write_file", "exit"]
+    for i in range(core.len(names)):
+        require(intrinsics.builtin_name(names[i]), names[i] + " is an intrinsic")
+    require(not intrinsics.builtin_name("malloc"), "libc calls are not intrinsics")
+    require(not intrinsics.builtin_name("LLVMContextCreate"), "LLVM APIs are not intrinsics")
+    require(not intrinsics.builtin_name("sole_rt_f64_bits"), "runtime helpers are not intrinsics")
+    require(not intrinsics.builtin_name(""), "empty name is not an intrinsic")
+    core.print("Passed backend-independent primitive checks.")
+    return 0

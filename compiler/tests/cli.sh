@@ -52,7 +52,7 @@ bounded() {
     return "$result"
 }
 
-bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.7' || fail version
+bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.8' || fail version
 SOLE_CC=/no/such/linker bounded "$compile_timeout" "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     bounded "$compile_timeout" "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -87,8 +87,6 @@ for emit in llvm object; do
     grep -q 'run requires binary emission' "$temporary/compile.log" || fail 'run emission diagnostic'
     test ! -e "$temporary/not-run.$emit" || fail 'run emitted an unused artifact'
 done
-
-cc -Wall -Wextra -Werror -fsyntax-only "$root/lib/runtime/system.c"
 
 mkdir -p "$temporary/tools"
 for tool in cc as ld; do ln -s "$(command -v "$tool")" "$temporary/tools/$tool"; done

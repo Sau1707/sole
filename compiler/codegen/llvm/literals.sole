@@ -1,13 +1,13 @@
 import core
-import wrappers.libc
-import wrappers.system
+import raw.c
 import codegen.llvm.ir as ir
+import runtime.system as system
 import codegen.llvm.context as context
+import primitives.registry as registry
 import diagnostics.report as diagnostics
 import semantic.types.query as type_query
 import syntax.lexer.characters as characters
-import codegen.llvm.scalars.registry as registry
-import codegen.llvm.scalars.definition as scalar_definition
+import primitives.definition as scalar_definition
 
 
 def string_constant(state: context.State, text: str) -> context.Value:
@@ -79,10 +79,10 @@ def float_literal(state: context.State, text: str, typ: str) -> context.Value:
     """Encode floating-point literals with exact LLVM bit patterns."""
     start: ptr = core.cstr(text)
     end: ptr = ptr(0)
-    real_value: float64 = wrappers.libc.strtod(start, core.address(end))
-    if end == start || wrappers.libc.strlen(end) != 0:
+    real_value: float64 = raw.c.strtod(start, core.address(end))
+    if end == start || raw.c.strlen(end) != 0:
         diagnostics.fail_at(state, "invalid floating-point literal")
-    bits: uint64 = wrappers.system.sole_rt_f64_bits(real_value)
+    bits: uint64 = system.f64_bits(real_value)
     digits: str = "0123456789ABCDEF"
     hex: str = "0x"
     i: int64 = 60

@@ -24,5 +24,4 @@ def generate(filename: str, source: str, home: str) -> Compilation:
     ir: str = llvm_module.emit(state, home)
     core.append(inputs, home + "/lib/runtime/native.ll")
     core.append(inputs, home + "/lib/runtime/core.ll")
-    core.append(inputs, home + "/lib/runtime/system.c")
     return Compilation(ir, inputs)

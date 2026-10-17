@@ -118,7 +118,7 @@ def call_builtin(state: context.State, name: str) -> context.Value:
     if core.len(values) != expected_count:
         report.fail_at(state, name + " expects " + str(expected_count) + " arguments")
     if name == "arg_count":
-        return context.Value("int64", ir.instruction(state, "call i64 @sole_rt_arg_count()"), "")
+        return context.Value("int64", ir.instruction(state, "call i64 @_sole.arg_count()"), "")
     value: context.Value = values[0]
     if name == "print":
         output.print_ir(state, value)
@@ -157,7 +157,7 @@ def call_builtin(state: context.State, name: str) -> context.Value:
         count_slice: str = ir.instruction(state, "sub i64 " + stop + ", " + start)
         return ir.make_string(state, begin, count_slice)
     if name == "arg":
-        argument: str = ir.instruction(state, "call ptr @sole_rt_arg(i64 " + value.value + ")")
+        argument: str = ir.instruction(state, "call ptr @_sole.arg(i64 " + value.value + ")")
         arg_len: str = ir.instruction(state, "call i64 @_sole.cstrlen(ptr " + argument + ")")
         return ir.make_string(state, argument, arg_len)
     elif name == "exit":
@@ -168,13 +168,13 @@ def call_builtin(state: context.State, name: str) -> context.Value:
     path: str = ir.c_string(state, value)
     if name == "read_file":
         out_size: str = ir.slot(state, "int64")
-        contents: str = ir.instruction(state, "call ptr @sole_rt_read_file(ptr " + path + ", ptr " + out_size + ")")
+        contents: str = ir.instruction(state, "call ptr @_sole.fn.__sole_mruntime__read_file(ptr " + path + ", ptr " + out_size + ")")
         file_size: str = ir.instruction(state, "load i64, ptr " + out_size)
         return ir.make_string(state, contents, file_size)
     if name == "write_file":
         content_data: str = ir.extract(state, values[1], 0)
         content_size: str = ir.extract(state, values[1], 1)
-        ir.emit(state, "call void @sole_rt_write_file(ptr " + path + ", ptr " + content_data + ", i64 " + content_size + ")")
+        ir.emit(state, "call void @_sole.fn.__sole_mruntime__write_file(ptr " + path + ", ptr " + content_data + ", i64 " + content_size + ")")
         return context.Value("void", "", "")
     report.fail_at(state, "unknown builtin " + name)
     return context.Value("void", "", "")

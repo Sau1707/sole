@@ -1,0 +1,400 @@
+extern def LLVMContextCreate() -> ptr
+
+
+extern def LLVMContextDispose(context: ptr) -> void
+
+
+extern def LLVMModuleCreateWithNameInContext(name: ptr, context: ptr) -> ptr
+
+
+extern def LLVMDisposeModule(module: ptr) -> void
+
+
+extern def LLVMPrintModuleToString(module: ptr) -> ptr
+
+
+extern def LLVMPrintTypeToString(typ: ptr) -> ptr
+
+
+extern def LLVMDisposeMessage(message: ptr) -> void
+
+
+extern def LLVMCreateMemoryBufferWithMemoryRangeCopy(data: ptr, size: uint64, name: ptr) -> ptr
+
+
+extern def LLVMParseIRInContext(context: ptr, buffer: ptr, module_out: ptr, error_out: ptr) -> int32
+
+
+extern def LLVMVerifyModule(module: ptr, action: int32, error_out: ptr) -> int32
+
+
+extern def LLVMVoidTypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMIntTypeInContext(context: ptr, bits: uint32) -> ptr
+
+
+extern def LLVMHalfTypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMBFloatTypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMFloatTypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMDoubleTypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMX86FP80TypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMFP128TypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMPPCFP128TypeInContext(context: ptr) -> ptr
+
+
+extern def LLVMPointerTypeInContext(context: ptr, address_space: uint32) -> ptr
+
+
+extern def LLVMArrayType2(element: ptr, count: uint64) -> ptr
+
+
+extern def LLVMVectorType(element: ptr, count: uint32) -> ptr
+
+
+extern def LLVMScalableVectorType(element: ptr, count: uint32) -> ptr
+
+
+extern def LLVMStructTypeInContext(context: ptr, elements: ptr, count: uint32, packed: int32) -> ptr
+
+
+extern def LLVMStructCreateNamed(context: ptr, name: ptr) -> ptr
+
+
+extern def LLVMStructSetBody(typ: ptr, elements: ptr, count: uint32, packed: int32) -> void
+
+
+extern def LLVMFunctionType(result: ptr, parameters: ptr, count: uint32, variadic: int32) -> ptr
+
+
+extern def LLVMGetTypeKind(typ: ptr) -> int32
+
+
+extern def LLVMGetIntTypeWidth(typ: ptr) -> uint32
+
+
+extern def LLVMGetArrayLength2(typ: ptr) -> uint64
+
+
+extern def LLVMTypeOf(value: ptr) -> ptr
+
+
+extern def LLVMConstInt(typ: ptr, value: uint64, sign_extend: int32) -> ptr
+
+
+extern def LLVMConstIntOfArbitraryPrecision(typ: ptr, count: uint32, words: ptr) -> ptr
+
+
+extern def LLVMConstIntGetZExtValue(value: ptr) -> uint64
+
+
+extern def LLVMConstIntGetSExtValue(value: ptr) -> int64
+
+
+extern def LLVMConstReal(typ: ptr, value: float64) -> ptr
+
+
+extern def LLVMConstNull(typ: ptr) -> ptr
+
+
+extern def LLVMGetUndef(typ: ptr) -> ptr
+
+
+extern def LLVMGetPoison(typ: ptr) -> ptr
+
+
+extern def LLVMAddFunction(module: ptr, name: ptr, typ: ptr) -> ptr
+
+
+extern def LLVMGetParam(function: ptr, index: uint32) -> ptr
+
+
+extern def LLVMAppendBasicBlockInContext(context: ptr, function: ptr, name: ptr) -> ptr
+
+
+extern def LLVMCreateBuilderInContext(context: ptr) -> ptr
+
+
+extern def LLVMDisposeBuilder(builder: ptr) -> void
+
+
+extern def LLVMPositionBuilderAtEnd(builder: ptr, block: ptr) -> void
+
+
+extern def LLVMBuildAdd(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildSub(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildMul(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildSDiv(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildUDiv(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildSRem(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildURem(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFAdd(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFSub(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFMul(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFDiv(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFRem(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFNeg(builder: ptr, value: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildAnd(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildOr(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildXor(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildShl(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildAShr(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildLShr(builder: ptr, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildICmp(builder: ptr, predicate: int32, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFCmp(builder: ptr, predicate: int32, left: ptr, right: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildTrunc(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildSExt(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildZExt(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFPTrunc(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFPExt(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildSIToFP(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildUIToFP(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFPToSI(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildFPToUI(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildPtrToInt(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildIntToPtr(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildBitCast(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildAddrSpaceCast(builder: ptr, value: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildAlloca(builder: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildLoad2(builder: ptr, typ: ptr, pointer: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildStore(builder: ptr, value: ptr, pointer: ptr) -> ptr
+
+
+extern def LLVMBuildGEP2(builder: ptr, typ: ptr, pointer: ptr, indices: ptr, count: uint32, name: ptr) -> ptr
+
+
+extern def LLVMBuildMemCpy(builder: ptr, destination: ptr, destination_alignment: uint32, source: ptr, source_alignment: uint32, size: ptr) -> ptr
+
+
+extern def LLVMBuildMemMove(builder: ptr, destination: ptr, destination_alignment: uint32, source: ptr, source_alignment: uint32, size: ptr) -> ptr
+
+
+extern def LLVMBuildMemSet(builder: ptr, destination: ptr, value: ptr, size: ptr, alignment: uint32) -> ptr
+
+
+extern def LLVMSetVolatile(instruction: ptr, volatile: int32) -> void
+
+
+extern def LLVMSetAlignment(value: ptr, alignment: uint32) -> void
+
+
+extern def LLVMSetOrdering(instruction: ptr, ordering: int32) -> void
+
+
+extern def LLVMBuildFence(builder: ptr, ordering: int32, single_thread: int32, name: ptr) -> ptr
+
+
+extern def LLVMBuildAtomicRMW(builder: ptr, operation: int32, pointer: ptr, value: ptr, ordering: int32, single_thread: int32) -> ptr
+
+
+extern def LLVMBuildAtomicCmpXchg(builder: ptr, pointer: ptr, expected: ptr, replacement: ptr, success_ordering: int32, failure_ordering: int32, single_thread: int32) -> ptr
+
+
+extern def LLVMBuildCall2(builder: ptr, typ: ptr, function: ptr, arguments: ptr, count: uint32, name: ptr) -> ptr
+
+
+extern def LLVMBuildRet(builder: ptr, value: ptr) -> ptr
+
+
+extern def LLVMBuildRetVoid(builder: ptr) -> ptr
+
+
+extern def LLVMBuildBr(builder: ptr, destination: ptr) -> ptr
+
+
+extern def LLVMBuildCondBr(builder: ptr, condition: ptr, then_block: ptr, else_block: ptr) -> ptr
+
+
+extern def LLVMBuildSwitch(builder: ptr, value: ptr, default_block: ptr, count: uint32) -> ptr
+
+
+extern def LLVMAddCase(instruction: ptr, value: ptr, destination: ptr) -> void
+
+
+extern def LLVMBuildPhi(builder: ptr, typ: ptr, name: ptr) -> ptr
+
+
+extern def LLVMAddIncoming(phi: ptr, values: ptr, blocks: ptr, count: uint32) -> void
+
+
+extern def LLVMBuildSelect(builder: ptr, condition: ptr, then_value: ptr, else_value: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildUnreachable(builder: ptr) -> ptr
+
+
+extern def LLVMBuildExtractValue(builder: ptr, aggregate: ptr, index: uint32, name: ptr) -> ptr
+
+
+extern def LLVMBuildInsertValue(builder: ptr, aggregate: ptr, value: ptr, index: uint32, name: ptr) -> ptr
+
+
+extern def LLVMBuildExtractElement(builder: ptr, vector: ptr, index: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildInsertElement(builder: ptr, vector: ptr, value: ptr, index: ptr, name: ptr) -> ptr
+
+
+extern def LLVMBuildShuffleVector(builder: ptr, first: ptr, second: ptr, mask: ptr, name: ptr) -> ptr
+
+
+extern def LLVMLookupIntrinsicID(name: ptr, length: uint64) -> uint32
+
+
+extern def LLVMGetIntrinsicDeclaration(module: ptr, identifier: uint32, types: ptr, count: uint64) -> ptr
+
+
+extern def LLVMIntrinsicGetType(context: ptr, identifier: uint32, types: ptr, count: uint64) -> ptr
+
+
+extern def LLVMInitializeX86TargetInfo() -> void
+
+
+extern def LLVMInitializeX86Target() -> void
+
+
+extern def LLVMInitializeX86TargetMC() -> void
+
+
+extern def LLVMInitializeX86AsmPrinter() -> void
+
+
+extern def LLVMGetDefaultTargetTriple() -> ptr
+
+
+extern def LLVMGetTargetFromTriple(triple: ptr, target_out: ptr, error_out: ptr) -> int32
+
+
+extern def LLVMCreateTargetMachine(target: ptr, triple: ptr, cpu: ptr, features: ptr, level: int32, reloc: int32, model: int32) -> ptr
+
+
+extern def LLVMSetTarget(module: ptr, triple: ptr) -> void
+
+
+extern def LLVMCreateTargetDataLayout(machine: ptr) -> ptr
+
+
+extern def LLVMCreateTargetData(layout: ptr) -> ptr
+
+
+extern def LLVMABISizeOfType(layout: ptr, typ: ptr) -> uint64
+
+
+extern def LLVMABIAlignmentOfType(layout: ptr, typ: ptr) -> uint32
+
+
+extern def LLVMOffsetOfElement(layout: ptr, typ: ptr, index: uint32) -> uint64
+
+
+extern def LLVMCopyStringRepOfTargetData(layout: ptr) -> ptr
+
+
+extern def LLVMSetDataLayout(module: ptr, layout: ptr) -> void
+
+
+extern def LLVMDisposeTargetData(layout: ptr) -> void
+
+
+extern def LLVMTargetMachineEmitToFile(machine: ptr, module: ptr, filename: ptr, kind: int32, error_out: ptr) -> int32
+
+
+extern def LLVMDisposeTargetMachine(machine: ptr) -> void
+
+
+extern def LLVMRunPasses(module: ptr, passes: ptr, machine: ptr, options: ptr) -> ptr
+
+
+extern def LLVMCreatePassBuilderOptions() -> ptr
+
+
+extern def LLVMDisposePassBuilderOptions(options: ptr) -> void
+
+
+extern def LLVMGetErrorMessage(error: ptr) -> ptr
+
+
+extern def LLVMDisposeErrorMessage(message: ptr) -> void

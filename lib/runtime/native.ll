@@ -1,12 +1,42 @@
 declare ptr @malloc(i64)
 declare i32 @putchar(i32)
 declare i32 @printf(ptr, ...)
-declare void @sole_rt_init(i32, ptr)
-declare i64 @sole_rt_arg_count()
-declare ptr @sole_rt_arg(i64)
-declare ptr @sole_rt_read_file(ptr, ptr)
-declare void @sole_rt_write_file(ptr, ptr, i64)
+declare i64 @write(i32, ptr, i64)
 declare void @exit(i32)
+
+@_sole.argc = internal global i64 0
+@_sole.argv = internal global ptr null
+@_sole.arg_error = private constant [36 x i8] c"sole: argument index out of bounds\0A\00"
+
+define void @_sole.init(i32 %argc, ptr %argv) {
+entry:
+  %count = sext i32 %argc to i64
+  store i64 %count, ptr @_sole.argc
+  store ptr %argv, ptr @_sole.argv
+  ret void
+}
+
+define i64 @_sole.arg_count() {
+entry:
+  %count = load i64, ptr @_sole.argc
+  ret i64 %count
+}
+
+define ptr @_sole.arg(i64 %index) {
+entry:
+  %count = load i64, ptr @_sole.argc
+  %valid = icmp ult i64 %index, %count
+  br i1 %valid, label %ok, label %bad
+bad:
+  %ignored = call i64 @write(i32 2, ptr @_sole.arg_error, i64 35)
+  call void @exit(i32 1)
+  unreachable
+ok:
+  %arguments = load ptr, ptr @_sole.argv
+  %slot = getelementptr ptr, ptr %arguments, i64 %index
+  %argument = load ptr, ptr %slot
+  ret ptr %argument
+}
 
 @_sole.signed = private constant [6 x i8] c"%lld\0A\00"
 @_sole.unsigned = private constant [6 x i8] c"%llu\0A\00"

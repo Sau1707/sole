@@ -6,14 +6,16 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-process-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-${CC:-cc} -std=gnu11 -Wall -Wextra -Werror \
-    "$root/compiler/tests/process.c" "$root/lib/runtime/system.c" \
-    -o "$temporary/process"
-"$temporary/process" "$temporary/no-shebang"
-echo 'Passed process runtime checks.'
-
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
 export SOLE_HOME="$root" SOLE_LIB="$root/lib"
+for optimize in -O0 -O2; do
+    "$compiler" build "$root/compiler/tests/runtime-bridge.sole" "$optimize" --emit object -o "$temporary/runtime.o"
+    ${CC:-cc} -std=gnu11 -Wall -Wextra -Werror \
+        "$root/compiler/tests/process.c" "$temporary/runtime.o" -lm -ldl \
+        -o "$temporary/process"
+    "$temporary/process" "$temporary/no-shebang"
+done
+echo 'Passed process runtime checks.'
 SOLE_REAL_CC=$(command -v "${CC:-cc}")
 export SOLE_REAL_CC
 cat > "$temporary/linker's tool" <<'EOF'

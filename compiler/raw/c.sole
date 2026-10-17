@@ -1,0 +1,121 @@
+extern def malloc(size: uint64) -> ptr
+
+
+extern def realloc(data: ptr, size: uint64) -> ptr
+
+
+extern def free(data: ptr) -> void
+
+
+extern def memcpy(destination: ptr, source: ptr, size: uint64) -> ptr
+
+
+extern def memmove(destination: ptr, source: ptr, size: uint64) -> ptr
+
+
+extern def memset(destination: ptr, value: int32, size: uint64) -> ptr
+
+
+extern def memcmp(first: ptr, second: ptr, size: uint64) -> int32
+
+
+extern def strlen(text: ptr) -> uint64
+
+
+extern def abs(value: int32) -> int32
+
+
+extern def remove(path: ptr) -> int32
+
+
+extern def rename(source: ptr, destination: ptr) -> int32
+
+
+extern def getenv(name: ptr) -> ptr
+
+
+extern def strtod(text: ptr, end: ptr) -> float64
+
+
+extern def system(command: ptr) -> int32
+
+
+extern def unlink(path: ptr) -> int32
+
+
+extern def rmdir(path: ptr) -> int32
+
+
+extern def strerror(error: int32) -> ptr
+
+
+extern def putchar(value: int32) -> int32
+
+
+extern def exit(status: int32) -> void
+
+
+extern def sqrt(value: float64) -> float64
+
+
+extern def sin(value: float64) -> float64
+
+
+extern def cos(value: float64) -> float64
+
+
+extern def pow(base: float64, exponent: float64) -> float64
+
+
+extern def strdup(text: ptr) -> ptr
+
+
+extern def __errno_location() -> ptr
+
+
+extern def dlsym(handle: ptr, name: ptr) -> ptr
+
+
+extern def stat(path: ptr, info: ptr) -> int32
+
+
+extern def lstat(path: ptr, info: ptr) -> int32
+
+
+extern def fstat(descriptor: int32, info: ptr) -> int32
+
+
+extern def access(path: ptr, mode: int32) -> int32
+
+
+extern def realpath(path: ptr, resolved: ptr) -> ptr
+
+
+extern def readlink(path: ptr, buffer: ptr, capacity: uint64) -> int64
+
+
+extern def mkdtemp(path: ptr) -> ptr
+
+
+extern def mkstemp(path: ptr) -> int32
+
+
+extern def write(descriptor: int32, data: ptr, size: uint64) -> int64
+
+
+extern def close(descriptor: int32) -> int32
+
+
+extern def fchown(descriptor: int32, uid: uint32, gid: uint32) -> int32
+
+
+extern def fchmod(descriptor: int32, mode: uint32) -> int32
+
+
+extern def fsync(descriptor: int32) -> int32
+
+
+extern def posix_spawnp(child: ptr, executable: ptr, actions: ptr, attributes: ptr, arguments: ptr, environment: ptr) -> int32
+
+
+extern def waitpid(child: int32, status: ptr, options: int32) -> int32

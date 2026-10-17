@@ -1,18 +1,18 @@
-import codegen.llvm.scalars.str as scalar_str
-import codegen.llvm.scalars.ptr as scalar_ptr
-import codegen.llvm.scalars.int8 as scalar_int8
-import codegen.llvm.scalars.bool as scalar_bool
-import codegen.llvm.scalars.void as scalar_void
-import codegen.llvm.scalars.int16 as scalar_int16
-import codegen.llvm.scalars.int32 as scalar_int32
-import codegen.llvm.scalars.int64 as scalar_int64
-import codegen.llvm.scalars.uint8 as scalar_uint8
-import codegen.llvm.scalars.uint16 as scalar_uint16
-import codegen.llvm.scalars.uint32 as scalar_uint32
-import codegen.llvm.scalars.uint64 as scalar_uint64
-import codegen.llvm.scalars.float32 as scalar_float32
-import codegen.llvm.scalars.float64 as scalar_float64
-import codegen.llvm.scalars.definition as scalar_definition
+import primitives.str as scalar_str
+import primitives.ptr as scalar_ptr
+import primitives.int8 as scalar_int8
+import primitives.bool as scalar_bool
+import primitives.void as scalar_void
+import primitives.int16 as scalar_int16
+import primitives.int32 as scalar_int32
+import primitives.int64 as scalar_int64
+import primitives.uint8 as scalar_uint8
+import primitives.uint16 as scalar_uint16
+import primitives.uint32 as scalar_uint32
+import primitives.uint64 as scalar_uint64
+import primitives.float32 as scalar_float32
+import primitives.float64 as scalar_float64
+import primitives.definition as scalar_definition
 
 
 def lookup(name: str) -> scalar_definition.Type:
@@ -45,4 +45,4 @@ def lookup(name: str) -> scalar_definition.Type:
         return scalar_ptr.ptr().definition()
     if name == "void":
         return scalar_void.void().definition()
-    return scalar_definition.Type(name, "", 0, "", false)
+    return scalar_definition.Type(name, 0, "", false)

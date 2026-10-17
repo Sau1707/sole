@@ -1,6 +1,6 @@
 import core
 import wrappers.libc
-import wrappers.system
+import runtime.system as system
 
 
 struct Result:
@@ -33,7 +33,7 @@ def run(executable: str, arguments: str[]) -> Result:
         core.append(argv, core.cstr(arguments[i]))
     core.append(argv, ptr(0))
     status: int32 = 0
-    error: int32 = wrappers.system.sole_rt_process_run(argv[0], core.address(argv[0]), core.address(status))
+    error: int32 = system.process_run(argv[0], core.address(argv[0]), core.address(status))
     if error != 0:
         return Result(-1, 0, core.from_cstr(wrappers.libc.strerror(error)))
     if (status & 127) != 0:

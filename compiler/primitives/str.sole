@@ -1,0 +1,7 @@
+import primitives.definition as scalar_definition
+
+
+class str:
+    def definition(self) -> scalar_definition.Type:
+        """TODO: Document this function."""
+        return scalar_definition.Type("str", 0, "str", false)

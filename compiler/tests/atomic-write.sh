@@ -6,15 +6,19 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-atomic-write-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-${CC:-cc} -std=gnu11 -Wall -Wextra -Werror \
-    "$root/compiler/tests/atomic-write.c" "$root/lib/runtime/system.c" \
-    -Wl,--wrap=write -Wl,--wrap=close -Wl,--wrap=rename -Wl,--wrap=fchmod -Wl,--wrap=fsync \
-    -o "$temporary/atomic-write"
-mkdir "$temporary/runtime"
-"$temporary/atomic-write" "$temporary/runtime" 2> "$temporary/runtime.log"
-grep -q 'dangling output symlink' "$temporary/runtime.log"
-
 compiler=$(command -v "${SOLE_COMPILER:-sole}")
+export SOLE_HOME="$root" SOLE_LIB="$root/lib"
+for optimize in -O0 -O2; do
+    "$compiler" build "$root/compiler/tests/runtime-bridge.sole" "$optimize" --emit object -o "$temporary/runtime.o"
+    ${CC:-cc} -std=gnu11 -Wall -Wextra -Werror \
+        "$root/compiler/tests/atomic-write.c" "$temporary/runtime.o" -lm -ldl \
+        -Wl,--wrap=write -Wl,--wrap=close -Wl,--wrap=rename -Wl,--wrap=fchmod -Wl,--wrap=fsync \
+        -o "$temporary/atomic-write"
+    mkdir "$temporary/runtime$optimize"
+    "$temporary/atomic-write" "$temporary/runtime$optimize" 2> "$temporary/runtime.log"
+    grep -q 'dangling output symlink' "$temporary/runtime.log"
+done
+
 printf 'import core\ndef main() -> void:\n    pass\n' > "$temporary/target"
 printf 'import core\n\n\ndef main() -> void:\n    """TODO: Document this function."""\n    pass\n' > "$temporary/expected"
 chmod 640 "$temporary/target"

@@ -1,12 +1,13 @@
 import codegen.llvm.ir as ir
+import primitives.registry as registry
+import codegen.llvm.scalars as scalars
 import codegen.llvm.literals as literals
 import diagnostics.report as diagnostics
 import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
 import codegen.llvm.context as llvm_context
 import syntax.parser.operators as operators
-import codegen.llvm.scalars.registry as registry
-import codegen.llvm.scalars.definition as scalar_definition
+import primitives.definition as scalar_definition
 
 
 def binary_ir(state: llvm_context.State, operator: str, left: llvm_context.Value, right: llvm_context.Value, expected: str) -> llvm_context.Value:
@@ -50,7 +51,7 @@ def binary_ir(state: llvm_context.State, operator: str, left: llvm_context.Value
     comparison: bool = operators.precedence(operator) == 3
     operation: str = ""
     if comparison:
-        operation = definition.comparison(operator)
+        operation = scalars.comparison(definition, operator)
         if operation == "":
             if operator != "==" && operator != "!=":
                 diagnostics.fail_at(state, "only numbers support ordering")
@@ -67,7 +68,7 @@ def binary_ir(state: llvm_context.State, operator: str, left: llvm_context.Value
     # Choose the arithmetic or bitwise instruction for the numeric operands.
     if not definition.numeric():
         diagnostics.fail_at(state, "arithmetic requires numeric operands")
-    operation = definition.arithmetic(operator)
+    operation = scalars.arithmetic(definition, operator)
     if operation == "":
         diagnostics.fail_at(state, "bitwise operators require integers")
     if definition.integer():

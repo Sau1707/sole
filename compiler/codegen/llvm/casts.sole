@@ -1,11 +1,12 @@
 import codegen.llvm.ir as ir
 import codegen.llvm.context as context
+import primitives.registry as registry
+import codegen.llvm.scalars as scalars
 import codegen.llvm.types as llvm_types
 import codegen.llvm.literals as literals
 import diagnostics.report as diagnostics
 import semantic.types.query as type_query
-import codegen.llvm.scalars.registry as registry
-import codegen.llvm.scalars.definition as scalar_definition
+import primitives.definition as scalar_definition
 
 
 def cast_value(state: context.State, value: context.Value, destination: str) -> context.Value:
@@ -24,7 +25,7 @@ def cast_value(state: context.State, value: context.Value, destination: str) -> 
     dest_ir: str = llvm_types.llvm_type(state, destination)
     source_definition: scalar_definition.Type = registry.lookup(source_type)
     dest_definition: scalar_definition.Type = registry.lookup(destination)
-    operation: str = source_definition.conversion(dest_definition)
+    operation: str = scalars.conversion(source_definition, dest_definition)
     if operation == "identity":
         return context.Value(destination, value.value, "")
     if operation == "fcmp une" || operation == "icmp ne":

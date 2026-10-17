@@ -1,0 +1,46 @@
+class Type:
+    name: str
+    bits: int64
+    category: str
+    unsigned: bool
+
+    def known(self) -> bool:
+        """Distinguish primitive descriptors from unknown type names."""
+        return self.category != ""
+
+    def integer(self) -> bool:
+        """Recognize signed and unsigned integer representations."""
+        return self.category == "integer"
+
+    def floating(self) -> bool:
+        """Recognize floating-point representations."""
+        return self.category == "float"
+
+    def numeric(self) -> bool:
+        """Recognize representations supporting numeric operations."""
+        return self.integer() || self.floating()
+
+    def maximum(self, negative: bool) -> uint64:
+        """Return the largest integer literal magnitude for the given sign."""
+        if not self.unsigned:
+            limit: uint64 = uint64(1) << uint64(self.bits - 1)
+            if not negative:
+                limit = limit - 1
+            return limit
+        if self.bits < 64:
+            return (uint64(1) << uint64(self.bits)) - 1
+        return uint64(18446744073709551615)
+
+    def lower_bound(self) -> str:
+        """Return the inclusive integer lower bound as decimal text."""
+        if self.unsigned:
+            return "0"
+        return "-" + str(uint64(1) << uint64(self.bits - 1))
+
+    def upper_bound(self) -> str:
+        """Return the exclusive integer upper bound as decimal text."""
+        if not self.unsigned:
+            return str(uint64(1) << uint64(self.bits - 1))
+        if self.bits == 64:
+            return "18446744073709551616"
+        return str(uint64(1) << uint64(self.bits))

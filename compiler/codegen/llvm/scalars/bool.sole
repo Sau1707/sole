@@ -1,7 +1,0 @@
-import codegen.llvm.scalars.definition as scalar_definition
-
-
-class bool:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("bool", "i1", 1, "bool", true)

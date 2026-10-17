@@ -1,0 +1,45 @@
+import core
+import runtime.linux as linux
+import runtime.system as system
+
+
+def atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr:
+    """Expose the Sole atomic-write implementation to the fault-injection harness."""
+    message: str = system.atomic_write_file(path, data, length)
+    if message == "":
+        return ptr(0)
+    return core.cstr(message)
+
+
+def output_path(path: ptr) -> ptr:
+    """Expose output resolution to the native integration harness."""
+    return core.cstr(system.output_path(core.from_cstr(path)))
+
+
+def output_dir(path: ptr) -> ptr:
+    """Expose output staging to the native integration harness."""
+    return core.cstr(system.output_dir(core.from_cstr(path)))
+
+
+def process_run(executable: ptr, arguments: ptr, status: ptr) -> int32:
+    """Expose the Sole spawn/wait loop to signal-interruption tests."""
+    return system.process_run(executable, arguments, status)
+
+
+def stat_layout(index: int32) -> uint64:
+    """Report Sole's native stat size and used field offsets for C ABI validation."""
+    info: linux.Stat = linux.stat_buffer()
+    base: uint64 = uint64(core.address(info))
+    if index == 0:
+        return uint64(core.address(info.reserved[2])) + 8 - base
+    if index == 1:
+        return uint64(core.address(info.mode)) - base
+    if index == 2:
+        return uint64(core.address(info.uid)) - base
+    if index == 3:
+        return uint64(core.address(info.gid)) - base
+    if index == 4:
+        return uint64(core.address(info.links)) - base
+    if index == 5:
+        return uint64(core.address(info.device)) - base
+    return uint64(core.address(info.inode)) - base

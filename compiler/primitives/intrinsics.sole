@@ -1,0 +1,3 @@
+def builtin_name(name: str) -> bool:
+    """Recognize operations whose typing and lowering require compiler support."""
+    return name == "print" || name == "len" || name == "append" || name == "join" || name == "slice" || name == "cstr" || name == "from_cstr" || name == "address" || name == "arg_count" || name == "arg" || name == "read_file" || name == "write_file" || name == "exit"

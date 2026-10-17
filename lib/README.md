@@ -47,3 +47,21 @@ The returned `process.Result` contains:
 No shell expansion, pipelines, redirections, or implicit script interpretation
 occur. Executable scripts must have a shebang. The compiler's `SOLE_CC` setting
 continues to name a single executable, not a command plus flags.
+
+## Runtime implementation
+
+The helpers in `runtime/system.sole` are implemented in Sole using libc/POSIX
+bindings. They include resource discovery, temporary outputs, filesystem identity,
+atomic replacement, process waiting, and float-bit inspection. `runtime/io.sole`
+implements binary file I/O for the compiler's file intrinsics. The platform ABI
+is isolated in `runtime/linux.sole` and currently targets glibc on Linux x86-64;
+native integration tests compare its `stat` size and field offsets with C.
+
+`wrappers.system` retains its existing `sole_rt_*` import names as Sole functions
+for compatibility, but these are no longer C exports. `compiler/raw/c.sole`
+contains only actual C/libm/POSIX/dynamic-loader bindings. Application linking
+uses libc, libm, and libdl, with no Sole-specific C source.
+
+Startup argument state remains in `runtime/native.ll` because mutable global
+storage and native entry-point setup are compiler responsibilities. No new Sole
+syntax or runtime semantics were introduced for this migration.

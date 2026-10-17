@@ -9,7 +9,7 @@ trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 export SOLE_HOME="$root" SOLE_LIB="$root/lib"
 
 cp "$root/compiler/tests/stdlib-reuse.sole" "$temporary/main.sole"
-for module in driver syntax semantic codegen modules diagnostics; do
+for module in driver syntax semantic codegen modules diagnostics primitives raw; do
     ln -s "$root/compiler/$module" "$temporary/$module"
 done
 for optimize in -O0 -O2; do

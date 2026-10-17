@@ -1,0 +1,92 @@
+intrinsic cstr
+intrinsic address
+intrinsic exit
+
+
+extern def malloc(size: uint64) -> ptr
+
+
+extern def memset(data: ptr, value: int32, size: uint64) -> ptr
+
+
+extern def memcpy(destination: ptr, source: ptr, size: uint64) -> ptr
+
+
+extern def fopen(path: ptr, mode: ptr) -> ptr
+
+
+extern def fseek(file: ptr, offset: int64, origin: int32) -> int32
+
+
+extern def ftell(file: ptr) -> int64
+
+
+extern def fread(data: ptr, size: uint64, count: uint64, file: ptr) -> uint64
+
+
+extern def fwrite(data: ptr, size: uint64, count: uint64, file: ptr) -> uint64
+
+
+extern def fclose(file: ptr) -> int32
+
+
+extern def strlen(text: ptr) -> uint64
+
+
+extern def write(descriptor: int32, data: ptr, size: uint64) -> int64
+
+
+extern def strerror(error: int32) -> ptr
+
+
+extern def __errno_location() -> ptr
+
+
+def fail(message: ptr) -> void:
+    """Report a file-runtime failure without depending on library import overrides."""
+    write(2, cstr("sole: "), 6)
+    write(2, message, strlen(message))
+    write(2, cstr("\n"), 1)
+    exit(1)
+
+
+def fail_errno() -> void:
+    """Preserve libc's current error before formatting the failure."""
+    error: int32 = 0
+    memcpy(address(error), __errno_location(), 4)
+    fail(strerror(error))
+
+
+def read_file(path: ptr, length_out: ptr) -> ptr:
+    """Read a seekable binary file and return owned, NUL-terminated storage."""
+    file: ptr = fopen(path, cstr("rb"))
+    if file == ptr(0):
+        fail_errno()
+    if fseek(file, 0, 2) != 0:
+        fail(cstr("cannot seek input file"))
+    size: int64 = ftell(file)
+    if size < 0 || fseek(file, 0, 0) != 0:
+        fail(cstr("cannot measure input file"))
+    data: ptr = malloc(uint64(size) + 1)
+    if data == ptr(0):
+        fail(cstr("out of memory"))
+    if fread(data, 1, uint64(size), file) != uint64(size):
+        fail(cstr("cannot read input file"))
+    if fclose(file) != 0:
+        fail(cstr("cannot close input file"))
+    memset(ptr(uint64(data) + uint64(size)), 0, 1)
+    memcpy(length_out, address(size), 8)
+    return data
+
+
+def write_file(path: ptr, data: ptr, length: int64) -> void:
+    """Write binary bytes while preserving embedded NULs and close failures."""
+    if length < 0:
+        fail(cstr("invalid file length"))
+    file: ptr = fopen(path, cstr("wb"))
+    if file == ptr(0):
+        fail_errno()
+    if fwrite(data, 1, uint64(length), file) != uint64(length):
+        fail(cstr("cannot write output file"))
+    if fclose(file) != 0:
+        fail(cstr("cannot close output file"))

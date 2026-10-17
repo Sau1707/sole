@@ -1,7 +1,0 @@
-import codegen.llvm.scalars.definition as scalar_definition
-
-
-class str:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("str", "{ptr, i64}", 0, "str", false)

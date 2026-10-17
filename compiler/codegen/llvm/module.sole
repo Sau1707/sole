@@ -19,7 +19,7 @@ def emit(state: context.State, home: str) -> str:
         main_fn: model.FunctionInfo = state.functions[main_index]
         if core.len(main_fn.types) != 0 || main_fn.result != "int32" && main_fn.result != "void" || main_fn.external:
             diagnostics.die("main must take no parameters and return int32 or void")
-        wrapper: str = "define i32 @main(i32 %argc, ptr %argv) {\nentry:\n  call void @sole_rt_init(i32 %argc, ptr %argv)\n"
+        wrapper: str = "define i32 @main(i32 %argc, ptr %argv) {\nentry:\n  call void @_sole.init(i32 %argc, ptr %argv)\n"
         if main_fn.result == "void":
             wrapper = wrapper + "  call void @_sole.fn.main()\n  ret i32 0\n}\n"
         else:

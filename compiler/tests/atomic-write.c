@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,19 +10,25 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern const char *sole_rt_atomic_write_file(const char *, const char *, int64_t);
-extern char *sole_rt_output_path(const char *);
-extern char *sole_rt_output_dir(const char *);
+extern const char *sole_rt_atomic_write_file(const char *, const char *, int64_t)
+    __asm__("_sole.fn.atomic_write_file");
+extern char *sole_rt_output_path(const char *) __asm__("_sole.fn.output_path");
+extern char *sole_rt_output_dir(const char *) __asm__("_sole.fn.output_dir");
+extern uint64_t sole_stat_layout(int) __asm__("_sole.fn.stat_layout");
 extern ssize_t __real_write(int, const void *, size_t);
 extern int __real_close(int);
 extern int __real_rename(const char *, const char *);
 extern int __real_fchmod(int, mode_t);
 extern int __real_fsync(int);
 
-static enum { NONE, SHORT_ERROR, ZERO_WRITE, CLOSE_ERROR, RENAME_ERROR, SYNC_ERROR, MODE_ERROR } fault;
+static enum { NONE, SHORT_ERROR, ZERO_WRITE, CLOSE_ERROR, RENAME_ERROR, SYNC_ERROR, MODE_ERROR, INTERRUPTED_WRITE } fault;
 static int writes;
 
 ssize_t __wrap_write(int fd, const void *data, size_t length) {
+    if (fault == INTERRUPTED_WRITE && writes++ == 0) {
+        errno = EINTR;
+        return -1;
+    }
     if (fault == SHORT_ERROR) {
         if (writes++ == 0) return __real_write(fd, data, length / 2);
         errno = ENOSPC;
@@ -123,7 +130,22 @@ static void permission_failure(void) {
 }
 
 int main(int argc, char **argv) {
+    assert(sole_stat_layout(0) == sizeof(struct stat));
+    assert(sole_stat_layout(1) == offsetof(struct stat, st_mode));
+    assert(sole_stat_layout(2) == offsetof(struct stat, st_uid));
+    assert(sole_stat_layout(3) == offsetof(struct stat, st_gid));
+    assert(sole_stat_layout(4) == offsetof(struct stat, st_nlink));
+    assert(sole_stat_layout(5) == offsetof(struct stat, st_dev));
+    assert(sole_stat_layout(6) == offsetof(struct stat, st_ino));
     assert(argc == 2 && chdir(argv[1]) == 0);
+    put("interrupted", "original");
+    fault = INTERRUPTED_WRITE;
+    writes = 0;
+    assert(sole_rt_atomic_write_file("interrupted", "replacement", 11) == NULL);
+    fault = NONE;
+    assert(writes == 2);
+    contents("interrupted", "replacement");
+    assert(unlink("interrupted") == 0);
     put("input", "original");
     assert(chmod("input", 0640) == 0);
     struct stat before, after;

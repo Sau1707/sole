@@ -1,12 +1,12 @@
 import core
 import diagnostics.report as report
+import primitives.registry as registry
 import syntax.lexer.characters as characters
-import codegen.llvm.scalars.registry as registry
 
 
 def builtin_type(typ: str) -> bool:
     """TODO: Document this function."""
-    return registry.lookup(typ).llvm != ""
+    return registry.lookup(typ).known()
 
 
 def array_type(typ: str) -> bool:

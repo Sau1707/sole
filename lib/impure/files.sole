@@ -1,6 +1,6 @@
 import core
 import wrappers.libc
-import wrappers.system
+import runtime.system as system
 
 
 def read(path: str) -> str:
@@ -15,17 +15,17 @@ def write(path: str, contents: str) -> void:
 
 def is_file(path: str) -> bool:
     """Return whether path resolves to a regular file, following symlinks."""
-    return wrappers.system.sole_rt_is_file(core.cstr(path)) != 0
+    return system.is_file(core.cstr(path))
 
 
 def realpath(path: str) -> str:
     """Return the canonical absolute path, exiting with an error if resolution fails."""
-    return core.from_cstr(wrappers.system.sole_rt_realpath(core.cstr(path)))
+    return core.from_cstr(system.realpath(core.cstr(path)))
 
 
 def same_file(first: str, second: str) -> bool:
     """Return whether both paths identify the same file, or false if either cannot be resolved."""
-    return wrappers.system.sole_rt_same_file(core.cstr(first), core.cstr(second)) != 0
+    return system.same_file(core.cstr(first), core.cstr(second))
 
 
 def atomic_write(path: str, contents: str) -> str:
@@ -34,10 +34,7 @@ def atomic_write(path: str, contents: str) -> str:
     Follow symlinks and preserve the destination path rather than replacing the link.
     Refuse files with multiple hard links. Missing files are not created.
     """
-    error: ptr = wrappers.system.sole_rt_atomic_write_file(core.cstr(path), core.cstr(contents), core.len(contents))
-    if error == ptr(0):
-        return ""
-    return core.from_cstr(error)
+    return system.atomic_write_file(core.cstr(path), core.cstr(contents), core.len(contents))
 
 
 def remove(path: str) -> bool:

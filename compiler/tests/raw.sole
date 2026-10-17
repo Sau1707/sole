@@ -1,0 +1,316 @@
+import core
+import raw.c as c
+import raw.llvm as llvm
+import runtime.system as system
+import codegen.llvm.target as target
+
+
+def require(condition: bool, description: str) -> void:
+    """Stop a raw-binding test with an actionable failure."""
+    if not condition:
+        core.print("FAIL: " + description)
+        core.exit(1)
+
+
+def type_text(typ: ptr) -> str:
+    """Copy an LLVM type description before releasing the owned message."""
+    message: ptr = llvm.LLVMPrintTypeToString(typ)
+    text: str = "" + core.from_cstr(message)
+    llvm.LLVMDisposeMessage(message)
+    return text
+
+
+def check_types(context: ptr) -> void:
+    """Exercise LLVM representations without Sole scalar descriptors."""
+    i8: ptr = llvm.LLVMIntTypeInContext(context, 8)
+    i64: ptr = llvm.LLVMIntTypeInContext(context, 64)
+    i128: ptr = llvm.LLVMIntTypeInContext(context, 128)
+    require(llvm.LLVMGetIntTypeWidth(i128) == 128, "arbitrary integer widths")
+    require(type_text(llvm.LLVMIntTypeInContext(context, 1)) == "i1", "raw i1")
+    require(type_text(llvm.LLVMVoidTypeInContext(context)) == "void", "raw void")
+    require(type_text(llvm.LLVMHalfTypeInContext(context)) == "half", "raw half")
+    require(type_text(llvm.LLVMBFloatTypeInContext(context)) == "bfloat", "raw bfloat")
+    require(type_text(llvm.LLVMFloatTypeInContext(context)) == "float", "raw float")
+    require(type_text(llvm.LLVMDoubleTypeInContext(context)) == "double", "raw double")
+    require(type_text(llvm.LLVMX86FP80TypeInContext(context)) == "x86_fp80", "raw x86_fp80")
+    require(type_text(llvm.LLVMFP128TypeInContext(context)) == "fp128", "raw fp128")
+    require(type_text(llvm.LLVMPPCFP128TypeInContext(context)) == "ppc_fp128", "raw ppc_fp128")
+    require(type_text(llvm.LLVMPointerTypeInContext(context, 3)) == "ptr addrspace(3)", "pointer address space")
+    require(type_text(llvm.LLVMVectorType(i64, 4)) == "<4 x i64>", "fixed vector")
+    require(type_text(llvm.LLVMScalableVectorType(i64, 4)) == "<vscale x 4 x i64>", "scalable vector")
+    require(llvm.LLVMGetArrayLength2(llvm.LLVMArrayType2(i8, 4294967297)) == 4294967297, "64-bit array length")
+    fields: ptr[2] = [i8, i64]
+    record: ptr = llvm.LLVMStructTypeInContext(context, core.address(fields[0]), 2, 0)
+    layout: ptr = llvm.LLVMCreateTargetData(core.cstr("e-p:64:64-i64:64"))
+    require(llvm.LLVMABISizeOfType(layout, record) == 16, "struct ABI size")
+    require(llvm.LLVMABIAlignmentOfType(layout, record) == 8, "struct ABI alignment")
+    require(llvm.LLVMOffsetOfElement(layout, record, 1) == 8, "struct field offset")
+    llvm.LLVMDisposeTargetData(layout)
+    record = llvm.LLVMStructCreateNamed(context, core.cstr("RawPair"))
+    llvm.LLVMStructSetBody(record, core.address(fields[0]), 2, 1)
+    require(type_text(record) == "%RawPair = type <{ i8, i64 }>", "named packed struct")
+    words: uint64[2] = [42, 1]
+    wide: ptr = llvm.LLVMConstIntOfArbitraryPrecision(i128, 2, core.address(words[0]))
+    require(llvm.LLVMTypeOf(wide) == i128, "wide integer constant")
+    require(llvm.LLVMConstIntGetZExtValue(llvm.LLVMConstInt(i64, 18446744073709551615, 0)) == uint64(18446744073709551615), "unsigned constant bits")
+    require(llvm.LLVMConstIntGetSExtValue(llvm.LLVMConstInt(i8, 255, 0)) == -1, "signed constant interpretation")
+
+
+def integer_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> void:
+    """Build native integer operations with LLVM's signedness-specific API."""
+    parameters: ptr[2] = [typ, typ]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_" + name), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("result")
+    result: ptr = ptr(0)
+    if name == "add":
+        result = llvm.LLVMBuildAdd(builder, left, right, label)
+    elif name == "sub":
+        result = llvm.LLVMBuildSub(builder, left, right, label)
+    elif name == "mul":
+        result = llvm.LLVMBuildMul(builder, left, right, label)
+    elif name == "sdiv":
+        result = llvm.LLVMBuildSDiv(builder, left, right, label)
+    elif name == "udiv":
+        result = llvm.LLVMBuildUDiv(builder, left, right, label)
+    elif name == "srem":
+        result = llvm.LLVMBuildSRem(builder, left, right, label)
+    elif name == "urem":
+        result = llvm.LLVMBuildURem(builder, left, right, label)
+    elif name == "and":
+        result = llvm.LLVMBuildAnd(builder, left, right, label)
+    elif name == "or":
+        result = llvm.LLVMBuildOr(builder, left, right, label)
+    elif name == "xor":
+        result = llvm.LLVMBuildXor(builder, left, right, label)
+    elif name == "shl":
+        result = llvm.LLVMBuildShl(builder, left, right, label)
+    elif name == "ashr":
+        result = llvm.LLVMBuildAShr(builder, left, right, label)
+    elif name == "lshr":
+        result = llvm.LLVMBuildLShr(builder, left, right, label)
+    require(result != ptr(0), "integer operation: " + name)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def floating_function(context: ptr, module: ptr, builder: ptr, typ: ptr, name: str) -> void:
+    """Build raw floating-point operations without fast-math assumptions."""
+    parameters: ptr[2] = [typ, typ]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_" + name), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("result")
+    result: ptr = ptr(0)
+    if name == "fadd":
+        result = llvm.LLVMBuildFAdd(builder, left, right, label)
+    elif name == "fsub":
+        result = llvm.LLVMBuildFSub(builder, left, right, label)
+    elif name == "fmul":
+        result = llvm.LLVMBuildFMul(builder, left, right, label)
+    elif name == "fdiv":
+        result = llvm.LLVMBuildFDiv(builder, left, right, label)
+    elif name == "frem":
+        result = llvm.LLVMBuildFRem(builder, left, right, label)
+    elif name == "fneg":
+        result = llvm.LLVMBuildFNeg(builder, left, label)
+    require(result != ptr(0), "floating-point operation: " + name)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def memory_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build memory accesses, pointer arithmetic, and atomic operations."""
+    parameters: ptr[2] = [typ, typ]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_memory"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("")
+    slot: ptr = llvm.LLVMBuildAlloca(builder, typ, label)
+    llvm.LLVMSetAlignment(slot, 8)
+    llvm.LLVMBuildStore(builder, left, slot)
+    index: ptr = llvm.LLVMConstInt(typ, 0, 0)
+    slot = llvm.LLVMBuildGEP2(builder, typ, slot, core.address(index), 1, label)
+    loaded: ptr = llvm.LLVMBuildLoad2(builder, typ, slot, label)
+    llvm.LLVMSetVolatile(loaded, 1)
+    llvm.LLVMSetOrdering(loaded, 7)
+    llvm.LLVMSetAlignment(loaded, 8)
+    sum: ptr = llvm.LLVMBuildAdd(builder, loaded, right, label)
+    llvm.LLVMBuildAtomicRMW(builder, 1, slot, right, 7, 0)
+    next: ptr = llvm.LLVMBuildAdd(builder, sum, llvm.LLVMConstInt(typ, 1, 0), label)
+    exchanged: ptr = llvm.LLVMBuildAtomicCmpXchg(builder, slot, sum, next, 7, 7, 0)
+    success: ptr = llvm.LLVMBuildExtractValue(builder, exchanged, 1, label)
+    result: ptr = llvm.LLVMBuildSelect(builder, success, next, llvm.LLVMConstInt(typ, 0, 0), label)
+    llvm.LLVMBuildFence(builder, 7, 0, label)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def branch_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build signed comparisons and a phi joining two control-flow paths."""
+    parameters: ptr[2] = [typ, typ]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_branch"), signature)
+    entry: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    less: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("less"))
+    other: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("other"))
+    merge: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("merge"))
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("")
+    llvm.LLVMPositionBuilderAtEnd(builder, entry)
+    condition: ptr = llvm.LLVMBuildICmp(builder, 40, left, right, label)
+    llvm.LLVMBuildCondBr(builder, condition, less, other)
+    llvm.LLVMPositionBuilderAtEnd(builder, less)
+    sum: ptr = llvm.LLVMBuildAdd(builder, left, right, label)
+    llvm.LLVMBuildBr(builder, merge)
+    llvm.LLVMPositionBuilderAtEnd(builder, other)
+    difference: ptr = llvm.LLVMBuildSub(builder, left, right, label)
+    llvm.LLVMBuildBr(builder, merge)
+    llvm.LLVMPositionBuilderAtEnd(builder, merge)
+    result: ptr = llvm.LLVMBuildPhi(builder, typ, label)
+    values: ptr[2] = [sum, difference]
+    blocks: ptr[2] = [less, other]
+    llvm.LLVMAddIncoming(result, core.address(values[0]), core.address(blocks[0]), 2)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def intrinsic_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Resolve an overloaded LLVM intrinsic and emit a typed call."""
+    name: str = "llvm.ctpop"
+    identifier: uint32 = llvm.LLVMLookupIntrinsicID(core.cstr(name), uint64(core.len(name)))
+    require(identifier != 0, "LLVM intrinsic lookup")
+    require(llvm.LLVMLookupIntrinsicID(core.cstr("llvm.not_an_intrinsic"), 21) == 0, "unknown intrinsic lookup")
+    declaration: ptr = llvm.LLVMGetIntrinsicDeclaration(module, identifier, core.address(typ), 1)
+    signature: ptr = llvm.LLVMIntrinsicGetType(context, identifier, core.address(typ), 1)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_popcount"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    argument: ptr = llvm.LLVMGetParam(function, 0)
+    result: ptr = llvm.LLVMBuildCall2(builder, signature, declaration, core.address(argument), 1, core.cstr("count"))
+    llvm.LLVMBuildRet(builder, result)
+
+
+def conversion_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build a signed integer and floating-point conversion chain."""
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(typ), 1, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_roundtrip"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    label: ptr = core.cstr("")
+    value: ptr = llvm.LLVMGetParam(function, 0)
+    double: ptr = llvm.LLVMDoubleTypeInContext(context)
+    value = llvm.LLVMBuildSIToFP(builder, value, double, label)
+    value = llvm.LLVMBuildFPTrunc(builder, value, llvm.LLVMFloatTypeInContext(context), label)
+    value = llvm.LLVMBuildFPExt(builder, value, double, label)
+    value = llvm.LLVMBuildFPToSI(builder, value, typ, label)
+    value = llvm.LLVMBuildTrunc(builder, value, llvm.LLVMIntTypeInContext(context, 8), label)
+    value = llvm.LLVMBuildSExt(builder, value, typ, label)
+    llvm.LLVMBuildRet(builder, value)
+
+
+def comparison_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build an ordered floating-point comparison and select its integer result."""
+    double: ptr = llvm.LLVMDoubleTypeInContext(context)
+    parameters: ptr[2] = [double, double]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_float_eq"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("")
+    condition: ptr = llvm.LLVMBuildFCmp(builder, 1, left, right, label)
+    result: ptr = llvm.LLVMBuildSelect(builder, condition, llvm.LLVMConstInt(typ, 1, 0), llvm.LLVMConstInt(typ, 0, 0), label)
+    llvm.LLVMBuildRet(builder, result)
+
+
+def aggregate_function(context: ptr, module: ptr, builder: ptr, typ: ptr) -> void:
+    """Build struct and vector values using raw LLVM aggregates."""
+    parameters: ptr[2] = [typ, typ]
+    signature: ptr = llvm.LLVMFunctionType(typ, core.address(parameters[0]), 2, 0)
+    function: ptr = llvm.LLVMAddFunction(module, core.cstr("raw_aggregate"), signature)
+    block: ptr = llvm.LLVMAppendBasicBlockInContext(context, function, core.cstr("entry"))
+    llvm.LLVMPositionBuilderAtEnd(builder, block)
+    left: ptr = llvm.LLVMGetParam(function, 0)
+    right: ptr = llvm.LLVMGetParam(function, 1)
+    label: ptr = core.cstr("")
+    record: ptr = llvm.LLVMStructTypeInContext(context, core.address(parameters[0]), 2, 0)
+    record = llvm.LLVMBuildInsertValue(builder, llvm.LLVMGetPoison(record), left, 0, label)
+    left = llvm.LLVMBuildExtractValue(builder, record, 0, label)
+    vector: ptr = llvm.LLVMConstNull(llvm.LLVMVectorType(typ, 2))
+    index: ptr = llvm.LLVMConstInt(llvm.LLVMIntTypeInContext(context, 32), 1, 0)
+    vector = llvm.LLVMBuildInsertElement(builder, vector, right, index, label)
+    right = llvm.LLVMBuildExtractElement(builder, vector, index, label)
+    llvm.LLVMBuildRet(builder, llvm.LLVMBuildAdd(builder, left, right, label))
+
+
+def check_c() -> void:
+    """Exercise C primitives alongside the Sole runtime implementations."""
+    data: ptr = c.malloc(4)
+    require(data != ptr(0), "C allocation")
+    c.memcpy(data, core.cstr("raw"), 4)
+    require(c.strlen(data) == 3 && core.from_cstr(data) == "raw", "C byte copy and length")
+    data = c.realloc(data, 8)
+    require(data != ptr(0), "C reallocation")
+    c.memmove(ptr(uint64(data) + 1), data, 4)
+    require(c.memcmp(data, core.cstr("rraw"), 5) == 0, "overlapping C byte move")
+    c.memset(data, 120, 8)
+    require(c.memcmp(data, core.cstr("xxxxxxxx"), 8) == 0, "C byte fill")
+    c.free(data)
+    end: ptr = ptr(0)
+    require(c.strtod(core.cstr("-1.5"), core.address(end)) == -1.5 && c.strlen(end) == 0, "C floating-point parser")
+    require(c.abs(-7) == 7 && c.sqrt(16.0) == 4.0 && c.pow(2.0, 3.0) == 8.0, "C arithmetic bindings")
+    require(c.sin(0.0) == 0.0 && c.cos(0.0) == 1.0, "C trigonometric bindings")
+    require(c.getenv(core.cstr("SOLE_HOME")) != ptr(0), "C environment binding")
+    require(system.home() != "" && system.lib_home() != "", "Sole runtime resource locations")
+    require(core.arg_count() > 0 && core.len(core.arg(0)) > 0, "native startup arguments")
+    require(system.f64_bits(1.0) == uint64(4607182418800017408), "Sole runtime bit representation")
+
+
+def main() -> int32:
+    """Build a verified native module using only raw LLVM handles and operations."""
+    check_c()
+    context: ptr = llvm.LLVMContextCreate()
+    check_types(context)
+    module: ptr = llvm.LLVMModuleCreateWithNameInContext(core.cstr("raw-bindings"), context)
+    builder: ptr = llvm.LLVMCreateBuilderInContext(context)
+    i64: ptr = llvm.LLVMIntTypeInContext(context, 64)
+    names: str[] = ["add", "sub", "mul", "sdiv", "udiv", "srem", "urem", "and", "or", "xor", "shl", "ashr", "lshr"]
+    for i in range(core.len(names)):
+        integer_function(context, module, builder, i64, names[i])
+    names = ["fadd", "fsub", "fmul", "fdiv", "frem", "fneg"]
+    for i in range(core.len(names)):
+        floating_function(context, module, builder, llvm.LLVMDoubleTypeInContext(context), names[i])
+    memory_function(context, module, builder, i64)
+    branch_function(context, module, builder, i64)
+    intrinsic_function(context, module, builder, i64)
+    conversion_function(context, module, builder, i64)
+    comparison_function(context, module, builder, i64)
+    aggregate_function(context, module, builder, i64)
+    message: ptr = ptr(0)
+    status: int32 = llvm.LLVMVerifyModule(module, 2, core.address(message))
+    if status != 0:
+        core.print(core.from_cstr(message))
+    if message != ptr(0):
+        llvm.LLVMDisposeMessage(message)
+    require(status == 0, "raw LLVM module verification")
+    message = llvm.LLVMPrintModuleToString(module)
+    text: str = "" + core.from_cstr(message)
+    llvm.LLVMDisposeMessage(message)
+    llvm.LLVMDisposeBuilder(builder)
+    llvm.LLVMDisposeModule(module)
+    llvm.LLVMContextDispose(context)
+    level: int32 = 0
+    if core.arg(2) == "2":
+        level = 2
+    error: str = target.llvm_object(text, core.arg(1), level, false)
+    require(error == "", "raw native object emission: " + error)
+    return 0

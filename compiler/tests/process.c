@@ -8,7 +8,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern int sole_rt_process_run(const char *, char *const [], int *);
+extern int sole_rt_process_run(const char *, char *const [], int *)
+    __asm__("_sole.fn.process_run");
 
 static volatile sig_atomic_t interruptions;
 

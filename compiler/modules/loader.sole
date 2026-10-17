@@ -3,11 +3,11 @@ import files
 import arrays
 import strings
 import os.path
-import wrappers.system
+import runtime.system as system
 import syntax.lexer.scanner as lexer
 import modules.model as module_model
 import diagnostics.report as diagnostics
-import semantic.resolve.builtins as builtins
+import primitives.intrinsics as intrinsics
 import syntax.lexer.tokens as lexical_tokens
 import syntax.parser.tokens as token_helpers
 
@@ -28,7 +28,7 @@ def module_path(name: str) -> str:
 def resolve_import(module: module_model.ModuleInfo, name: str, position: int64, entry_directory: str) -> str:
     """Find a module in local, project, or standard-library directories."""
     relative: str = module_path(name)
-    library: str = core.from_cstr(wrappers.system.sole_rt_lib_home())
+    library: str = system.lib_home()
     candidates: str[] = [parent_directory(module.path) + relative, entry_directory + relative, library + "/" + relative, library + "/pure/" + relative, library + "/impure/" + relative, library + "/wrappers/" + relative]
     for i in range(core.len(candidates)):
         if files.is_file(candidates[i]):
@@ -80,7 +80,7 @@ def load_module(modules: module_model.ModuleInfo[], path: str, source: str) -> i
             core.append(module.names, tokens.text[i + 1])
         if depth == 0 && kind == 1 && text == "intrinsic":
             name: str = tokens.text[i + 1]
-            if not builtins.builtin_name(name):
+            if not intrinsics.builtin_name(name):
                 diagnostics.module_error(module, i + 1, "unknown intrinsic '" + name + "'")
             if arrays.contains(module.names, name):
                 diagnostics.module_error(module, i + 1, "duplicate declaration '" + name + "'")
@@ -319,6 +319,9 @@ def load_imports(filename: str, source: str, inputs: str[]) -> lexical_tokens.To
     modules: module_model.ModuleInfo[] = []
     path: str = files.realpath(filename)
     load_module(modules, path, source)
+    runtime_path: str = files.realpath(system.home() + "/lib/runtime/io.sole")
+    runtime_index: int64 = load_module(modules, runtime_path, core.read_file(runtime_path))
+    modules[runtime_index].prefix = "__sole_mruntime__"
     output: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], 0, [])
     for i in range(core.len(modules)):
         core.append(inputs, modules[i].path)

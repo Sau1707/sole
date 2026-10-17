@@ -1,18 +1,19 @@
 import core
 import semantic.model as model
 import codegen.llvm.context as context
+import primitives.registry as registry
+import codegen.llvm.scalars as scalars
 import diagnostics.report as diagnostics
 import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
-import codegen.llvm.scalars.registry as registry
-import codegen.llvm.scalars.definition as scalar_definition
+import primitives.definition as scalar_definition
 
 
 def llvm_type(state: context.State, typ: str) -> str:
     """Map a Sole type to its LLVM representation and validate array sizes."""
     definition: scalar_definition.Type = registry.lookup(typ)
-    if definition.llvm != "":
-        return definition.llvm
+    if definition.known():
+        return scalars.representation(definition)
     if type_query.dynamic_type(typ):
         element: str = type_query.element_type(typ)
         if element == "void":

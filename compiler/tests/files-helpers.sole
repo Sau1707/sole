@@ -25,6 +25,11 @@ def main() -> int32:
         return 6
     if not files.same_file(target, link):
         return 7
+    if files.atomic_write(link, "a\0bé") != "" || files.read(target) != "a\0bé":
+        return 13
+    files.write(target, "c\0d")
+    if files.read(target) != "c\0d":
+        return 14
     if files.atomic_write(target, "") != "" || files.read(target) != "":
         return 8
     error: str = files.atomic_write(hard, "must not be written")

@@ -33,7 +33,7 @@ printf 'def answer() -> int32:\n    return 0\n' > "$temporary/source/leaf.sole"
 printf '# An imported module without emitted tokens.\n' > "$temporary/source/empty.sole"
 
 for input in "$temporary/source/"*.sole "$temporary/home/lib/runtime/native.ll" \
-    "$temporary/home/lib/runtime/core.ll" "$temporary/home/lib/runtime/system.c"; do
+    "$temporary/home/lib/runtime/core.ll" "$temporary/home/lib/runtime/io.sole"; do
     cp "$input" "$temporary/original"
     rm -f "$temporary/aliases/symlink" "$temporary/aliases/hardlink"
     ln -s "$input" "$temporary/aliases/symlink"
