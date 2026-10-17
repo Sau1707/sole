@@ -1,11 +1,8 @@
-import ascii
-
-
 def digit(byte: uint8) -> bool:
     """Recognize ASCII decimal digits."""
-    return ascii.is_digit(byte)
+    return byte.is_digit()
 
 
 def letter(byte: uint8) -> bool:
     """Recognize letters and underscores allowed in identifiers."""
-    return ascii.is_alpha(byte) || byte == 95
+    return byte.is_alpha() || byte == 95

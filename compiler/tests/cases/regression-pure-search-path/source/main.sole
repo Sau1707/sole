@@ -1,11 +1,9 @@
 import core
-import strings
-import arrays
 import os.path
 
 
 def partition_is(text: str, separator: str, before: str, matched: str, after: str) -> bool:
-    parts: str[] = strings.partition(text, separator)
+    parts: str[] = text.partition(separator)
     return core.len(parts) == 3 && parts[0] == before && parts[1] == matched && parts[2] == after
 
 
@@ -15,15 +13,15 @@ def split_is(text: str, directory: str, basename: str) -> bool:
 
 
 def main() -> int32:
-    if strings.replace("", "", "x") != "" || strings.replace("abc", "", "x") != "abc":
+    if "".replace("", "x") != "" || "abc".replace("", "x") != "abc":
         return 1
-    if strings.replace("abc", "abcd", "x") != "abc" || strings.replace("abc", "z", "x") != "abc":
+    if "abc".replace("abcd", "x") != "abc" || "abc".replace("z", "x") != "abc":
         return 2
-    if strings.replace("aaaaa", "aa", "x") != "xxa" || strings.replace("aba", "a", "") != "b":
+    if "aaaaa".replace("aa", "x") != "xxa" || "aba".replace("a", "") != "b":
         return 3
-    if strings.replace("a", "a", "aa") != "aa" || strings.replace("é.猫.é", ".", "/") != "é/猫/é":
+    if "a".replace("a", "aa") != "aa" || "é.猫.é".replace(".", "/") != "é/猫/é":
         return 4
-    if strings.replace("a\0a", "\0", "é") != "aéa" || strings.replace("猫猫", "猫", "é") != "éé":
+    if "a\0a".replace("\0", "é") != "aéa" || "猫猫".replace("猫", "é") != "éé":
         return 5
     if not partition_is("", "", "", "", "") || not partition_is("abc", "", "abc", "", ""):
         return 6
@@ -35,11 +33,11 @@ def main() -> int32:
         return 9
     empty: str[] = []
     items: str[] = ["", "猫", "a\0b", "猫"]
-    if arrays.contains(empty, "") || arrays.index_of(empty, "") != -1:
+    if empty.contains("") || empty.index_of("") != -1:
         return 10
-    if not arrays.contains(items, "") || arrays.index_of(items, "猫") != 1 || arrays.index_of(items, "a\0b") != 2:
+    if not items.contains("") || items.index_of("猫") != 1 || items.index_of("a\0b") != 2:
         return 11
-    if arrays.contains(items, "a") || arrays.index_of(items, "missing") != -1 || core.len(items) != 4:
+    if items.contains("a") || items.index_of("missing") != -1 || core.len(items) != 4:
         return 12
     if not split_is("", "", "") || not split_is("name", "", "name") || not split_is("/", "/", ""):
         return 13

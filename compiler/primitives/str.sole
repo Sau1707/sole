@@ -1,7 +1,58 @@
-import primitives.definition as scalar_definition
+import core
 
 
 class str:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("str", 0, "str", false)
+    def starts_with(self, prefix: str) -> bool:
+        """Test whether the string begins with the given bytes."""
+        return core.len(prefix) <= core.len(self) && core.slice(self, 0, core.len(prefix)) == prefix
+
+    def ends_with(self, suffix: str) -> bool:
+        """Test whether the string ends with the given bytes."""
+        return core.len(suffix) <= core.len(self) && core.slice(self, core.len(self) - core.len(suffix), core.len(self)) == suffix
+
+    def find(self, needle: str) -> int64:
+        """Return the first matching byte offset, or -1 if absent."""
+        for i in range(core.len(self) - core.len(needle) + 1):
+            if core.slice(self, i, i + core.len(needle)) == needle:
+                return i
+        return -1
+
+    def contains(self, needle: str) -> bool:
+        """Test whether the string contains the given bytes."""
+        return self.find(needle) >= 0
+
+    def replace(self, old: str, new: str) -> str:
+        """Replace non-overlapping byte matches; an empty old string leaves self unchanged."""
+        if old == "":
+            return self
+        parts: str[] = []
+        start: int64 = 0
+        i: int64 = 0
+        while i <= core.len(self) - core.len(old):
+            if core.slice(self, i, i + core.len(old)) == old:
+                core.append(parts, core.slice(self, start, i))
+                core.append(parts, new)
+                i = i + core.len(old)
+                start = i
+            else:
+                i = i + 1
+        core.append(parts, core.slice(self, start, core.len(self)))
+        return core.join(parts)
+
+    def partition(self, separator: str) -> str[]:
+        """Return [before, separator, after], or [self, "", ""] if absent or empty."""
+        if separator == "":
+            return [self, "", ""]
+        index: int64 = self.find(separator)
+        if index < 0:
+            return [self, "", ""]
+        return [core.slice(self, 0, index), separator, core.slice(self, index + core.len(separator), core.len(self))]
+
+    def repeat(self, count: int64) -> str:
+        """Repeat the string count times; nonpositive counts produce an empty string."""
+        if self == "" || count <= 0:
+            return ""
+        parts: str[] = []
+        for i in range(count):
+            core.append(parts, self)
+        return core.join(parts)

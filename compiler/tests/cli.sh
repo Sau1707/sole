@@ -104,7 +104,8 @@ if [ -d "$compiler_prefix/lib/sole" ]; then
 fi
 cp -R "$root/lib" "$temporary/installed/share/sole/"
 mkdir -p "$temporary/installed/share/sole/compiler"
-cp -R "$root/compiler/raw" "$temporary/installed/share/sole/compiler/"
+cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/installed/share/sole/compiler/"
+cp -R "$root/compiler/primitives" "$temporary/installed/share/sole/compiler/"
 mv "$temporary/installed" "$temporary/relocated"
 unset SOLE_HOME SOLE_LIB
 cd "$temporary"

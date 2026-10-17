@@ -1,11 +1,8 @@
 import core
-import math
-import strings
-import ascii
 
 def main() -> int32:
-    core.print(math.gcd(48, 18))
-    core.print(strings.contains("Hello, Sole!", "Sole"))
-    core.print(strings.repeat("ha", 3))
-    core.print(ascii.to_lower(65))
+    core.print(int64(48).gcd(18))
+    core.print("Hello, Sole!".contains("Sole"))
+    core.print("ha".repeat(3))
+    core.print(uint8(65).to_lower())
     return 0

@@ -1,5 +1,4 @@
 import core
-import pure.strings
 import codegen.llvm.target as target
 
 
@@ -30,8 +29,8 @@ def main() -> int32:
     require(target.llvm_object(valid, missing, level, true) == "", "check-only succeeds without emitting")
     require(target.llvm_object(valid, output, level, false) == "", "object emission returns empty on success")
     require(target.llvm_object(valid, output, level, true) == "", "check succeeds after failures")
-    require(pure.strings.contains(parse_error, "expected"), "parse message survives LLVM disposal")
-    require(pure.strings.contains(verify_error, "Entry block"), "verification message survives LLVM disposal")
-    require(pure.strings.contains(emit_error, "No such file"), "emission message survives LLVM disposal")
-    require(pure.strings.contains(pass_error, "invalid optimization level 'O4'"), "pass message survives LLVM disposal")
+    require(parse_error.contains("expected"), "parse message survives LLVM disposal")
+    require(verify_error.contains("Entry block"), "verification message survives LLVM disposal")
+    require(emit_error.contains("No such file"), "emission message survives LLVM disposal")
+    require(pass_error.contains("invalid optimization level 'O4'"), "pass message survives LLVM disposal")
     return 0

@@ -1,0 +1,3 @@
+def main() -> int32:
+    names: str[] = ["a"]
+    return int32(names.index_of(1))

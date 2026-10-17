@@ -4,7 +4,7 @@ import core # Keep this long comment with core, without counting it for sorting.
 import frontend.lexer as lexer
 
 import env
-import strings
+import arrays
 
 # Separate group.
 import files

@@ -53,7 +53,7 @@ from core import len as size
 from core import len
 from bridge import make
 from wrappers.system import sole_rt_f64_bits as bits
-from math import min as minimum, clamp
+from bisect import bisect_left as insertion, bisect_right
 
 
 struct Labels:
@@ -95,7 +95,7 @@ def main() -> int32:
         return 2
     if bits(0.0) != 0:
         return 6
-    if minimum(2, 3) != 2 || clamp(9, 0, 4) != 4:
+    if insertion(numbers, 2) != 1 || bisect_right(numbers, 2) != 2:
         return 7
     item: I = I.Value(point.value)
     direction: D = D.Left

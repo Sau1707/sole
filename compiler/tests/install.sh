@@ -21,7 +21,8 @@ else
     fi
     cp -R "$root/lib" "$temporary/$archive/share/sole/"
     mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
-    cp -R "$root/compiler/raw" "$temporary/$archive/share/sole/compiler/"
+    cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/$archive/share/sole/compiler/"
+    cp -R "$root/compiler/primitives" "$temporary/$archive/share/sole/compiler/"
     cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
     printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
     tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
@@ -51,10 +52,18 @@ export SOLE_TEST_DOWNLOADS="$temporary/downloads" SOLE_VERSION="$version" SOLE_T
 PATH="$temporary/tools:$PATH" sh "$root/install.sh" "$temporary/installed" > "$temporary/log"
 test "$("$temporary/installed/bin/sole" --version)" = "sole $version (self-hosted)"
 test -f "$temporary/installed/share/sole/lib/core.sole"
-test -f "$temporary/installed/share/sole/lib/runtime/system.sole"
+test ! -e "$temporary/installed/share/sole/lib/runtime"
+for resource in core.ll native.ll io.sole linux.sole system.sole; do
+    test -f "$temporary/installed/share/sole/compiler/runtime/$resource"
+done
 test -f "$temporary/installed/share/sole/compiler/syntax/parser/sole.ebnf"
 test -f "$temporary/installed/share/sole/compiler/raw/c.sole"
 test -f "$temporary/installed/share/sole/compiler/raw/llvm.sole"
+test -f "$temporary/installed/share/sole/compiler/primitives/str.sole"
+test -f "$temporary/installed/share/sole/compiler/primitives/int.sole"
+test -f "$temporary/installed/share/sole/compiler/primitives/uint.sole"
+test -f "$temporary/installed/share/sole/compiler/primitives/float.sole"
+test -f "$temporary/installed/share/sole/compiler/primitives/array.sole"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
     test -f "$temporary/installed/lib/sole/libLLVM.so.21.1"
     test -f "$temporary/installed/share/sole/licenses/common-licenses/Apache-2.0"
@@ -77,6 +86,13 @@ def main() -> int32:
         return 1
     if not env.has("SOLE_INSTALLED_BINDINGS_TEST"):
         return 2
+    if not "ha".repeat(3).ends_with("haha"):
+        return 3
+    if int16(-12).abs().gcd(8) != 4 || not b'A'.to_lower().is_alpha():
+        return 4
+    names: str[] = ["a", "b"]
+    if not names.contains("b") || names.index_of("a") != 0 || float32(2.5).clamp(0.0, 2.0) != 2.0:
+        return 5
     return 0
 EOF
 (
@@ -87,7 +103,7 @@ EOF
 
 DESTDIR="$temporary/staged" PATH="$temporary/tools:$PATH" sh "$root/install.sh" /usr/local > "$temporary/log"
 test -x "$temporary/staged/usr/local/bin/sole"
-test -f "$temporary/staged/usr/local/share/sole/lib/runtime/core.ll"
+test -f "$temporary/staged/usr/local/share/sole/compiler/runtime/core.ll"
 
 (
     unset SOLE_VERSION

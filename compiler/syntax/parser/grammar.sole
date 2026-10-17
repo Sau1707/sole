@@ -1,5 +1,4 @@
 import core
-import arrays
 import syntax.lexer.scanner as lexer
 import syntax.parser.tokens as tokens
 import diagnostics.report as diagnostics
@@ -84,7 +83,7 @@ def choice(grammar: Grammar) -> int64:
 
 def rule_index(grammar: Grammar, name: str) -> int64:
     """TODO: Document this function."""
-    return arrays.index_of(grammar.names, name)
+    return grammar.names.index_of(name)
 
 
 def token_kind(name: str) -> int32:

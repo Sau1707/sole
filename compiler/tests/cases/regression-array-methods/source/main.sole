@@ -1,0 +1,34 @@
+import core
+
+
+class Names:
+    values: str[]
+
+    def contains(self, value: str) -> bool:
+        return self.values.contains(value)
+
+
+def values(calls: int64[]) -> str[]:
+    calls[0] = calls[0] + 1
+    return ["", "猫", "a\0b", "猫"]
+
+
+def main() -> int32:
+    empty: str[] = []
+    if empty.contains("") || empty.index_of("") != -1:
+        return 1
+    calls: int64[] = [0]
+    if not values(calls).contains("猫") || calls[0] != 1:
+        return 2
+    names: str[] = values(calls)
+    if names.index_of("猫") != 1 || names.index_of("a\0b") != 2 || names.index_of("missing") != -1:
+        return 3
+    if not names.contains("") || names.contains("a") || names.contains("\0"):
+        return 4
+    holder: Names = Names(names)
+    if not holder.contains("猫") || holder.values.index_of("a\0b") != 2:
+        return 5
+    if core.len(names) != 4 || names[2] != "a\0b":
+        return 6
+    core.print("array methods ok")
+    return 0

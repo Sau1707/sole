@@ -1,5 +1,4 @@
 import core
-import strings
 
 
 def split(path: str) -> str[]:
@@ -12,21 +11,21 @@ def split(path: str) -> str[]:
 
 def replace_suffix(path: str, suffix: str, replacement: str) -> str:
     """Replace a nonempty byte suffix only after a nonempty prefix; otherwise append replacement."""
-    if suffix != "" && core.len(path) > core.len(suffix) && strings.ends_with(path, suffix):
+    if suffix != "" && core.len(path) > core.len(suffix) && path.ends_with(suffix):
         return core.slice(path, 0, core.len(path) - core.len(suffix)) + replacement
     return path + replacement
 
 
 def isabs(path: str) -> bool:
     """TODO: Document this function."""
-    return strings.starts_with(path, "/")
+    return path.starts_with("/")
 
 
 def join(a: str, b: str) -> str:
     """TODO: Document this function."""
     if isabs(b) || core.len(a) == 0:
         return b
-    if strings.ends_with(a, "/"):
+    if a.ends_with("/"):
         return a + b
     return a + "/" + b
 

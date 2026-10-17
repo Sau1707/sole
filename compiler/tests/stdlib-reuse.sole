@@ -1,5 +1,4 @@
 import core
-import strings
 import os.path
 import driver.linker as linker
 import codegen.llvm.context as context
@@ -62,8 +61,8 @@ def main() -> int32:
     trimmed: context.LoopTargets[] = statements.without_last(targets)
     if core.len(trimmed) != 1 || trimmed[0].continue_target != "outer-test" || trimmed[0].break_target != "outer-end" || core.len(targets) != 2:
         return 17
-    if strings.find("", "") != 0 || strings.find("abc", "") != 0 || strings.find("", "a") != -1:
+    if "".find("") != 0 || "abc".find("") != 0 || "".find("a") != -1:
         return 18
-    if strings.find("abc", "c") != 2 || strings.find("abc", "abc") != 0 || strings.find("abc", "abcd") != -1:
+    if "abc".find("c") != 2 || "abc".find("abc") != 0 || "abc".find("abcd") != -1:
         return 19
     return 0

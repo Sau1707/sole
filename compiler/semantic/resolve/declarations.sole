@@ -3,6 +3,7 @@ import semantic.model as model
 import diagnostics.report as report
 import syntax.parser.tokens as tokens
 import codegen.llvm.context as context
+import primitives.registry as primitives
 
 
 def parse_type(state: context.State) -> str:
@@ -102,8 +103,16 @@ def scan(state: context.State) -> void:
             record_position: int64 = state.tokens.position
             record_kind: str = tokens.take(state)
             record_name: str = tokens.identifier(state)
+            primitive: bool = core.len(record_name) > 17 && core.slice(record_name, 0, 17) == "__sole_primitive_"
+            if primitive:
+                record_name = core.slice(record_name, 17, core.len(record_name))
+                if record_name == "str_array":
+                    record_name = "str[]"
+                elif not primitives.lookup(record_name).known():
+                    report.fail_at(state, "unknown primitive class: " + record_name)
             record: model.RecordInfo = model.RecordInfo(record_name, record_kind, [], [])
-            core.append(state.records, record)
+            if not primitive:
+                core.append(state.records, record)
             tokens.expect(state, ":")
             tokens.expect(state, "<newline>")
             tokens.expect(state, "<indent>")
@@ -118,6 +127,8 @@ def scan(state: context.State) -> void:
                 elif tokens.accept(state, "pass"):
                     tokens.expect(state, "<newline>")
                 else:
+                    if primitive:
+                        report.fail_at(state, "primitive classes cannot declare fields")
                     core.append(record.names, tokens.identifier(state))
                     tokens.expect(state, ":")
                     core.append(record.types, parse_type(state))

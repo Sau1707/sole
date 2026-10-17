@@ -1,13 +1,46 @@
-import primitives.definition as scalar_definition
-
-
 class float32:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("float32", 32, "float", false)
+    def abs(self) -> float32:
+        """Negate negative values; preserve NaNs and signed zero."""
+        if self < 0.0:
+            return -self
+        return self
+
+    def min(self, other: float32) -> float32:
+        """Return self when strictly smaller, otherwise other."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: float32) -> float32:
+        """Return self when strictly larger, otherwise other."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: float32, upper: float32) -> float32:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)
 
 
 class float64:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("float64", 64, "float", false)
+    def abs(self) -> float64:
+        """Negate negative values; preserve NaNs and signed zero."""
+        if self < 0.0:
+            return -self
+        return self
+
+    def min(self, other: float64) -> float64:
+        """Return self when strictly smaller, otherwise other."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: float64) -> float64:
+        """Return self when strictly larger, otherwise other."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: float64, upper: float64) -> float64:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)

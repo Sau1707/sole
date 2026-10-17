@@ -10,7 +10,7 @@ import semantic.resolve.symbols as symbols
 def emit(state: context.State, home: str) -> str:
     """TODO: Document this function."""
     record_definitions: str = llvm_types.layouts(state)
-    prologue: str = core.read_file(home + "/lib/runtime/native.ll")
+    prologue: str = core.read_file(home + "/compiler/runtime/native.ll")
     runtime_declarations: str[] = functions.runtime_declarations(prologue)
     for f in range(core.len(state.functions)):
         functions.compile_function(state, state.functions[f], runtime_declarations)
@@ -25,6 +25,6 @@ def emit(state: context.State, home: str) -> str:
         else:
             wrapper = wrapper + "  %result = call i32 @_sole.fn.main()\n  ret i32 %result\n}\n"
         core.append(state.definitions, wrapper)
-    runtime_core: str = core.read_file(home + "/lib/runtime/core.ll")
+    runtime_core: str = core.read_file(home + "/compiler/runtime/core.ll")
     runtime_core = core.slice(runtime_core, core.len("declare ptr @_sole.alloc64(i64)\n"), core.len(runtime_core))
     return prologue + runtime_core + record_definitions + core.join(state.globals) + core.join(state.definitions)

@@ -1,25 +1,134 @@
-import primitives.definition as scalar_definition
-
-
 class int8:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("int8", 8, "integer", false)
+    def abs(self) -> int8:
+        """Return the absolute value using the type's wrapping arithmetic."""
+        if self < 0:
+            return -self
+        return self
+
+    def min(self, other: int8) -> int8:
+        """Return the smaller value, choosing other on a tie."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: int8) -> int8:
+        """Return the larger value, choosing other on a tie."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: int8, upper: int8) -> int8:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)
+
+    def gcd(self, other: int8) -> int8:
+        """Run Euclid's algorithm on the absolute values."""
+        a: int8 = self.abs()
+        b: int8 = other.abs()
+        while b != 0:
+            remainder: int8 = a % b
+            a = b
+            b = remainder
+        return a
 
 
 class int16:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("int16", 16, "integer", false)
+    def abs(self) -> int16:
+        """Return the absolute value using the type's wrapping arithmetic."""
+        if self < 0:
+            return -self
+        return self
+
+    def min(self, other: int16) -> int16:
+        """Return the smaller value, choosing other on a tie."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: int16) -> int16:
+        """Return the larger value, choosing other on a tie."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: int16, upper: int16) -> int16:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)
+
+    def gcd(self, other: int16) -> int16:
+        """Run Euclid's algorithm on the absolute values."""
+        a: int16 = self.abs()
+        b: int16 = other.abs()
+        while b != 0:
+            remainder: int16 = a % b
+            a = b
+            b = remainder
+        return a
 
 
 class int32:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("int32", 32, "integer", false)
+    def abs(self) -> int32:
+        """Return the absolute value using the type's wrapping arithmetic."""
+        if self < 0:
+            return -self
+        return self
+
+    def min(self, other: int32) -> int32:
+        """Return the smaller value, choosing other on a tie."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: int32) -> int32:
+        """Return the larger value, choosing other on a tie."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: int32, upper: int32) -> int32:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)
+
+    def gcd(self, other: int32) -> int32:
+        """Run Euclid's algorithm on the absolute values."""
+        a: int32 = self.abs()
+        b: int32 = other.abs()
+        while b != 0:
+            remainder: int32 = a % b
+            a = b
+            b = remainder
+        return a
 
 
 class int64:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("int64", 64, "integer", false)
+    def abs(self) -> int64:
+        """Return the absolute value using the type's wrapping arithmetic."""
+        if self < 0:
+            return -self
+        return self
+
+    def min(self, other: int64) -> int64:
+        """Return the smaller value, choosing other on a tie."""
+        if self < other:
+            return self
+        return other
+
+    def max(self, other: int64) -> int64:
+        """Return the larger value, choosing other on a tie."""
+        if self > other:
+            return self
+        return other
+
+    def clamp(self, lower: int64, upper: int64) -> int64:
+        """Apply the lower bound, then the upper bound."""
+        return self.max(lower).min(upper)
+
+    def gcd(self, other: int64) -> int64:
+        """Run Euclid's algorithm on the absolute values."""
+        a: int64 = self.abs()
+        b: int64 = other.abs()
+        while b != 0:
+            remainder: int64 = a % b
+            a = b
+            b = remainder
+        return a

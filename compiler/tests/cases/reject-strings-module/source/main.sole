@@ -1,0 +1,5 @@
+import strings
+
+
+def main() -> int32:
+    return 0

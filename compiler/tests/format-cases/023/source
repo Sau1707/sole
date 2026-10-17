@@ -3,7 +3,7 @@ import math
 import core # Keep this long comment with core, without counting it for sorting.
 import os
 
-import strings
+import arrays
 import env
 # Separate group.
 import statistics

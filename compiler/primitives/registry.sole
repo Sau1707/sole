@@ -1,39 +1,35 @@
-import primitives.str as scalar_str
 import primitives.ptr as scalar_ptr
-import primitives.int as scalar_int
 import primitives.bool as scalar_bool
 import primitives.void as scalar_void
-import primitives.uint as scalar_uint
-import primitives.float as scalar_float
 import primitives.definition as scalar_definition
 
 
 def lookup(name: str) -> scalar_definition.Type:
     """TODO: Document this function."""
     if name == "int8":
-        return scalar_int.int8().definition()
+        return scalar_definition.Type("int8", 8, "integer", false)
     if name == "int16":
-        return scalar_int.int16().definition()
+        return scalar_definition.Type("int16", 16, "integer", false)
     if name == "int32":
-        return scalar_int.int32().definition()
+        return scalar_definition.Type("int32", 32, "integer", false)
     if name == "int64":
-        return scalar_int.int64().definition()
+        return scalar_definition.Type("int64", 64, "integer", false)
     if name == "uint8":
-        return scalar_uint.uint8().definition()
+        return scalar_definition.Type("uint8", 8, "integer", true)
     if name == "uint16":
-        return scalar_uint.uint16().definition()
+        return scalar_definition.Type("uint16", 16, "integer", true)
     if name == "uint32":
-        return scalar_uint.uint32().definition()
+        return scalar_definition.Type("uint32", 32, "integer", true)
     if name == "uint64":
-        return scalar_uint.uint64().definition()
+        return scalar_definition.Type("uint64", 64, "integer", true)
     if name == "float32":
-        return scalar_float.float32().definition()
+        return scalar_definition.Type("float32", 32, "float", false)
     if name == "float64":
-        return scalar_float.float64().definition()
+        return scalar_definition.Type("float64", 64, "float", false)
     if name == "bool":
         return scalar_bool.bool().definition()
     if name == "str":
-        return scalar_str.str().definition()
+        return scalar_definition.Type("str", 0, "str", false)
     if name == "ptr":
         return scalar_ptr.ptr().definition()
     if name == "void":

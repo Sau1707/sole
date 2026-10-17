@@ -1,7 +1,6 @@
 import core
 import primitives.registry as registry
 import codegen.llvm.scalars as scalars
-import primitives.int as scalar_int
 import primitives.definition as scalar_definition
 
 
@@ -52,7 +51,7 @@ def main() -> int32:
     check_integer("uint16", "i16", 16, true)
     check_integer("uint32", "i32", 32, true)
     check_integer("uint64", "i64", 64, true)
-    signed: scalar_definition.Type = scalar_int.int16().definition()
+    signed: scalar_definition.Type = registry.lookup("int16")
     unsigned: scalar_definition.Type = registry.lookup("uint16")
     wide: scalar_definition.Type = registry.lookup("int64")
     narrow: scalar_definition.Type = registry.lookup("int8")

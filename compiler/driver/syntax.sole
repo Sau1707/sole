@@ -1,5 +1,4 @@
 import core
-import strings
 import runtime.system as system
 import syntax.parser.grammar as grammar
 
@@ -19,7 +18,7 @@ def main() -> int32:
         return 1
     for i in range(first, core.arg_count()):
         path: str = core.arg(i)
-        if not strings.ends_with(path, ".sole"):
+        if not path.ends_with(".sole"):
             core.print("error: expected a .sole file: " + path)
             return 1
     loaded: grammar.Grammar = grammar.load(grammar_path)

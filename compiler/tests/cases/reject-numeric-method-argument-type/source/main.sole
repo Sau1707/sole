@@ -1,0 +1,2 @@
+def main() -> int32:
+    return int32(4).min(int64(2))

@@ -41,7 +41,7 @@ def home() -> str:
         suffixes: str[] = ["../share/sole", ".."]
         for i in range(core.len(suffixes)):
             candidate: str = directory + suffixes[i]
-            if is_file(core.cstr(candidate + "/lib/runtime/core.ll")):
+            if is_file(core.cstr(candidate + "/compiler/runtime/core.ll")):
                 resolved: ptr = ¢.realpath(core.cstr(candidate), ptr(0))
                 if resolved != ptr(0):
                     text: str = "" + core.from_cstr(resolved)

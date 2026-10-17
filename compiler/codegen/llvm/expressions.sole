@@ -1,5 +1,4 @@
 import core
-import arrays
 import codegen.llvm.ir as ir
 import semantic.model as model
 import codegen.llvm.casts as casts
@@ -52,7 +51,7 @@ def parse_constructor_arguments(state: context.State, record: model.RecordInfo) 
             named = true
             field_name: str = tokens.identifier(state)
             tokens.expect(state, "=")
-            field_index = arrays.index_of(record.names, field_name)
+            field_index = record.names.index_of(field_name)
             if field_index < 0:
                 report.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
         else:
@@ -353,6 +352,7 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
         if tokens.accept(state, "."):
             member: str = tokens.identifier(state)
             if tokens.peek(state) == "(":
+                left = literals.coerce(state, left, "")
                 receivers: context.Value[] = [left]
                 left = named_call(state, left.typ + "." + member, receivers)
                 is_call = true

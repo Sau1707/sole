@@ -45,7 +45,7 @@ def function_symbol(fn: model.FunctionInfo) -> str:
     """Choose a function's native symbol, preserving foreign C names."""
     if fn.external:
         return symbols.foreign_name(fn.name)
-    return "_sole.fn." + fn.name
+    return "\"_sole.fn." + fn.name + "\""
 
 
 def typed(state: context.State, value: context.Value) -> str:

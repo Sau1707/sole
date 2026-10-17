@@ -30,11 +30,14 @@ while IFS= read -r source; do
 done
 seed_prefix=$(dirname -- "$(dirname -- "$(command -v "$seed")")")
 seed_resources=${SOLE_BOOTSTRAP_HOME:-$seed_prefix/share/sole}
+
+# Released seeds still load runtime resources from lib/runtime.
+ln -s "$seed_home/compiler/runtime" "$seed_home/lib/runtime"
 if [ -f "$seed_resources/lib/runtime/system.c" ]; then
     cp "$seed_resources/lib/runtime/system.c" "$seed_home/lib/runtime/system.c"
     cp "$seed_resources/lib/runtime/native.ll" "$seed_home/lib/runtime/native.ll"
 fi
-ln -s "$seed_home/lib/runtime" "$seed_home/runtime"
+ln -s "$seed_home/compiler/runtime" "$seed_home/runtime"
 ln -s "$seed_home/compiler/raw" "$seed_home/lib/raw"
 SOLE_HOME="$seed_home" SOLE_LIB="$seed_home/lib" "$seed" build "$seed_home/compiler/main.sole" --link "$llvm_library" -o .build/sole-stage1
 .build/sole-stage1 build compiler/main.sole --link "$llvm_library" -o .build/sole-stage2
@@ -45,6 +48,6 @@ sha256sum .build/sole-stage2 .build/sole-stage3 > .build/bootstrap-proof.txt
 find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -print | LC_ALL=C sort | while IFS= read -r source; do
     sha256sum "$source"
 done >> .build/bootstrap-proof.txt
-sha256sum lib/runtime/*.ll >> .build/bootstrap-proof.txt
+sha256sum compiler/runtime/*.ll >> .build/bootstrap-proof.txt
 rm -- .build/sole-stage1
 echo "Verified: stage 2 and stage 3 are byte-for-byte identical."
