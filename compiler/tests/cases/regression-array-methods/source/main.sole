@@ -1,11 +1,12 @@
 import core
+import string_array
 
 
-class Names:
+struct Names:
     values: str[]
 
-    def contains(self, value: str) -> bool:
-        return self.values.contains(value)
+def contains(names: Names, value: str) -> bool:
+    return string_array.contains(names.values, value)
 
 
 def values(calls: int64[]) -> str[]:
@@ -15,18 +16,18 @@ def values(calls: int64[]) -> str[]:
 
 def main() -> int32:
     empty: str[] = []
-    if empty.contains("") || empty.index_of("") != -1:
+    if string_array.contains(empty, "") || string_array.index_of(empty, "") != -1:
         return 1
     calls: int64[] = [0]
-    if not values(calls).contains("猫") || calls[0] != 1:
+    if not string_array.contains(values(calls), "猫") || calls[0] != 1:
         return 2
     names: str[] = values(calls)
-    if names.index_of("猫") != 1 || names.index_of("a\0b") != 2 || names.index_of("missing") != -1:
+    if string_array.index_of(names, "猫") != 1 || string_array.index_of(names, "a\0b") != 2 || string_array.index_of(names, "missing") != -1:
         return 3
-    if not names.contains("") || names.contains("a") || names.contains("\0"):
+    if not string_array.contains(names, "") || string_array.contains(names, "a") || string_array.contains(names, "\0"):
         return 4
     holder: Names = Names(names)
-    if not holder.contains("猫") || holder.values.index_of("a\0b") != 2:
+    if not contains(holder, "猫") || string_array.index_of(holder.values, "a\0b") != 2:
         return 5
     if core.len(names) != 4 || names[2] != "a\0b":
         return 6

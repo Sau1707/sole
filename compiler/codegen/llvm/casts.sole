@@ -30,14 +30,14 @@ def cast_value(state: context.State, value: context.Value, destination: str) -> 
         return context.Value(destination, value.value, "")
     if operation == "fcmp une" || operation == "icmp ne":
         zero: str = "0"
-        if source_definition.floating():
+        if scalar_definition.floating(source_definition):
             zero = "0.0"
         return context.Value("bool", ir.instruction(state, operation + " " + ir.typed(state, value) + ", " + zero), "")
     if operation == "fptosi" || operation == "fptoui":
 
         # Guard float-to-integer conversions against NaN and range overflow.
-        low_text: str = dest_definition.lower_bound()
-        high_text: str = dest_definition.upper_bound()
+        low_text: str = scalar_definition.lower_bound(dest_definition)
+        high_text: str = scalar_definition.upper_bound(dest_definition)
         low_value: context.Value = literals.float_literal(state, low_text, source_type)
         high_value: context.Value = literals.float_literal(state, high_text, source_type)
         above: str = ir.instruction(state, "fcmp oge " + ir.typed(state, value) + ", " + low_value.value)

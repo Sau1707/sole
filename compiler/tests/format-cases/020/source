@@ -2,14 +2,14 @@
 # Another comment.
 import core # Inline comment.
 extern def external() -> void
-class Box:
+struct Box:
     value: int32
-    def read(
-        self
-        # Signature comment.
-    ) -> int32: # Header comment.
-        # Body comment.
-        return self.value # Keep inline.
+def read(
+    box: Box
+    # Signature comment.
+) -> int32: # Header comment.
+    # Body comment.
+    return box.value # Keep inline.
 def single() -> void:
     # Before an existing docstring.
     'Existing documentation.'

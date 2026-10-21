@@ -4,7 +4,6 @@ import codegen.llvm.scalars as scalars
 import codegen.llvm.literals as literals
 import diagnostics.report as diagnostics
 import semantic.types.query as type_query
-import semantic.resolve.symbols as symbols
 import codegen.llvm.context as llvm_context
 import syntax.parser.operators as operators
 import primitives.definition as scalar_definition
@@ -53,31 +52,22 @@ def binary_ir(state: llvm_context.State, operator: str, left: llvm_context.Value
     if comparison:
         operation = scalars.comparison(definition, operator)
         if operation == "":
-            if operator != "==" && operator != "!=":
-                diagnostics.fail_at(state, "only numbers support ordering")
-            ri: int64 = symbols.record_index(state, typ)
-            si: int64 = symbols.sum_index(state, typ)
-            enum_type: bool = si >= 0 && state.sums[si].kind == "enum"
-            if not enum_type && (ri < 0 || state.records[ri].kind != "class"):
-                diagnostics.fail_at(state, "this type does not support comparison")
-            operation = "icmp eq"
-            if operator == "!=":
-                operation = "icmp ne"
+            diagnostics.fail_at(state, "this type does not support comparison")
         return llvm_context.Value("bool", ir.instruction(state, operation + " " + ir.typed(state, left) + ", " + right.value), "")
 
     # Choose the arithmetic or bitwise instruction for the numeric operands.
-    if not definition.numeric():
+    if not scalar_definition.numeric(definition):
         diagnostics.fail_at(state, "arithmetic requires numeric operands")
     operation = scalars.arithmetic(definition, operator)
     if operation == "":
         diagnostics.fail_at(state, "bitwise operators require integers")
-    if definition.integer():
+    if scalar_definition.integer(definition):
 
         # Reject integer division by zero, signed overflow, and invalid shifts.
         if operator == "/" || operator == "%":
             valid: str = ir.instruction(state, "icmp ne " + ir.typed(state, right) + ", 0")
             if not definition.unsigned:
-                minimum: str = definition.lower_bound()
+                minimum: str = scalar_definition.lower_bound(definition)
                 a_min: str = ir.instruction(state, "icmp eq " + ir.typed(state, left) + ", " + minimum)
                 b_minus: str = ir.instruction(state, "icmp eq " + ir.typed(state, right) + ", -1")
                 overflow: str = ir.instruction(state, "and i1 " + a_min + ", " + b_minus)

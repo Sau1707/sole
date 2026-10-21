@@ -1,0 +1,7 @@
+import strings
+
+
+def main() -> int32:
+    if not strings.contains("Sole", "ol"):
+        return 1
+    return 0

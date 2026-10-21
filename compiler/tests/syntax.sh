@@ -85,16 +85,6 @@ reject 'def main() -> int32:
     value: bool = true or false'
 
 cat > "$temporary/features.sole" <<'EOF'
-enum Kind:
-    Number
-    Text
-
-
-union Item:
-    Number(value: int64)
-    Empty()
-
-
 struct Pair:
     first: int64
     second: int64
@@ -105,12 +95,7 @@ def main() -> int32:
     total: int64 = 0
     for i in range(0, pair.second):
         total += i
-    item: Item = Item.Number(total)
-    match item:
-        case Item.Number(value):
-            return int32(value)
-        case Item.Empty():
-            return 0
+    return int32(total)
 EOF
 syntax "$temporary/features.sole"
 reject 'enum Empty:'

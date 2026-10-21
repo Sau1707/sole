@@ -5,31 +5,28 @@ import codegen.llvm.context as context
 def end_scope(state: context.State) -> void:
     """TODO: Document this function."""
     for i in range(core.len(state.depths)):
-        if state.depths[i] == state.depth:
+        if state.depths[i] == state.depth[0]:
             state.depths[i] = -1
-    state.depth = state.depth - 1
+    state.depth[0] = state.depth[0] - 1
 
 
-def foreign_name(name: str) -> str:
-    """Recover a C symbol's original name from its module-qualified name."""
+def module_prefix(name: str) -> str:
+    """Recover the loader's module identity from a qualified declaration."""
     if core.len(name) > 10 && core.slice(name, 0, 8) == "__sole_m":
         i: int64 = 8
         while i < core.len(name) && name[i] != 95:
             i = i + 1
-        return core.slice(name, i + 2, core.len(name))
-    return name
+        return core.slice(name, 0, i + 2)
+    return ""
 
 
-def sum_index(state: context.State, name: str) -> int64:
-    """Find a declared enum or union by name."""
-    for i in range(core.len(state.sums)):
-        if state.sums[i].name == name:
-            return i
-    return -1
+def foreign_name(name: str) -> str:
+    """Recover a C symbol's original name from its module-qualified name."""
+    return core.slice(name, core.len(module_prefix(name)), core.len(name))
 
 
 def record_index(state: context.State, name: str) -> int64:
-    """Find a declared struct or class by name."""
+    """Find a declared struct by name."""
     for i in range(core.len(state.records)):
         if state.records[i].name == name:
             return i

@@ -1,4 +1,5 @@
 import core
+import strings
 import os.path
 
 
@@ -21,6 +22,6 @@ def main() -> void:
     core.print(os.path.normpath("a/b/../../c/d/../e/") == "c/e")
     core.print(os.path.normpath("a/../../b/../") == "..")
     core.print(os.path.normpath("a b/é/../🙂/") == "a b/🙂")
-    many: str = "segment/".repeat(2048) + "tail"
+    many: str = strings.repeat("segment/", 2048) + "tail"
     core.print(os.path.normpath("./" + many + "/") == many)
     core.print(os.path.normpath("//" + many + "/") == "//" + many)

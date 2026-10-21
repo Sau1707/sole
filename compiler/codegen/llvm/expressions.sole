@@ -1,4 +1,5 @@
 import core
+import string_array
 import codegen.llvm.ir as ir
 import semantic.model as model
 import codegen.llvm.casts as casts
@@ -8,12 +9,9 @@ import syntax.parser.tokens as tokens
 import codegen.llvm.context as context
 import codegen.llvm.types as llvm_types
 import codegen.llvm.literals as literals
-import codegen.llvm.sumtypes as sumtypes
 import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
 import syntax.parser.operators as operators
-import semantic.resolve.builtins as builtins
-import semantic.resolve.variants as variants
 import codegen.llvm.operators as llvm_operators
 
 
@@ -22,7 +20,7 @@ def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
     values: context.Value[] = []
     tokens.expect(state, "(")
     while tokens.peek(state) != ")":
-        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+        if state.tokens.kind[state.tokens.position[0]] == 1 && state.tokens.text[state.tokens.position[0] + 1] == "=":
             report.fail_at(state, "named arguments are only supported for record constructors")
         expected: str = ""
         if core.len(values) < core.len(types):
@@ -47,11 +45,11 @@ def parse_constructor_arguments(state: context.State, record: model.RecordInfo) 
     named: bool = false
     while tokens.peek(state) != ")":
         field_index: int64 = positional
-        if state.tokens.kind[state.tokens.position] == 1 && state.tokens.text[state.tokens.position + 1] == "=":
+        if state.tokens.kind[state.tokens.position[0]] == 1 && state.tokens.text[state.tokens.position[0] + 1] == "=":
             named = true
             field_name: str = tokens.identifier(state)
             tokens.expect(state, "=")
-            field_index = record.names.index_of(field_name)
+            field_index = string_array.index_of(record.names, field_name)
             if field_index < 0:
                 report.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
         else:
@@ -179,11 +177,11 @@ def call_builtin(state: context.State, name: str) -> context.Value:
     return context.Value("void", "", "")
 
 
-def named_call(state: context.State, name: str, receiver: context.Value[]) -> context.Value:
-    """Resolve intrinsic calls, casts, constructors, functions, and methods."""
-    if core.len(receiver) == 0 && core.len(name) > 17 && core.slice(name, 0, 17) == "__sole_intrinsic_":
+def named_call(state: context.State, name: str) -> context.Value:
+    """Resolve intrinsic calls, casts, struct constructors, and functions."""
+    if core.len(name) > 17 && core.slice(name, 0, 17) == "__sole_intrinsic_":
         return call_builtin(state, core.slice(name, 17, core.len(name)))
-    if core.len(receiver) == 0 && (type_query.integer_type(name) || type_query.float_type(name) || name == "bool" || name == "ptr" || name == "str"):
+    if type_query.integer_type(name) || type_query.float_type(name) || name == "bool" || name == "ptr" || name == "str":
         tokens.expect(state, "(")
         argument: context.Value = expression(state, 0, name)
         tokens.expect(state, ")")
@@ -198,23 +196,12 @@ def named_call(state: context.State, name: str, receiver: context.Value[]) -> co
             return context.Value("str", ir.instruction(state, "call {ptr, i64} @_sole.number_str(i64 " + wide.value + ", i1 " + negative + ")"), "")
         return casts.cast_value(state, argument, name)
     ri: int64 = symbols.record_index(state, name)
-    if core.len(receiver) == 0 && ri >= 0:
+    if ri >= 0:
         record: model.RecordInfo = state.records[ri]
         arguments: context.Value[] = parse_constructor_arguments(state, record)
         aggregate: str = "poison"
-        pointer: str = ""
-        if record.kind == "class":
-            end: str = ir.instruction(state, "getelementptr %" + name + ", ptr null, i32 1")
-            size: str = ir.instruction(state, "ptrtoint ptr " + end + " to i64")
-            pointer = ir.instruction(state, "call ptr @_sole.alloc64(i64 " + size + ")")
         for i in range(core.len(arguments)):
-            if record.kind == "class":
-                field: str = ir.instruction(state, "getelementptr %" + name + ", ptr " + pointer + ", i32 0, i32 " + str(i))
-                ir.emit(state, "store " + ir.typed(state, arguments[i]) + ", ptr " + field)
-            else:
-                aggregate = ir.instruction(state, "insertvalue %" + name + " " + aggregate + ", " + ir.typed(state, arguments[i]) + ", " + str(i))
-        if record.kind == "class":
-            return context.Value(name, pointer, "")
+            aggregate = ir.instruction(state, "insertvalue %" + name + " " + aggregate + ", " + ir.typed(state, arguments[i]) + ", " + str(i))
         if core.len(arguments) == 0:
             aggregate = "zeroinitializer"
         return context.Value(name, aggregate, "")
@@ -222,17 +209,10 @@ def named_call(state: context.State, name: str, receiver: context.Value[]) -> co
     if fi < 0:
         report.fail_at(state, "unknown function '" + name + "'")
     fn: model.FunctionInfo = state.functions[fi]
-    parameter_types: str[] = fn.types
-    if core.len(receiver) > 0:
-        parameter_types = []
-        for j in range(core.len(receiver), core.len(fn.types)):
-            core.append(parameter_types, fn.types[j])
-    values: context.Value[] = parse_arguments(state, parameter_types)
-    if core.len(values) + core.len(receiver) != core.len(fn.types):
+    values: context.Value[] = parse_arguments(state, fn.types)
+    if core.len(values) != core.len(fn.types):
         report.fail_at(state, "wrong number of arguments for " + name)
     parts: str[] = []
-    if core.len(receiver) > 0:
-        core.append(parts, ir.typed(state, receiver[0]))
     for k in range(core.len(values)):
         if core.len(parts) > 0:
             core.append(parts, ", ")
@@ -253,7 +233,7 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
     """Parse and lower an expression using operator precedence."""
 
     # Read the initial literal, unary operation, grouped value, or name.
-    kind: int32 = state.tokens.kind[state.tokens.position]
+    kind: int32 = state.tokens.kind[state.tokens.position[0]]
     text: str = tokens.take(state)
     left: context.Value = context.Value("void", "", "")
     is_call: bool = false
@@ -262,7 +242,7 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
     elif kind == 8:
         left = context.Value("uint8", str(text[0]), "")
     elif text == "-" || text == "~" || text == "not":
-        direct_number: bool = state.tokens.kind[state.tokens.position] == 2
+        direct_number: bool = state.tokens.kind[state.tokens.position[0]] == 2
         level: int32 = 10
         if text == "not":
             level = 3
@@ -322,19 +302,10 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
                 number_kind = "real"
         left = context.Value(number_kind, text, "")
     elif kind == 1:
-        si: int64 = symbols.sum_index(state, text)
-        if si >= 0:
-            info: model.SumInfo = state.sums[si]
-            tokens.expect(state, ".")
-            variant: int64 = variants.variant_index(state, info, tokens.identifier(state))
-            if info.kind == "enum":
-                left = context.Value(info.name, str(variant), "")
-            else:
-                values: context.Value[] = parse_arguments(state, info.variants[variant].types)
-                left = sumtypes.construct(state, info, variant, values)
-                is_call = true
-        elif tokens.peek(state) == "(":
-            left = named_call(state, text, [])
+        if tokens.reserved_keyword(text):
+            report.fail_at(state, "expected an expression, got '" + text + "'")
+        if tokens.peek(state) == "(":
+            left = named_call(state, text)
             is_call = true
         else:
             li: int64 = symbols.local_index(state, text)
@@ -352,10 +323,7 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
         if tokens.accept(state, "."):
             member: str = tokens.identifier(state)
             if tokens.peek(state) == "(":
-                left = literals.coerce(state, left, "")
-                receivers: context.Value[] = [left]
-                left = named_call(state, left.typ + "." + member, receivers)
-                is_call = true
+                report.fail_at(state, "methods are not supported; use a function with an explicit parameter")
             else:
                 is_call = false
                 record_id: int64 = symbols.record_index(state, left.typ)
@@ -369,8 +337,6 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
                     report.fail_at(state, "unknown field '" + member + "'")
                 field_type: str = info.types[field_index]
                 base_pointer: str = left.pointer
-                if info.kind == "class":
-                    base_pointer = left.value
                 if base_pointer != "":
                     field_pointer: str = ir.instruction(state, "getelementptr %" + info.name + ", ptr " + base_pointer + ", i32 0, i32 " + str(field_index))
                     field_value: str = ir.instruction(state, "load " + llvm_types.llvm_type(state, field_type) + ", ptr " + field_pointer)
@@ -421,9 +387,9 @@ def parse_expression(state: context.State, minimum: int32, expected: str) -> con
             tokens.take(state)
             if operator == "&&" || operator == "||":
                 left = literals.coerce(state, left, "bool")
-                rhs_label: str = state.fresh()
-                short_label: str = state.fresh()
-                end_label: str = state.fresh()
+                rhs_label: str = context.fresh(state)
+                short_label: str = context.fresh(state)
+                end_label: str = context.fresh(state)
                 bool_slot: str = ir.slot(state, "bool")
                 if operator == "&&":
                     ir.emit(state, "br i1 " + left.value + ", label %" + rhs_label + ", label %" + short_label)

@@ -65,7 +65,7 @@ def number_literal(state: context.State, text: str, typ: str) -> context.Value:
             signed_value = "-" + signed_value
         return float_literal(state, signed_value, typ)
     definition: scalar_definition.Type = registry.lookup(typ)
-    maximum: uint64 = definition.maximum(negative)
+    maximum: uint64 = scalar_definition.maximum(definition, negative)
     if magnitude > maximum || negative && definition.unsigned:
         diagnostics.fail_at(state, "integer literal does not fit " + typ)
     output_number: str = str(magnitude)

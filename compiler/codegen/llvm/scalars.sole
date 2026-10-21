@@ -3,9 +3,9 @@ import primitives.definition as scalar_definition
 
 def representation(typ: scalar_definition.Type) -> str:
     """Map primitive representations to LLVM types."""
-    if typ.integer() || typ.category == "bool":
+    if scalar_definition.integer(typ) || typ.category == "bool":
         return "i" + str(typ.bits)
-    if typ.floating():
+    if scalar_definition.floating(typ):
         if typ.bits == 32:
             return "float"
         return "double"
@@ -20,9 +20,9 @@ def representation(typ: scalar_definition.Type) -> str:
 
 def arithmetic(typ: scalar_definition.Type, operator: str) -> str:
     """Select an LLVM arithmetic or bitwise instruction."""
-    if not typ.numeric():
+    if not scalar_definition.numeric(typ):
         return ""
-    if typ.floating():
+    if scalar_definition.floating(typ):
         if operator == "+":
             return "fadd"
         if operator == "-":
@@ -80,15 +80,15 @@ def comparison(typ: scalar_definition.Type, operator: str) -> str:
         predicate = "ge"
     else:
         return ""
-    if typ.floating():
+    if scalar_definition.floating(typ):
         if operator == "!=":
             return "fcmp une"
         return "fcmp o" + predicate
     if operator == "==" || operator == "!=":
-        if typ.integer() || typ.category == "bool" || typ.category == "ptr":
+        if scalar_definition.integer(typ) || typ.category == "bool" || typ.category == "ptr":
             return "icmp " + predicate
         return ""
-    if not typ.integer():
+    if not scalar_definition.integer(typ):
         return ""
     if typ.unsigned:
         return "icmp u" + predicate
@@ -99,17 +99,17 @@ def conversion(source: scalar_definition.Type, destination: scalar_definition.Ty
     """Select an LLVM primitive conversion instruction."""
     if source.name == destination.name:
         return "identity"
-    if source.category == "ptr" && destination.integer():
+    if source.category == "ptr" && scalar_definition.integer(destination):
         return "ptrtoint"
-    if source.integer() && destination.category == "ptr":
+    if scalar_definition.integer(source) && destination.category == "ptr":
         return "inttoptr"
     if destination.category == "bool":
-        if source.floating():
+        if scalar_definition.floating(source):
             return "fcmp une"
-        if source.integer():
+        if scalar_definition.integer(source):
             return "icmp ne"
-    if source.integer() || source.category == "bool":
-        if destination.integer():
+    if scalar_definition.integer(source) || source.category == "bool":
+        if scalar_definition.integer(destination):
             if source.bits == destination.bits:
                 return "identity"
             if source.bits > destination.bits:
@@ -117,16 +117,16 @@ def conversion(source: scalar_definition.Type, destination: scalar_definition.Ty
             if source.unsigned || source.category == "bool":
                 return "zext"
             return "sext"
-        if destination.floating():
+        if scalar_definition.floating(destination):
             if source.unsigned || source.category == "bool":
                 return "uitofp"
             return "sitofp"
-    if source.floating():
-        if destination.integer():
+    if scalar_definition.floating(source):
+        if scalar_definition.integer(destination):
             if destination.unsigned:
                 return "fptoui"
             return "fptosi"
-        if destination.floating():
+        if scalar_definition.floating(destination):
             if source.bits > destination.bits:
                 return "fptrunc"
             return "fpext"

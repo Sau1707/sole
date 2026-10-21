@@ -3,14 +3,14 @@ struct Point:
     x: float64
     y: float64
 
-class Counter:
+struct Counter:
     value: int32
 
-    def add(self, amount: int32) -> void:
-        self.value = self.value + amount
+def add(counter: Counter[], amount: int32) -> void:
+    counter[0].value = counter[0].value + amount
 
-    def read(self) -> int32:
-        return self.value
+def read(counter: Counter[]) -> int32:
+    return counter[0].value
 
 def factorial(n: int64) -> int64:
     if n <= 1:
@@ -23,10 +23,10 @@ def main() -> int32:
     copy.x = 9.0
     core.print(point.x)
 
-    counter: Counter = Counter(0)
-    alias: Counter = counter
-    alias.add(7)
-    core.print(counter.read())
+    counter: Counter[] = [Counter(0)]
+    alias: Counter[] = counter
+    add(alias, 7)
+    core.print(read(counter))
 
     numbers: int32[4] = [10, 20, 30, 40]
     i: int64 = 0

@@ -2,16 +2,17 @@ import core
 
 
 # Store token text, kinds, source locations, and the parser cursor.
-class Tokens:
+struct Tokens:
     text: str[]
     kind: int32[]
     line: int64[]
-    position: int64
+    position: int64[]
     files: str[]
 
-    def add(self, text: str, kind: int32, line: int64) -> void:
-        """TODO: Document this function."""
-        core.append(self.text, text)
-        core.append(self.kind, kind)
-        core.append(self.line, line)
-        core.append(self.files, "")
+
+def add(tokens: Tokens, text: str, kind: int32, line: int64) -> void:
+    """Append a token and its source location to shared storage."""
+    core.append(tokens.text, text)
+    core.append(tokens.kind, kind)
+    core.append(tokens.line, line)
+    core.append(tokens.files, "")

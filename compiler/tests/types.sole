@@ -14,9 +14,9 @@ def require(condition: bool, description: str) -> void:
 def check_integer(name: str, llvm: str, bits: int64, unsigned: bool) -> void:
     """TODO: Document this function."""
     definition: scalar_definition.Type = registry.lookup(name)
-    require(definition.known() && definition.name == name, name + " primitive identity")
+    require(scalar_definition.known(definition) && definition.name == name, name + " primitive identity")
     require(scalars.representation(definition) == llvm, name + " representation")
-    require(definition.integer() && not definition.floating(), name + " category")
+    require(scalar_definition.integer(definition) && not scalar_definition.floating(definition), name + " category")
     require(definition.bits == bits && definition.unsigned == unsigned, name + " width and signedness")
     require(scalars.arithmetic(definition, "+") == "add", name + " addition")
     require(scalars.arithmetic(definition, "-") == "sub", name + " subtraction")
@@ -32,13 +32,13 @@ def check_integer(name: str, llvm: str, bits: int64, unsigned: bool) -> void:
         require(scalars.arithmetic(definition, "%") == "urem", name + " remainder")
         require(scalars.arithmetic(definition, ">>") == "lshr", name + " right shift")
         require(scalars.comparison(definition, "<") == "icmp ult", name + " ordering")
-        require(definition.lower_bound() == "0", name + " lower bound")
+        require(scalar_definition.lower_bound(definition) == "0", name + " lower bound")
     else:
         require(scalars.arithmetic(definition, "/") == "sdiv", name + " division")
         require(scalars.arithmetic(definition, "%") == "srem", name + " remainder")
         require(scalars.arithmetic(definition, ">>") == "ashr", name + " right shift")
         require(scalars.comparison(definition, "<") == "icmp slt", name + " ordering")
-        require(definition.maximum(true) == definition.maximum(false) + 1, name + " signed limits")
+        require(scalar_definition.maximum(definition, true) == scalar_definition.maximum(definition, false) + 1, name + " signed limits")
 
 
 def main() -> int32:
@@ -86,16 +86,16 @@ def main() -> int32:
     require(scalars.comparison(real, "<=") == "fcmp ole", "ordered float comparison")
     require(scalars.representation(boolean) == "i1" && boolean.bits == 1, "boolean representation")
     require(scalars.representation(pointer) == "ptr" && scalars.representation(text) == "{ptr, i64}", "pointer and string representations")
-    require(nothing.known() && scalars.representation(nothing) == "void", "void representation")
+    require(scalar_definition.known(nothing) && scalars.representation(nothing) == "void", "void representation")
     require(scalars.arithmetic(boolean, "+") == "" && scalars.comparison(pointer, "<") == "", "invalid scalar operations")
     require(scalars.comparison(text, "==") == "", "strings use runtime equality")
-    require(not registry.lookup("int").known(), "unknown type")
-    require(not registry.lookup("int16[]").known(), "arrays are not primitive types")
+    require(not scalar_definition.known(registry.lookup("int")), "unknown type")
+    require(not scalar_definition.known(registry.lookup("int16[]")), "arrays are not primitive types")
     require(scalars.representation(registry.lookup("int")) == "", "unknown representation")
-    require(signed.lower_bound() == "-32768" && signed.upper_bound() == "32768", "int16 bounds")
-    require(unsigned.maximum(false) == uint64(65535), "uint16 maximum")
-    require(wide.lower_bound() == "-9223372036854775808", "int64 minimum")
-    require(registry.lookup("uint64").upper_bound() == "18446744073709551616", "uint64 exclusive upper bound")
-    require(registry.lookup("uint64").maximum(false) == uint64(18446744073709551615), "uint64 maximum")
+    require(scalar_definition.lower_bound(signed) == "-32768" && scalar_definition.upper_bound(signed) == "32768", "int16 bounds")
+    require(scalar_definition.maximum(unsigned, false) == uint64(65535), "uint16 maximum")
+    require(scalar_definition.lower_bound(wide) == "-9223372036854775808", "int64 minimum")
+    require(scalar_definition.upper_bound(registry.lookup("uint64")) == "18446744073709551616", "uint64 exclusive upper bound")
+    require(scalar_definition.maximum(registry.lookup("uint64"), false) == uint64(18446744073709551615), "uint64 maximum")
     core.print("Passed compiler type implementation checks.")
     return 0

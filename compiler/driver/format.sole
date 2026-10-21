@@ -1,4 +1,5 @@
 import core
+import strings
 import files
 import syntax.formatter as formatter
 
@@ -17,7 +18,7 @@ def main() -> int32:
         return 1
     for i in range(first, core.arg_count()):
         path: str = core.arg(i)
-        if not path.ends_with(".sole"):
+        if not strings.ends_with(path, ".sole"):
             core.print("error: expected a .sole file: " + path)
             return 1
     status: int32 = 0

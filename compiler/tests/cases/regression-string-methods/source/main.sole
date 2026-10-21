@@ -1,11 +1,12 @@
 import core
+import strings
 
 
-class Label:
+struct Label:
     text: str
 
-    def contains(self, needle: str) -> bool:
-        return self.text.contains(needle)
+def contains(label: Label, needle: str) -> bool:
+    return strings.contains(label.text, needle)
 
 
 def text(calls: int64[]) -> str:
@@ -15,29 +16,29 @@ def text(calls: int64[]) -> str:
 
 def main() -> int32:
     value: str = "é\0猫"
-    if not "".starts_with("") || not "".ends_with(""):
+    if not strings.starts_with("", "") || not strings.ends_with("", ""):
         return 1
-    if "".starts_with("a") || "".ends_with("a"):
+    if strings.starts_with("", "a") || strings.ends_with("", "a"):
         return 2
-    if not value.starts_with("é\0") || not value.ends_with("\0猫"):
+    if not strings.starts_with(value, "é\0") || not strings.ends_with(value, "\0猫"):
         return 3
-    if value.starts_with("é\0猫a") || value.ends_with("aé\0猫"):
+    if strings.starts_with(value, "é\0猫a") || strings.ends_with(value, "aé\0猫"):
         return 4
-    if value.starts_with("猫") || value.ends_with("é"):
+    if strings.starts_with(value, "猫") || strings.ends_with(value, "é"):
         return 5
-    if value.find("猫") != 3 || value.find("\0") != 2 || value.find("a") != -1:
+    if strings.find(value, "猫") != 3 || strings.find(value, "\0") != 2 || strings.find(value, "a") != -1:
         return 6
-    if not value.contains("") || not value.contains("\0猫") || value.contains("a"):
+    if not strings.contains(value, "") || not strings.contains(value, "\0猫") || strings.contains(value, "a"):
         return 7
-    parts: str[] = value.partition("\0")
+    parts: str[] = strings.partition(value, "\0")
     if core.len(parts) != 3 || parts[0] != "é" || parts[1] != "\0" || parts[2] != "猫":
         return 8
-    if value.replace("\0", "/").repeat(2) != "é/猫é/猫":
+    if strings.repeat(strings.replace(value, "\0", "/"), 2) != "é/猫é/猫":
         return 9
-    if not ("é" + "猫").ends_with("猫") || not Label(value).contains("猫"):
+    if not strings.ends_with("é" + "猫", "猫") || not contains(Label(value), "猫"):
         return 10
     calls: int64[] = [0]
-    if text(calls).replace("\0", "/").find("猫") != 3 || calls[0] != 1:
+    if strings.find(strings.replace(text(calls), "\0", "/"), "猫") != 3 || calls[0] != 1:
         return 11
     core.print("string methods ok")
     return 0

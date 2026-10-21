@@ -1,6 +1,6 @@
 # Sole
 
-A statically typed, indentation-based language with an LLVM backend. It compiles to **native executables**.
+A small, statically typed, indentation-based language with an LLVM backend. It compiles to **native executables** and its compiler is written in Sole.
 
 
 ## Install the released compiler
@@ -34,55 +34,76 @@ def main() -> int32:
 
 <br />
 
-### String methods
+### Minimal language core
 
-Strings provide `starts_with(prefix)`, `ends_with(suffix)`, `find(needle)`,
-`contains(needle)`, `replace(old, new)`, `partition(separator)`, and `repeat(count)`
-without an import:
+- `int8`–`int64`, `uint8`–`uint64`, `float32`, `float64`, `bool`, `ptr`, and `void`.
+- Functions, imports, and typed external C declarations.
+- Data-only structs, fixed-size arrays, strings, and dynamic arrays.
+- Explicitly typed variables, arithmetic, `if`, `while`, `for … in range(…)`,
+  `break`, `continue`, and `return`.
 
-```sole
-"Hello, Sole!".contains("Sole")
-"ha".repeat(3)
-```
+Classes, methods, implicit `self`, enums, tagged unions, pattern matching, and
+lambdas are not supported. This is an intentional breaking reduction of the
+language, not an alternative class syntax.
 
-Matching is byte-based, and `find` returns a byte offset or `-1` when absent.
-An empty needle matches at offset zero. `replace` replaces non-overlapping matches
-and leaves the string unchanged for an empty pattern. `partition` returns
-`[before, separator, after]` at the first match, or `[text, "", ""]` for an absent
-or empty separator. `repeat` returns an empty string for nonpositive counts.
-
-### Numeric, byte, and array methods
-
-All signed and unsigned integer widths and both floating-point types provide
-`abs()`, `min(other)`, `max(other)`, and `clamp(lower, upper)`. Integers also provide
-`gcd(other)`. Arguments and results retain the receiver's type; no numeric widening
-is implied. Integer and real literal receivers default to `int64` and `float64`.
+Structs and fixed arrays have value semantics. Dynamic arrays share storage;
+use an explicit array parameter when a function needs to mutate shared data:
 
 ```sole
-int32(-12).abs()
-uint64(48).gcd(18)
-float32(2.5).clamp(0.0, 2.0)
-b'A'.to_lower().is_alpha()
+struct Counter:
+    value: int32
+
+
+def increment(counter: Counter[]) -> void:
+    counter[0].value = counter[0].value + 1
+
+
+def main() -> int32:
+    counter: Counter[] = [Counter(0)]
+    increment(counter)
+    return counter[0].value - 1
 ```
 
-`clamp` applies `max(lower)` followed by `min(upper)`, including for reversed
-bounds. Signed integer `abs` uses wrapping negation, so the minimum value remains
-unchanged. Signed `gcd` preserves the former `math.gcd` algorithm and its ordinary
-integer arithmetic checks; results outside the signed positive range are not
-widened. Floating `abs` negates strictly negative values and preserves signed zero
-and NaNs. Floating `min`/`max` use strict comparisons and return the argument on
-ties or unordered comparisons, rather than IEEE `minimum`/`maximum` semantics.
+Copying a struct also copies its dynamic-array handles, not the arrays' contents.
+The compiler uses single-element arrays for shared counters and parser cursors;
+ordinary structs and fixed arrays still copy by value. Raw C pointers remain
+unsafe; this reduction does not introduce typed pointers or new ownership rules.
 
-Bytes (`uint8`) also provide ASCII-only `is_digit()`, `is_alpha()`, `is_space()`,
-`to_lower()`, and `to_upper()`. Non-ASCII bytes are left unchanged by conversions.
+### Ordinary library functions
 
-Dynamic string arrays (`str[]`) provide `contains(value)` and `index_of(value)`.
-Search returns the first matching index, or `-1` when absent, without modifying
-the array. These methods preserve the former string-array-only API; other array
-element types are not implicitly supported.
+String helpers are ordinary functions, loaded only when imported:
 
-These methods require no imports. The former `math`, `ascii`, and `arrays`
-modules have been removed. `bisect` and `statistics` remain separate modules.
+```sole
+import strings
+import string_array
+```
+
+Use `strings.contains(text, needle)`, `strings.repeat(text, count)`, or
+`string_array.index_of(items, value)` instead of methods. `strings` also provides
+`starts_with`, `ends_with`, `find`, `replace`, and `partition`.
+Matching is byte-based; `find` and `index_of` return `-1` when absent. An empty
+needle matches at offset zero. Replacement is non-overlapping and an empty pattern
+leaves the text unchanged. Partitioning returns `[before, separator, after]`, or
+`[text, "", ""]` for an absent or empty separator. Repetition returns an empty
+string for nonpositive counts. Numeric and ASCII convenience methods have been
+removed; use explicit arithmetic, ordinary functions, or the typed C API.
+
+### Reading the compiler
+
+Start with `compiler/driver/pipeline.sole`, which coordinates:
+
+1. `compiler/syntax/lexer/`: source text to located tokens.
+2. `compiler/modules/loader.sole`: import loading and name qualification.
+3. `compiler/semantic/resolve/`: declaration collection and symbol lookup.
+4. `compiler/semantic/check/`: declaration and struct-layout validation.
+5. `compiler/codegen/llvm/`: expression/body checking and textual LLVM IR emission.
+6. `compiler/codegen/llvm/target.sole`: LLVM verification, optimization, and output.
+
+The compiler currently lowers function bodies directly from tokens; it does not
+have a separate AST or typed IR. `compiler/syntax/parser/sole.ebnf` describes the
+syntax used by the standalone `syntax` command. LLVM performs optimization and
+machine-code generation. Runtime support stays in `compiler/runtime/`; ordinary
+library code stays in `lib/`.
 
 ### Built-in C API
 
@@ -116,8 +137,18 @@ make up             # Setup the local development
 make down           # Cleanup the local enviroment
 ```
 
+To rebuild and verify self-hosting, then run the tests:
+
+```sh
+sh scripts/bootstrap-ci.sh
+SOLE_COMPILER="$PWD/.build/sole" sh compiler/tests/suite.sh
+```
+
+Bootstrap compares the second and third compiler builds byte-for-byte. It also
+supports older seeds that implicitly load the now-removed primitive method files.
+
 ### Formatting
 
 Run `sole format file.sole` to format a file, or `sole format --check file.sole` to check without modifying it.
 
-The formatter inserts `"""TODO: Document this function."""` in functions and methods that lack a docstring. Existing docstrings and bodyless `extern` declarations are preserved. Every standalone `#` comment must have a blank line before it; inline comments and comment-like text inside strings are unchanged.
+The formatter inserts `"""TODO: Document this function."""` in functions that lack a docstring. Existing docstrings and bodyless `extern` declarations are preserved. Every standalone `#` comment must have a blank line before it; inline comments and comment-like text inside strings are unchanged.

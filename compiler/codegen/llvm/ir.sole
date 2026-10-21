@@ -12,7 +12,7 @@ def emit(state: context.State, text: str) -> void:
 
 def instruction(state: context.State, text: str) -> str:
     """Emit an instruction and return its result name."""
-    result_name: str = "%" + state.fresh()
+    result_name: str = "%" + context.fresh(state)
     emit(state, result_name + " = " + text)
     return result_name
 
@@ -20,20 +20,20 @@ def instruction(state: context.State, text: str) -> str:
 def block_label(state: context.State, name: str) -> void:
     """Start a basic block that can receive new instructions."""
     core.append(state.code, name + ":\n")
-    state.ended = false
+    state.ended[0] = false
 
 
 def slot(state: context.State, typ: str) -> str:
     """Reserve typed storage in the function's entry block."""
-    result_name: str = "%" + state.fresh()
+    result_name: str = "%" + context.fresh(state)
     core.append(state.slots, "  " + result_name + " = alloca " + llvm_types.llvm_type(state, typ) + "\n")
     return result_name
 
 
 def checked(state: context.State, condition: str) -> void:
     """Trap when a runtime safety condition fails."""
-    ok: str = state.fresh()
-    bad: str = state.fresh()
+    ok: str = context.fresh(state)
+    bad: str = context.fresh(state)
     emit(state, "br i1 " + condition + ", label %" + ok + ", label %" + bad)
     block_label(state, bad)
     emit(state, "call void @llvm.trap()")

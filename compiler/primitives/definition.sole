@@ -1,46 +1,46 @@
-class Type:
+struct Type:
     name: str
     bits: int64
     category: str
     unsigned: bool
 
-    def known(self) -> bool:
-        """Distinguish primitive descriptors from unknown type names."""
-        return self.category != ""
 
-    def integer(self) -> bool:
-        """Recognize signed and unsigned integer representations."""
-        return self.category == "integer"
+def known(typ: Type) -> bool:
+    return typ.category != ""
 
-    def floating(self) -> bool:
-        """Recognize floating-point representations."""
-        return self.category == "float"
 
-    def numeric(self) -> bool:
-        """Recognize representations supporting numeric operations."""
-        return self.integer() || self.floating()
+def integer(typ: Type) -> bool:
+    return typ.category == "integer"
 
-    def maximum(self, negative: bool) -> uint64:
-        """Return the largest integer literal magnitude for the given sign."""
-        if not self.unsigned:
-            limit: uint64 = uint64(1) << uint64(self.bits - 1)
-            if not negative:
-                limit = limit - 1
-            return limit
-        if self.bits < 64:
-            return (uint64(1) << uint64(self.bits)) - 1
-        return uint64(18446744073709551615)
 
-    def lower_bound(self) -> str:
-        """Return the inclusive integer lower bound as decimal text."""
-        if self.unsigned:
-            return "0"
-        return "-" + str(uint64(1) << uint64(self.bits - 1))
+def floating(typ: Type) -> bool:
+    return typ.category == "float"
 
-    def upper_bound(self) -> str:
-        """Return the exclusive integer upper bound as decimal text."""
-        if not self.unsigned:
-            return str(uint64(1) << uint64(self.bits - 1))
-        if self.bits == 64:
-            return "18446744073709551616"
-        return str(uint64(1) << uint64(self.bits))
+
+def numeric(typ: Type) -> bool:
+    return integer(typ) || floating(typ)
+
+
+def maximum(typ: Type, negative: bool) -> uint64:
+    if not typ.unsigned:
+        limit: uint64 = uint64(1) << uint64(typ.bits - 1)
+        if not negative:
+            limit = limit - 1
+        return limit
+    if typ.bits < 64:
+        return (uint64(1) << uint64(typ.bits)) - 1
+    return uint64(18446744073709551615)
+
+
+def lower_bound(typ: Type) -> str:
+    if typ.unsigned:
+        return "0"
+    return "-" + str(uint64(1) << uint64(typ.bits - 1))
+
+
+def upper_bound(typ: Type) -> str:
+    if not typ.unsigned:
+        return str(uint64(1) << uint64(typ.bits - 1))
+    if typ.bits == 64:
+        return "18446744073709551616"
+    return str(uint64(1) << uint64(typ.bits))

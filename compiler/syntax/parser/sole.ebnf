@@ -4,7 +4,7 @@
 # intrinsic availability and control-flow validity are checked semantically.
 # Notation: comma = sequence, | = choice, [] = optional, {} = repetition.
 
-program = [docstring], {import_decl | intrinsic_decl | function_decl | extern_decl | struct_decl | class_decl | enum_decl | union_decl}, EOF;
+program = [docstring], {import_decl | intrinsic_decl | function_decl | extern_decl | struct_decl}, EOF;
 docstring = STRING, NEWLINE;
 qualified_name = IDENTIFIER, {".", IDENTIFIER};
 import_decl = ("import", qualified_name, ["as", IDENTIFIER] | "from", qualified_name, "import", import_name, {",", import_name}), NEWLINE;
@@ -19,20 +19,11 @@ extern_decl = "extern", signature, NEWLINE;
 field = IDENTIFIER, ":", type_name, NEWLINE;
 empty_member = "pass", NEWLINE;
 struct_decl = "struct", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], {field | empty_member}, DEDENT;
-class_decl = "class", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], {field | empty_member}, method_decl, {field | method_decl | empty_member}, DEDENT;
-enum_decl = "enum", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], enum_member, {enum_member}, DEDENT;
-enum_member = IDENTIFIER, NEWLINE;
-union_decl = "union", IDENTIFIER, ":", NEWLINE, INDENT, [docstring], variant_decl, {variant_decl}, DEDENT;
-variant_decl = IDENTIFIER, "(", [parameters], ")", NEWLINE;
-method_decl = "def", IDENTIFIER, "(", "self", [",", [parameters]], ")", "->", type_name, block;
 block = ":", NEWLINE, INDENT, [docstring], {statement}, DEDENT;
-statement = if_stmt | while_stmt | for_stmt | match_stmt | return_stmt | jump_stmt | pass_stmt | variable_decl | augmented_stmt | expression_stmt;
+statement = if_stmt | while_stmt | for_stmt | return_stmt | jump_stmt | pass_stmt | variable_decl | augmented_stmt | expression_stmt;
 if_stmt = "if", expression, block, {"elif", expression, block}, ["else", block];
 while_stmt = "while", expression, block;
 for_stmt = "for", IDENTIFIER, "in", "range", "(", expression, [",", expression], [","], ")", block;
-match_stmt = "match", expression, ":", NEWLINE, INDENT, case_arm, {case_arm}, DEDENT;
-case_arm = "case", qualified_name, ["(", [bindings], ")"], block;
-bindings = IDENTIFIER, {",", IDENTIFIER}, [","];
 return_stmt = "return", [expression], NEWLINE;
 jump_stmt = ("break" | "continue"), NEWLINE;
 pass_stmt = "pass", NEWLINE;
@@ -52,7 +43,7 @@ sum = product, {("+" | "-"), product};
 product = unary, {("*" | "/" | "%"), unary};
 unary = ("-" | "~"), unary | postfix;
 postfix = primary, {".", IDENTIFIER | "[", expression, "]" | "(", [call_arguments], ")"};
-primary = NUMBER | STRING | BYTE | "true" | "false" | "self" | IDENTIFIER | "¢", ".", IDENTIFIER | "(", expression, ")" | "[", [arguments], "]";
+primary = NUMBER | STRING | BYTE | "true" | "false" | IDENTIFIER | "¢", ".", IDENTIFIER | "(", expression, ")" | "[", [arguments], "]";
 arguments = expression, {",", expression}, [","];
 call_arguments = argument, {",", argument}, [","];
 argument = IDENTIFIER, "=", expression | expression;

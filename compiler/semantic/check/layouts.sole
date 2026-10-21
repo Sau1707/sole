@@ -1,0 +1,24 @@
+import core
+import diagnostics.report as report
+import codegen.llvm.context as context
+import semantic.types.query as type_query
+import semantic.resolve.symbols as symbols
+
+
+def check_layout(state: context.State, typ: str, path: str[]) -> void:
+    """Reject recursively embedded structs, including through fixed arrays."""
+    if type_query.dynamic_type(typ):
+        return
+    typ = type_query.element_type(typ)
+    ri: int64 = symbols.record_index(state, typ)
+    if ri < 0:
+        return
+    for i in range(core.len(path)):
+        if path[i] == typ:
+            report.fail_at(state, "recursive value layout: " + typ)
+    next_path: str[] = []
+    for i in range(core.len(path)):
+        core.append(next_path, path[i])
+    core.append(next_path, typ)
+    for f in range(core.len(state.records[ri].types)):
+        check_layout(state, state.records[ri].types[f], next_path)

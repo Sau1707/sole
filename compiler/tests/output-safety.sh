@@ -11,7 +11,6 @@ mkdir -p "$temporary/home" "$temporary/source" "$temporary/aliases" "$temporary/
 cp -R "$root/lib" "$temporary/home/lib"
 mkdir -p "$temporary/home/compiler"
 cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/home/compiler/"
-cp -R "$root/compiler/primitives" "$temporary/home/compiler/"
 export SOLE_HOME="$temporary/home" SOLE_LIB="$temporary/home/lib" TMPDIR="$temporary/tmp"
 
 fail() {
@@ -37,9 +36,7 @@ printf '# An imported module without emitted tokens.\n' > "$temporary/source/emp
 
 for input in "$temporary/source/"*.sole "$temporary/home/compiler/runtime/native.ll" \
     "$temporary/home/compiler/runtime/core.ll" "$temporary/home/compiler/runtime/io.sole" \
-    "$temporary/home/compiler/raw/c.sole" "$temporary/home/compiler/primitives/str.sole" \
-    "$temporary/home/compiler/primitives/int.sole" "$temporary/home/compiler/primitives/uint.sole" \
-    "$temporary/home/compiler/primitives/float.sole" "$temporary/home/compiler/primitives/array.sole"; do
+    "$temporary/home/compiler/raw/c.sole"; do
     cp "$input" "$temporary/original"
     rm -f "$temporary/aliases/symlink" "$temporary/aliases/hardlink"
     ln -s "$input" "$temporary/aliases/symlink"

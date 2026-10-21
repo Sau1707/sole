@@ -1,8 +1,7 @@
 
-# Describe the fields and kind of a struct or class.
+# Describe a data-only struct.
 struct RecordInfo:
     name: str
-    kind: str
     names: str[]
     types: str[]
 
@@ -15,17 +14,3 @@ struct FunctionInfo:
     result: str
     body: int64
     external: bool
-
-
-struct VariantInfo:
-    name: str
-    names: str[]
-    types: str[]
-    position: int64
-
-
-struct SumInfo:
-    name: str
-    kind: str
-    variants: VariantInfo[]
-    position: int64

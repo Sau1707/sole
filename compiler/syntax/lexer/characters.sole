@@ -1,8 +1,8 @@
 def digit(byte: uint8) -> bool:
     """Recognize ASCII decimal digits."""
-    return byte.is_digit()
+    return byte >= 48 && byte <= 57
 
 
 def letter(byte: uint8) -> bool:
     """Recognize letters and underscores allowed in identifiers."""
-    return byte.is_alpha() || byte == 95
+    return byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte == 95

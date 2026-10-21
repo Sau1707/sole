@@ -52,7 +52,7 @@ bounded() {
     return "$result"
 }
 
-bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.9' || fail version
+bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.10' || fail version
 SOLE_CC=/no/such/linker bounded "$compile_timeout" "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     bounded "$compile_timeout" "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -105,7 +105,6 @@ fi
 cp -R "$root/lib" "$temporary/installed/share/sole/"
 mkdir -p "$temporary/installed/share/sole/compiler"
 cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/installed/share/sole/compiler/"
-cp -R "$root/compiler/primitives" "$temporary/installed/share/sole/compiler/"
 mv "$temporary/installed" "$temporary/relocated"
 unset SOLE_HOME SOLE_LIB
 cd "$temporary"

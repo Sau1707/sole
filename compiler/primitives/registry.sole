@@ -1,6 +1,3 @@
-import primitives.ptr as scalar_ptr
-import primitives.bool as scalar_bool
-import primitives.void as scalar_void
 import primitives.definition as scalar_definition
 
 
@@ -27,11 +24,11 @@ def lookup(name: str) -> scalar_definition.Type:
     if name == "float64":
         return scalar_definition.Type("float64", 64, "float", false)
     if name == "bool":
-        return scalar_bool.bool().definition()
+        return scalar_definition.Type("bool", 1, "bool", false)
     if name == "str":
         return scalar_definition.Type("str", 0, "str", false)
     if name == "ptr":
-        return scalar_ptr.ptr().definition()
+        return scalar_definition.Type("ptr", 0, "ptr", false)
     if name == "void":
-        return scalar_void.void().definition()
+        return scalar_definition.Type("void", 0, "void", false)
     return scalar_definition.Type(name, 0, "", false)

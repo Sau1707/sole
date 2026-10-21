@@ -11,7 +11,8 @@ def declare_local(state: context.State, name: str, typ: str, value: context.Valu
     """Validate a local name, allocate its storage, and initialize its value."""
     if symbols.local_index(state, name) >= 0:
         diagnostics.fail_at(state, "variable is already declared; shadowing is forbidden")
-    if builtins.reserved_name(name) || symbols.record_index(state, name) >= 0 || symbols.sum_index(state, name) >= 0 || symbols.function_index(state, name) >= 0:
+    same_module: bool = symbols.module_prefix(name) == symbols.module_prefix(state.function_name)
+    if builtins.reserved_name(name) || same_module && (symbols.record_index(state, name) >= 0 || symbols.function_index(state, name) >= 0):
         diagnostics.fail_at(state, "reserved variable name '" + name + "'")
     if typ == "void":
         diagnostics.fail_at(state, "void is only a return type")
@@ -21,4 +22,4 @@ def declare_local(state: context.State, name: str, typ: str, value: context.Valu
     core.append(state.names, name)
     core.append(state.types, typ)
     core.append(state.pointers, pointer)
-    core.append(state.depths, state.depth)
+    core.append(state.depths, state.depth[0])

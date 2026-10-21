@@ -1,11 +1,9 @@
-enum Kind:
-    Number
-    Text
+struct Kind:
+    number: int32
 
 
-union Item:
-    Number(value: int64)
-    Empty()
+struct Item:
+    value: int64
 
 
 struct Pair:
@@ -19,8 +17,4 @@ def main() -> int32:
     total: int64 = 0
     for i in range(pair.second):
         total += i
-    match Item.Number(total):
-        case Item.Number(value):
-            return int32(value)
-        case Item.Empty():
-            return 0
+    return int32(total)

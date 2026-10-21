@@ -1,14 +1,15 @@
 import core
-class sole:
-    def main(self) -> int32:
-        return 7
+struct sole:
+    value: int32
+def read(value: sole) -> int32:
+    return value.value
 def strlen() -> int32:
     return 9
 def abs(x: int32) -> int32:
     return x + 1
 def main() -> int32:
-    object: sole = sole()
-    core.print(object.main())
+    object: sole = sole(7)
+    core.print(read(object))
     core.print(strlen())
     core.print(abs(-3))
     return 0

@@ -19,10 +19,8 @@ for optimize in -O0 -O2; do
 done
 
 for name in integer real; do
-    for declaration in enum union; do
-        member=A
-        if [ "$declaration" = union ]; then member='A()'; fi
-        printf '%s %s:\n    %s\n\n\ndef main() -> int32:\n    return 0\n' "$declaration" "$name" "$member" > "$temporary/reserved.sole"
+    for declaration in struct; do
+        printf '%s %s:\n    pass\n\n\ndef main() -> int32:\n    return 0\n' "$declaration" "$name" > "$temporary/reserved.sole"
         for command in check build; do
             status=0
             "$compiler" "$command" "$temporary/reserved.sole" > "$temporary/error" 2>&1 || status=$?
@@ -32,4 +30,4 @@ for name in integer real; do
     done
 done
 
-echo 'Passed combined constructor, enum, union, match, range, and += checks.'
+echo 'Passed combined struct, shared array, range, and += checks.'

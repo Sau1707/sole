@@ -6,7 +6,7 @@ import syntax.lexer.tokens as lexical_tokens
 
 def lex(text: str) -> lexical_tokens.Tokens:
     """Convert source text into tokens while tracking indentation and lines."""
-    tokens: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], 0, [])
+    tokens: lexical_tokens.Tokens = lexical_tokens.Tokens([], [], [], [0], [])
     levels: int64[] = [0]
     i: int64 = 0
     line: int64 = 1
@@ -30,11 +30,11 @@ def lex(text: str) -> lexical_tokens.Tokens:
                 top: int64 = core.len(levels) - 1
                 if indent_width > levels[top]:
                     core.append(levels, indent_width)
-                    tokens.add("<indent>", 5, line)
+                    lexical_tokens.add(tokens, "<indent>", 5, line)
                 else:
                     while top > 0 && indent_width < levels[top]:
                         top = top - 1
-                        tokens.add("<dedent>", 6, line)
+                        lexical_tokens.add(tokens, "<dedent>", 6, line)
                     if indent_width != levels[top]:
                         diagnostics.die("inconsistent indentation at line " + str(line))
                     if top < core.len(levels) - 1:
@@ -58,19 +58,19 @@ def lex(text: str) -> lexical_tokens.Tokens:
             if nesting == 0 && core.len(tokens.kind) > 0:
                 last: int32 = tokens.kind[core.len(tokens.kind) - 1]
                 if last != 4 && last != 5 && last != 6:
-                    tokens.add("<newline>", 4, line)
+                    lexical_tokens.add(tokens, "<newline>", 4, line)
             i = i + 1
             line = line + 1
             beginning = true
         elif byte == 194 && i + 1 < core.len(text) && text[i + 1] == 162:
-            tokens.add("¢", 7, line)
+            lexical_tokens.add(tokens, "¢", 7, line)
             i = i + 2
         elif characters.letter(byte) && not byte_literal:
             start: int64 = i
             i = i + 1
             while i < core.len(text) && (characters.letter(text[i]) || characters.digit(text[i])):
                 i = i + 1
-            tokens.add(core.slice(text, start, i), 1, line)
+            lexical_tokens.add(tokens, core.slice(text, start, i), 1, line)
         elif characters.digit(byte):
             start_number: int64 = i
             hex_number: bool = i + 1 < core.len(text) && text[i] == 48 && (text[i + 1] == 120 || text[i + 1] == 88)
@@ -79,7 +79,7 @@ def lex(text: str) -> lexical_tokens.Tokens:
                 i = i + 1
                 if not hex_number && i < core.len(text) && (text[i - 1] == 101 || text[i - 1] == 69) && (text[i] == 43 || text[i] == 45):
                     i = i + 1
-            tokens.add(core.slice(text, start_number, i), 2, line)
+            lexical_tokens.add(tokens, core.slice(text, start_number, i), 2, line)
         elif byte == 34 || byte == 39 || byte_literal:
             literal_kind: int32 = 3
             literal_name: str = "string"
@@ -132,7 +132,7 @@ def lex(text: str) -> lexical_tokens.Tokens:
             decoded: str = core.join(parts)
             if literal_kind == 8 && core.len(decoded) != 1:
                 diagnostics.die("byte literal must contain exactly one byte at line " + str(start_line))
-            tokens.add(decoded, literal_kind, start_line)
+            lexical_tokens.add(tokens, decoded, literal_kind, start_line)
         else:
             punct: str = core.slice(text, i, i + 1)
             if i + 1 < core.len(text):
@@ -145,17 +145,17 @@ def lex(text: str) -> lexical_tokens.Tokens:
                 nesting = nesting - 1
                 if nesting < 0:
                     diagnostics.die("unmatched closing delimiter")
-            tokens.add(punct, 7, line)
+            lexical_tokens.add(tokens, punct, 7, line)
             i = i + core.len(punct)
 
     # Close the final line and indentation levels before ending the stream.
     if nesting != 0:
         diagnostics.die("unclosed delimiter")
     if core.len(tokens.kind) > 0 && tokens.kind[core.len(tokens.kind) - 1] != 4 && tokens.kind[core.len(tokens.kind) - 1] != 6:
-        tokens.add("<newline>", 4, line)
+        lexical_tokens.add(tokens, "<newline>", 4, line)
     k: int64 = core.len(levels) - 1
     while k > 0:
-        tokens.add("<dedent>", 6, line)
+        lexical_tokens.add(tokens, "<dedent>", 6, line)
         k = k - 1
-    tokens.add("<end>", 0, line)
+    lexical_tokens.add(tokens, "<end>", 0, line)
     return tokens

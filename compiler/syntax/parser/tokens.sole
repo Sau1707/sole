@@ -4,21 +4,21 @@ import diagnostics.report as diagnostics
 
 def peek(state: context.State) -> str:
     """Inspect the next token without treating literal contents as syntax."""
-    if state.tokens.kind[state.tokens.position] == 8:
+    if state.tokens.kind[state.tokens.position[0]] == 8:
         return "<byte>"
-    if state.tokens.kind[state.tokens.position] == 3:
+    if state.tokens.kind[state.tokens.position[0]] == 3:
         return "<string>"
-    if state.tokens.kind[state.tokens.position] == 2:
+    if state.tokens.kind[state.tokens.position[0]] == 2:
         return "<number>"
-    return state.tokens.text[state.tokens.position]
+    return state.tokens.text[state.tokens.position[0]]
 
 
 def take(state: context.State) -> str:
     """Consume the next token, rejecting unexpected end of input."""
-    value: str = state.tokens.text[state.tokens.position]
-    if state.tokens.kind[state.tokens.position] == 0:
+    value: str = state.tokens.text[state.tokens.position[0]]
+    if state.tokens.kind[state.tokens.position[0]] == 0:
         diagnostics.fail_at(state, "unexpected end of input")
-    state.tokens.position = state.tokens.position + 1
+    state.tokens.position[0] = state.tokens.position[0] + 1
     return value
 
 
@@ -38,7 +38,7 @@ def expect(state: context.State, text: str) -> void:
 
 def skip_docstring(state: context.State) -> void:
     """Skip an optional docstring at the start of a block."""
-    if state.tokens.kind[state.tokens.position] == 3 && state.tokens.kind[state.tokens.position + 1] == 4:
+    if state.tokens.kind[state.tokens.position[0]] == 3 && state.tokens.kind[state.tokens.position[0] + 1] == 4:
         take(state)
         take(state)
 
@@ -50,7 +50,7 @@ def reserved_keyword(name: str) -> bool:
 
 def identifier(state: context.State) -> str:
     """Read an identifier and reject reserved keywords."""
-    if state.tokens.kind[state.tokens.position] != 1:
+    if state.tokens.kind[state.tokens.position[0]] != 1:
         diagnostics.fail_at(state, "expected an identifier")
     name: str = take(state)
     if reserved_keyword(name):

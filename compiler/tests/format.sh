@@ -106,15 +106,15 @@ done
 
 cat > "$temporary/executable.sole" <<'EOF'
 import core
-class Box:
+struct Box:
     value: int32
-    def read(self) -> int32:
-        # Read the value.
-        return self.value
+def read(box: Box) -> int32:
+    # Read the value.
+    return box.value
 def main() -> int32:
     box: Box = Box(42)
     # Print the result.
-    core.print(box.read())
+    core.print(read(box))
     return 0
 EOF
 "$compiler" format "$temporary/executable.sole" > "$temporary/log"

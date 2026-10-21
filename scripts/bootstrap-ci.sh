@@ -17,6 +17,13 @@ trap 'rm -rf -- "$seed_home"' EXIT HUP INT TERM
 cp -R "$PWD/lib" "$seed_home/lib"
 cp -R "$PWD/compiler" "$seed_home/compiler"
 
+# Older seeds implicitly load primitive method modules removed from the core.
+for primitive in str int uint float array bool ptr void; do
+    if [ ! -f "$seed_home/compiler/primitives/$primitive.sole" ]; then
+        : > "$seed_home/compiler/primitives/$primitive.sole"
+    fi
+done
+
 # Older seeds use explicit imports for the built-in C namespace.
 find "$seed_home/compiler" "$seed_home/lib" -path "$seed_home/compiler/tests" -prune -o -type f -name '*.sole' -print |
 while IFS= read -r source; do

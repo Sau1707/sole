@@ -1,8 +1,11 @@
 import core
+import strings
+import bisect
 
 def main() -> int32:
-    core.print(int64(48).gcd(18))
-    core.print("Hello, Sole!".contains("Sole"))
-    core.print("ha".repeat(3))
-    core.print(uint8(65).to_lower())
+    values: int64[] = [0, 1, 2, 3, 4, 5, 6]
+    core.print(bisect.bisect_left(values, 6))
+    core.print(strings.contains("Hello, Sole!", "Sole"))
+    core.print(strings.repeat("ha", 3))
+    core.print(uint8(97))
     return 0

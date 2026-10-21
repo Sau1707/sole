@@ -34,11 +34,6 @@ def identity(value: int32) -> int32:
     return value
 
 
-class Method:
-    def identity(self, value: int32) -> int32:
-        return value
-
-
 def main() -> int32:
     $expression
     return 0
@@ -64,7 +59,6 @@ reject 'pair: Pair = Pair(1)' "missing constructor field 'second'"
 reject 'pair: Pair = Pair(1, 2, 3)' 'wrong number of constructor fields'
 reject 'pair: Pair = Pair(first=1, 2)' 'positional argument cannot follow named constructor arguments'
 reject 'value: int32 = identity(value=1)' 'named arguments are only supported for record constructors'
-reject 'value: int32 = Method().identity(value=1)' 'named arguments are only supported for record constructors'
 reject 'pair: Pair = Pair(second=2, first="wrong")' 'expected int32, got str'
 
 echo 'Passed named constructor execution and validation checks.'

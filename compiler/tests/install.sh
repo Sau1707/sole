@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.9
+version=0.0.10
 archive="sole-$version-linux-x86_64"
 mkdir "$temporary/downloads" "$temporary/tools"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
@@ -22,7 +22,6 @@ else
     cp -R "$root/lib" "$temporary/$archive/share/sole/"
     mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
     cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/$archive/share/sole/compiler/"
-    cp -R "$root/compiler/primitives" "$temporary/$archive/share/sole/compiler/"
     cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
     printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
     tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
@@ -59,11 +58,11 @@ done
 test -f "$temporary/installed/share/sole/compiler/syntax/parser/sole.ebnf"
 test -f "$temporary/installed/share/sole/compiler/raw/c.sole"
 test -f "$temporary/installed/share/sole/compiler/raw/llvm.sole"
-test -f "$temporary/installed/share/sole/compiler/primitives/str.sole"
-test -f "$temporary/installed/share/sole/compiler/primitives/int.sole"
-test -f "$temporary/installed/share/sole/compiler/primitives/uint.sole"
-test -f "$temporary/installed/share/sole/compiler/primitives/float.sole"
-test -f "$temporary/installed/share/sole/compiler/primitives/array.sole"
+test -f "$temporary/installed/share/sole/lib/pure/strings.sole"
+test -f "$temporary/installed/share/sole/lib/pure/string_array.sole"
+for primitive in str int uint float array; do
+    test ! -e "$temporary/installed/share/sole/compiler/primitives/$primitive.sole"
+done
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
     test -f "$temporary/installed/lib/sole/libLLVM.so.21.1"
     test -f "$temporary/installed/share/sole/licenses/common-licenses/Apache-2.0"
@@ -79,6 +78,8 @@ test "$("$temporary/relocated/bin/sole" --version)" = "sole $version (self-hoste
 cat > "$temporary/main.sole" <<'EOF'
 import raw.llvm as llvm
 import env
+import strings
+import string_array
 
 
 def main() -> int32:
@@ -86,12 +87,12 @@ def main() -> int32:
         return 1
     if not env.has("SOLE_INSTALLED_BINDINGS_TEST"):
         return 2
-    if not "ha".repeat(3).ends_with("haha"):
+    if not strings.ends_with(strings.repeat("ha", 3), "haha"):
         return 3
-    if int16(-12).abs().gcd(8) != 4 || not b'A'.to_lower().is_alpha():
+    if ¢.abs(-12) != 12:
         return 4
     names: str[] = ["a", "b"]
-    if not names.contains("b") || names.index_of("a") != 0 || float32(2.5).clamp(0.0, 2.0) != 2.0:
+    if not string_array.contains(names, "b") || string_array.index_of(names, "a") != 0:
         return 5
     return 0
 EOF

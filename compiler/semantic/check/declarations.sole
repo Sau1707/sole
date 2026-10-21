@@ -5,13 +5,12 @@ import codegen.llvm.context as context
 import codegen.llvm.types as llvm_types
 import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
-import semantic.check.sumtypes as sumtypes
+import semantic.check.layouts as layouts
 import semantic.resolve.builtins as builtins
 
 
 def validate(state: context.State) -> void:
     """Check declaration names, field types, signatures, and record layouts."""
-    sumtypes.validate(state)
 
     # Check record names, field types, and conflicting members.
     for i in range(core.len(state.records)):
@@ -22,17 +21,13 @@ def validate(state: context.State) -> void:
             if record.types[j] == "void" || type_query.element_type(record.types[j]) == "void":
                 report.fail_at(state, "void cannot be a field type")
             llvm_types.llvm_type(state, record.types[j])
-            if symbols.function_index(state, record.name + "." + record.names[j]) >= 0:
-                report.fail_at(state, "duplicate member: " + record.names[j])
             for k in range(j):
                 if record.names[j] == record.names[k]:
                     report.fail_at(state, "duplicate field: " + record.names[j])
 
     # Walk inline record fields to reject infinite-sized value layouts.
     for layout_index in range(core.len(state.records)):
-        sumtypes.check_layout(state, state.records[layout_index].name, [])
-    for sum_layout in range(core.len(state.sums)):
-        sumtypes.check_layout(state, state.sums[sum_layout].name, [])
+        layouts.check_layout(state, state.records[layout_index].name, [])
 
     # Validate function names, return types, parameters, and foreign signatures.
     for f in range(core.len(state.functions)):

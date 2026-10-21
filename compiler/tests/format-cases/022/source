@@ -1,11 +1,13 @@
 import core
 
 
-class Box:
+struct Box:
     value: int32
-    def read(self) -> int32:
-        """Read the stored value."""
-        return self.value
+
+
+def read(box: Box) -> int32:
+    """Read the stored value."""
+    return box.value
 
 
 def first(

@@ -1,0 +1,3 @@
+def read(text: int32) -> int32:
+    needle: int32 = text
+    return needle

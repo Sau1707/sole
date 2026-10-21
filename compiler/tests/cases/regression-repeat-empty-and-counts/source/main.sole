@@ -1,12 +1,13 @@
 import core
+import strings
 
 
 def main() -> void:
-    core.print("".repeat(9223372036854775807) == "")
-    core.print("".repeat(0) == "")
-    core.print("".repeat(-1) == "")
-    core.print("abc".repeat(0) == "")
-    core.print("abc".repeat(-7) == "")
-    core.print("abc".repeat(1) == "abc")
-    core.print("ab".repeat(3) == "ababab")
-    core.print("é🙂".repeat(2) == "é🙂é🙂")
+    core.print(strings.repeat("", 9223372036854775807) == "")
+    core.print(strings.repeat("", 0) == "")
+    core.print(strings.repeat("", -1) == "")
+    core.print(strings.repeat("abc", 0) == "")
+    core.print(strings.repeat("abc", -7) == "")
+    core.print(strings.repeat("abc", 1) == "abc")
+    core.print(strings.repeat("ab", 3) == "ababab")
+    core.print(strings.repeat("é🙂", 2) == "é🙂é🙂")

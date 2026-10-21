@@ -18,7 +18,7 @@ def generate(filename: str, source: str, home: str) -> Compilation:
     # Load dependencies and collect validated declarations.
     inputs: str[] = []
     loaded: tokens.Tokens = modules.load_imports(filename, source, inputs)
-    state: context.State = context.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [], 0, 0, false, "", filename)
+    state: context.State = context.State(loaded, [], [], [], [], [], [], [], [], [], [], [], [0], [0], [false], "", filename, [0], "")
     declarations.scan(state)
     validation.validate(state)
     ir: str = llvm_module.emit(state, home)

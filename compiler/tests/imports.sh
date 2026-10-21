@@ -15,21 +15,11 @@ struct Point:
     value: int64
 
 
-class Box:
+struct Box:
     value: int64
 
-    def read(self) -> int64:
-        return self.value
-
-
-enum Direction:
-    Left
-    Right
-
-
-union Item:
-    Value(value: int64)
-    Empty()
+def read(box: Box) -> int64:
+    return box.value
 
 
 def add(value: int64, other: int64) -> int64:
@@ -46,7 +36,7 @@ EOF
 
 cat > "$temporary/main.sole" <<'EOF'
 import package.models as models
-from package.models import Point as P, Box, Direction as D, Item as I
+from package.models import Point as P, Box, read
 from package.models import add as sum
 from package.models import add as other_sum
 from core import len as size
@@ -60,22 +50,6 @@ struct Labels:
     sum: int64
 
 
-class Methods:
-    value: int64
-
-    def sum(self) -> int64:
-        return self.value
-
-
-union Labeled:
-    sum(sum: int64)
-    Empty()
-
-
-enum LabeledEnum:
-    sum
-
-
 def identity(point: P) -> P:
     return point
 
@@ -84,31 +58,16 @@ def main() -> int32:
     point: P = identity(make(4))
     box: Box = Box(value=point.value)
     labels: Labels = Labels(sum=3)
-    methods: Methods = Methods(value=2)
-    labeled: Labeled = Labeled.sum(1)
-    labeled_enum: LabeledEnum = LabeledEnum.sum
     labels.sum = labels.sum + 1
     numbers: int64[] = [1, 2, 3]
-    if sum(box.read(), labels.sum) != 9 || size(numbers) != 3 || len(numbers) != 3:
+    if sum(read(box), labels.sum) != 9 || size(numbers) != 3 || len(numbers) != 3:
         return 1
-    if other_sum(1, 2) != models.add(1, 2) || methods.sum() != 2:
+    if other_sum(1, 2) != models.add(1, 2) || models.read(box) != 5:
         return 2
     if bits(0.0) != 0:
         return 6
     if insertion(numbers, 2) != 1 || bisect_right(numbers, 2) != 2:
         return 7
-    item: I = I.Value(point.value)
-    direction: D = D.Left
-    match item:
-        case I.Value(value):
-            match direction:
-                case D.Left:
-                    if value != 5:
-                        return 3
-                case D.Right:
-                    return 4
-        case I.Empty():
-            return 5
     return 0
 EOF
 
@@ -193,14 +152,10 @@ def main(Point: int64) -> int32:
     return 0
 EOF
 
-reject 'pattern binding conflicts' <<'EOF'
-from package.models import Point, Item
-def score(item: Item) -> int64:
-    match item:
-        case Item.Value(Point):
-            return 0
-        case Item.Empty():
-            return 1
+reject 'imported name cannot be rebound or shadowed: Point' <<'EOF'
+from package.models import Point
+def score(Point: int64) -> int64:
+    return Point
 EOF
 
 reject 'imports are only allowed at module scope' <<'EOF'
@@ -211,9 +166,8 @@ EOF
 
 reject 'imported name cannot be rebound or shadowed: Point' <<'EOF'
 from package.models import Point
-class Box:
-    def read(self, Point: int64) -> int64:
-        return 0
+def read(Point: int64) -> int64:
+    return 0
 EOF
 
 reject 'expected an import name or alias' <<'EOF'

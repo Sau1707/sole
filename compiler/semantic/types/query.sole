@@ -1,12 +1,13 @@
 import core
 import diagnostics.report as report
 import primitives.registry as registry
+import primitives.definition as definition
 import syntax.lexer.characters as characters
 
 
 def builtin_type(typ: str) -> bool:
     """TODO: Document this function."""
-    return registry.lookup(typ).known()
+    return definition.known(registry.lookup(typ))
 
 
 def array_type(typ: str) -> bool:
@@ -29,12 +30,12 @@ def dynamic_type(typ: str) -> bool:
 
 def integer_type(typ: str) -> bool:
     """Recognize the supported signed and unsigned integer types."""
-    return registry.lookup(typ).integer()
+    return definition.integer(registry.lookup(typ))
 
 
 def float_type(typ: str) -> bool:
     """Recognize the supported floating-point types."""
-    return registry.lookup(typ).floating()
+    return definition.floating(registry.lookup(typ))
 
 
 def unsigned_type(typ: str) -> bool:

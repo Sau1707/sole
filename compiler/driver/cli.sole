@@ -30,7 +30,7 @@ def cleanup(temporary: str) -> void:
 def main() -> int32:
     """Parse command-line options and dispatch compilation, linking, or execution."""
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.9 (self-hosted)")
+        core.print("sole 0.0.10 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()

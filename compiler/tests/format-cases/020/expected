@@ -8,17 +8,19 @@ import core # Inline comment.
 extern def external() -> void
 
 
-class Box:
+struct Box:
     value: int32
-    def read(
-        self
 
-        # Signature comment.
-    ) -> int32: # Header comment.
 
-        # Body comment.
-        """TODO: Document this function."""
-        return self.value # Keep inline.
+def read(
+    box: Box
+
+    # Signature comment.
+) -> int32: # Header comment.
+
+    # Body comment.
+    """TODO: Document this function."""
+    return box.value # Keep inline.
 
 
 def single() -> void:

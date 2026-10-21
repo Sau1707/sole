@@ -5,4 +5,4 @@ import pkg.types
 def main() -> void:
     box: first.Box = second.Box(42)
     other: pkg.types.Box = box
-    core.print(other.read())
+    core.print(first.read(other))

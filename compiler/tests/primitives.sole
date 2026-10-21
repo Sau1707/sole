@@ -1,4 +1,5 @@
 import core
+import primitives.definition as definition
 import primitives.registry as registry
 import primitives.intrinsics as intrinsics
 
@@ -14,16 +15,16 @@ def main() -> int32:
     """Verify primitive recognition independently of LLVM lowering."""
     names: str[] = ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "bool", "ptr", "str", "void"]
     for i in range(core.len(names)):
-        require(registry.lookup(names[i]).known(), names[i] + " is a primitive")
-    require(not registry.lookup("").known(), "empty name is not a primitive")
-    require(not registry.lookup("Point").known(), "user types are not primitives")
-    require(not registry.lookup("int64[]").known(), "arrays are not primitives")
-    require(registry.lookup("int64").numeric(), "integers are numeric")
-    require(registry.lookup("float32").numeric(), "floats are numeric")
-    require(not registry.lookup("bool").numeric(), "booleans are not numeric")
-    require(not registry.lookup("ptr").numeric(), "pointers are not numeric")
-    require(not registry.lookup("str").numeric(), "strings are not numeric")
-    require(not registry.lookup("void").numeric(), "void is not numeric")
+        require(definition.known(registry.lookup(names[i])), names[i] + " is a primitive")
+    require(not definition.known(registry.lookup("")), "empty name is not a primitive")
+    require(not definition.known(registry.lookup("Point")), "user types are not primitives")
+    require(not definition.known(registry.lookup("int64[]")), "arrays are not primitives")
+    require(definition.numeric(registry.lookup("int64")), "integers are numeric")
+    require(definition.numeric(registry.lookup("float32")), "floats are numeric")
+    require(not definition.numeric(registry.lookup("bool")), "booleans are not numeric")
+    require(not definition.numeric(registry.lookup("ptr")), "pointers are not numeric")
+    require(not definition.numeric(registry.lookup("str")), "strings are not numeric")
+    require(not definition.numeric(registry.lookup("void")), "void is not numeric")
     names = ["print", "len", "append", "slice", "join", "cstr", "from_cstr", "address", "arg_count", "arg", "read_file", "write_file", "exit"]
     for i in range(core.len(names)):
         require(intrinsics.builtin_name(names[i]), names[i] + " is an intrinsic")

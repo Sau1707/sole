@@ -246,14 +246,11 @@ def main() -> int32:
     return 0
 EOF
 reject '+= requires a numeric local identifier' <<'EOF'
-class Box:
+struct Box:
     value: int64
-
-    def update(self) -> void:
-        self += self
-
-
 def main() -> int32:
+    box: Box = Box(1)
+    box.value += 1
     return 0
 EOF
 echo 'Passed range loops and numeric local += checks.'

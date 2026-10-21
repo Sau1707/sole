@@ -11,10 +11,10 @@ def die(message: str) -> void:
 
 def fail_at(state: context.State, message: str) -> void:
     """Report an error at the current token's source location."""
-    filename: str = state.tokens.files[state.tokens.position]
+    filename: str = state.tokens.files[state.tokens.position[0]]
     if filename == "":
         filename = state.filename
-    die(filename + ":" + str(state.tokens.line[state.tokens.position]) + ": " + message)
+    die(filename + ":" + str(state.tokens.line[state.tokens.position[0]]) + ": " + message)
 
 
 def module_error(module: module_model.ModuleInfo, position: int64, message: str) -> void:

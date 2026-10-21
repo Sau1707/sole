@@ -12,7 +12,7 @@ import primitives.definition as scalar_definition
 def llvm_type(state: context.State, typ: str) -> str:
     """Map a Sole type to its LLVM representation and validate array sizes."""
     definition: scalar_definition.Type = registry.lookup(typ)
-    if definition.known():
+    if scalar_definition.known(definition):
         return scalars.representation(definition)
     if type_query.dynamic_type(typ):
         element: str = type_query.element_type(typ)
@@ -25,16 +25,9 @@ def llvm_type(state: context.State, typ: str) -> str:
         if length < 1 || length > 1000000:
             diagnostics.fail_at(state, "array size must be between 1 and 1000000")
         return "[" + str(length) + " x " + llvm_type(state, type_query.element_type(typ)) + "]"
-    si: int64 = symbols.sum_index(state, typ)
-    if si >= 0:
-        if state.sums[si].kind == "enum":
-            return "i32"
-        return "%" + typ
     idx: int64 = symbols.record_index(state, typ)
     if idx < 0:
         diagnostics.fail_at(state, "unknown type '" + typ + "'")
-    if state.records[idx].kind == "class":
-        return "ptr"
     return "%" + typ
 
 
@@ -49,12 +42,4 @@ def layouts(state: context.State) -> str:
                 core.append(fields, ", ")
             core.append(fields, llvm_type(state, info.types[i]))
         core.append(definitions, "%" + info.name + " = type {" + core.join(fields) + "}\n")
-    for s in range(core.len(state.sums)):
-        sum: model.SumInfo = state.sums[s]
-        if sum.kind == "union":
-            layout: str = "%" + sum.name + " = type {i32"
-            for v in range(core.len(sum.variants)):
-                for p in range(core.len(sum.variants[v].types)):
-                    layout = layout + ", " + llvm_type(state, sum.variants[v].types[p])
-            core.append(definitions, layout + "}\n")
     return core.join(definitions)

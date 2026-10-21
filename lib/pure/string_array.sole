@@ -1,0 +1,12 @@
+import core
+
+
+def index_of(items: str[], value: str) -> int64:
+    for i in range(core.len(items)):
+        if items[i] == value:
+            return i
+    return -1
+
+
+def contains(items: str[], value: str) -> bool:
+    return index_of(items, value) >= 0

@@ -8,9 +8,8 @@ struct LoopTargets:
 
 
 # Share declarations, local scopes, and emitted IR during compilation.
-class State:
+struct State:
     tokens: token_model.Tokens
-    sums: model.SumInfo[]
     records: model.RecordInfo[]
     functions: model.FunctionInfo[]
     globals: str[]
@@ -22,16 +21,20 @@ class State:
     pointers: str[]
     depths: int32[]
     loops: LoopTargets[]
-    serial: int64
-    depth: int32
-    ended: bool
+    # Single-element arrays share mutable cells across struct copies.
+    serial: int64[]
+    depth: int32[]
+    ended: bool[]
     result: str
     filename: str
+    loop_depth: int64[]
+    function_name: str
 
-    def fresh(self) -> str:
-        """TODO: Document this function."""
-        self.serial = self.serial + 1
-        return "v" + str(self.serial)
+
+def fresh(state: State) -> str:
+    """Allocate a name using the shared counter cell."""
+    state.serial[0] = state.serial[0] + 1
+    return "v" + str(state.serial[0])
 
 
 # Carry an expression's type, LLVM value, and optional storage address.

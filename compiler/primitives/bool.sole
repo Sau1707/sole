@@ -1,7 +1,0 @@
-import primitives.definition as scalar_definition
-
-
-class bool:
-    def definition(self) -> scalar_definition.Type:
-        """TODO: Document this function."""
-        return scalar_definition.Type("bool", 1, "bool", true)

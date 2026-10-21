@@ -3,5 +3,5 @@ import geometry
 def main() -> void:
     p: geometry.Point = geometry.move(geometry.Point(3))
     c: geometry.Counter = geometry.Counter(p.x)
-    core.print(c.read())
+    core.print(geometry.counter_value(c))
     core.print(geometry.read())

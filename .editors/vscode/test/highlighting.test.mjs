@@ -37,7 +37,7 @@ test('declarations, annotations, arrays, and extern functions', () => {
     ['4', 'constant.numeric.sole'],
     ['int32', 'storage.type.sole'],
   ]);
-  for (const kind of ['class', 'struct', 'enum', 'union']) {
+  for (const kind of ['struct']) {
     check(`${kind} Point:`, [
       [kind, 'storage.type.sole'],
       [kind, 'storage.type.class.python'],
@@ -143,7 +143,7 @@ test('named imports distinguish paths, names, aliases, and punctuation', () => {
   check('"from core import len"', [['from core import len', 'string.quoted.double.sole']]);
 });
 
-test('control flow, booleans, self, calls, and operators', () => {
+test('control flow, booleans, calls, and operators', () => {
   check('if true && not false:', [
     ['if', 'keyword.control.sole'],
     ['true', 'constant.language.boolean.sole'],
@@ -151,23 +151,16 @@ test('control flow, booleans, self, calls, and operators', () => {
     ['not', 'keyword.operator.logical.sole'],
     ['false', 'constant.language.boolean.sole'],
   ]);
-  check('print(self.read() + len(values))', [
+  check('print(read(value) + len(values))', [
     ['print', 'support.function.builtin.sole'],
-    ['self', 'variable.language.self.sole'],
+    ['value', 'variable.other.readwrite.sole'],
     ['read', 'entity.name.function.sole'],
     ['+', 'keyword.operator.sole'],
     ['len', 'support.function.builtin.sole'],
   ]);
 });
 
-test('enum members, union payloads, and named constructors', () => {
-  check('    Number', [['Number', 'variable.other.readwrite.sole']]);
-  check('    Number(value: int64)', [
-    ['Number', 'entity.name.function.sole'],
-    ['value', 'variable.other.readwrite.sole'],
-    ['int64', 'storage.type.sole'],
-  ]);
-  check('    Empty()', [['Empty', 'entity.name.function.sole']]);
+test('named struct constructors', () => {
   check('pair = Pair(second=2, first=1)', [
     ['Pair', 'entity.name.function.sole'],
     ['second', 'variable.other.readwrite.sole'],
@@ -178,19 +171,13 @@ test('enum members, union payloads, and named constructors', () => {
   ]);
 });
 
-test('match cases and range loops', () => {
-  check('match item:', [['match', 'keyword.control.sole'], ['item', 'variable.other.readwrite.sole']]);
-  check('    case Item.Number(value):', [
-    ['case', 'keyword.control.sole'],
-    ['Item', 'variable.other.readwrite.sole'],
-    ['Number', 'entity.name.function.sole'],
-    ['value', 'variable.other.readwrite.sole'],
-  ]);
-  check('    case Kind.Number:', [
-    ['case', 'keyword.control.sole'],
-    ['Kind', 'variable.other.readwrite.sole'],
-    ['Number', 'variable.other.property.sole'],
-  ]);
+test('removed features are not highlighted as supported keywords', () => {
+  for (const word of ['class', 'enum', 'union', 'match', 'case', 'self', 'lambda']) {
+    check(word, [[word, 'variable.other.readwrite.sole']]);
+  }
+});
+
+test('range loops', () => {
   for (const args of ['stop', 'start, stop']) {
     check(`for i in range(${args}):`, [
       ['for', 'keyword.control.sole'],
@@ -236,8 +223,8 @@ test('variable declarations, parameters, references, and fields', () => {
     ['add', 'entity.name.function.sole'],
     ['amount', 'variable.other.readwrite.sole'],
   ]);
-  check('self.value = counter.value + numbers[index]', [
-    ['self', 'variable.language.self.sole'],
+  check('item.value = counter.value + numbers[index]', [
+    ['item', 'variable.other.readwrite.sole'],
     ['value', 'variable.other.property.sole'],
     ['counter', 'variable.other.readwrite.sole'],
     ['numbers', 'variable.other.readwrite.sole'],
@@ -271,22 +258,20 @@ test('symbolic logical operators stay distinct from bitwise operators', () => {
 });
 
 test('Python-compatible scopes for shared syntax', () => {
-  check('def add(self, amount: int32) -> int32:', [
+  check('def add(amount: int32) -> int32:', [
     ['def', 'storage.type.function.python'],
     ['add', 'entity.name.function.python'],
-    ['self', 'variable.parameter.function.language.special.self.python'],
     ['amount', 'variable.parameter.function.language.python'],
     ['int32', 'support.type.python'],
   ]);
-  check('class Counter:', [['class', 'storage.type.class.python'], ['Counter', 'entity.name.type.class.python']]);
+  check('struct Counter:', [['struct', 'storage.type.class.python'], ['Counter', 'entity.name.type.class.python']]);
   check('if true && not false:', [
     ['if', 'keyword.control.flow.python'],
     ['true', 'constant.language.python'],
     ['&&', 'keyword.operator.logical.python'],
   ]);
-  check('print(self.read() + 42) # comment', [
+  check('print(read(value) + 42) # comment', [
     ['print', 'support.function.builtin.python'],
-    ['self', 'variable.language.special.self.python'],
     ['read', 'meta.function-call.generic.python'],
     ['+', 'keyword.operator.arithmetic.python'],
     ['42', 'constant.numeric.python'],

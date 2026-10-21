@@ -36,7 +36,7 @@ def compile_function(state: context.State, fn: model.FunctionInfo, runtime: str[
         prefix = "declare "
     header: str = prefix + llvm_types.llvm_type(state, fn.result) + " @" + ir.function_symbol(fn) + "(" + core.join(parameter_parts) + ")"
     if fn.external:
-        state.tokens.position = fn.body
+        state.tokens.position[0] = fn.body
         for native in range(core.len(runtime)):
             declaration: str = runtime[native]
             symbol_start: int64 = 0
@@ -66,7 +66,7 @@ def compile_function(state: context.State, fn: model.FunctionInfo, runtime: str[
         return
 
     # Reset per-function state before declaring parameters and compiling blocks.
-    state.tokens.position = fn.body
+    state.tokens.position[0] = fn.body
     state.code = []
     state.slots = []
     state.names = []
@@ -74,14 +74,16 @@ def compile_function(state: context.State, fn: model.FunctionInfo, runtime: str[
     state.pointers = []
     state.depths = []
     state.loops = []
-    state.serial = 0
-    state.depth = 0
-    state.ended = false
+    state.serial[0] = 0
+    state.depth[0] = 0
+    state.ended[0] = false
     state.result = fn.result
+    state.loop_depth[0] = 0
+    state.function_name = fn.name
     for j in range(core.len(fn.types)):
         locals.declare_local(state, fn.names[j], fn.types[j], context.Value(fn.types[j], "%arg" + str(j), ""))
     statements.compile_block(state)
-    if not state.ended:
+    if not state.ended[0]:
         if fn.result != "void":
             diagnostics.fail_at(state, "function must return on every checked path: " + fn.name)
         ir.emit(state, "ret void")

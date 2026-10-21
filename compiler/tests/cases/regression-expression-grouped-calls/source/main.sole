@@ -1,11 +1,11 @@
 import core
 
 
-class Counter:
+struct Counter:
     value: int32
 
-    def add(self, amount: int32) -> void:
-        self.value = self.value + amount
+def add(counter: Counter[], amount: int32) -> void:
+    counter[0].value = counter[0].value + amount
 
 
 def number(value: int32) -> int32:
@@ -20,8 +20,8 @@ def main() -> int32:
     (core.print(4))
     Counter(0)
     int32(9)
-    counter: Counter = Counter(0)
-    (counter.add(2))
-    ((counter).add(5))
-    core.print(counter.value)
+    counter: Counter[] = [Counter(0)]
+    (add(counter, 2))
+    (add((counter), 5))
+    core.print(counter[0].value)
     return 0
