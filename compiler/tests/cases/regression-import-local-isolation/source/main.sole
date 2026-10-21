@@ -11,6 +11,6 @@ def needle() -> int32:
 
 
 def main() -> int32:
-    if helper.read(3) != 3 || not strings.contains("abc", "b"):
+    if helper.read(3) != 3 || strings.find("abc", "b") < 0:
         return 1
     return 0

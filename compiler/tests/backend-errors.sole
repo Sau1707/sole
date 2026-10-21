@@ -30,8 +30,8 @@ def main() -> int32:
     require(target.llvm_object(valid, missing, level, true) == "", "check-only succeeds without emitting")
     require(target.llvm_object(valid, output, level, false) == "", "object emission returns empty on success")
     require(target.llvm_object(valid, output, level, true) == "", "check succeeds after failures")
-    require(strings.contains(parse_error, "expected"), "parse message survives LLVM disposal")
-    require(strings.contains(verify_error, "Entry block"), "verification message survives LLVM disposal")
-    require(strings.contains(emit_error, "No such file"), "emission message survives LLVM disposal")
-    require(strings.contains(pass_error, "invalid optimization level 'O4'"), "pass message survives LLVM disposal")
+    require(strings.find(parse_error, "expected") >= 0, "parse message survives LLVM disposal")
+    require(strings.find(verify_error, "Entry block") >= 0, "verification message survives LLVM disposal")
+    require(strings.find(emit_error, "No such file") >= 0, "emission message survives LLVM disposal")
+    require(strings.find(pass_error, "invalid optimization level 'O4'") >= 0, "pass message survives LLVM disposal")
     return 0

@@ -48,4 +48,13 @@ struct First:
 struct Second:
     first: First
 EOF
+for module in bisect statistics; do
+    printf 'import %s\n' "$module" | reject "cannot find module '$module'"
+done
+for api in strings.contains strings.repeat os.path.isabs os.path.join os.path.basename os.path.dirname os.path.normpath files.read files.write files.atomic_write files.remove files.rename env.has; do
+    module=${api%.*}
+    name=${api##*.}
+    printf 'import %s\n\ndef main() -> void:\n    %s()\n' "$module" "$api" \
+        | reject "has no declaration '$name'"
+done
 echo 'Passed removed-feature rejection and recursive struct layout checks.'

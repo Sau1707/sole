@@ -1,20 +1,2 @@
-import core
-
-
-extern def memcpy(destination: ptr, source: ptr, count: uint64) -> ptr
-
-
 enum Kind:
     A
-    B
-
-
-def main() -> int32:
-    value: Kind = Kind.A
-    invalid: int32 = 123
-    memcpy(core.address(value), core.address(invalid), 4)
-    match value:
-        case Kind.A:
-            return 0
-        case Kind.B:
-            return 1

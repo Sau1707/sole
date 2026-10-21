@@ -1,14 +1,14 @@
 import core
+import env
 import strings
 import os.path
-import driver.linker as linker
 import syntax.lexer.tokens as tokens
 import syntax.lexer.characters as characters
 import codegen.llvm.functions as functions
 
 
 def main() -> int32:
-    if linker.native_linker() != core.arg(1):
+    if env.get("SOLE_CC", "cc") != core.arg(1):
         return 1
     for byte in range(256):
         digit: bool = byte >= 48 && byte <= 57
@@ -19,20 +19,20 @@ def main() -> int32:
     copy: tokens.Tokens = source
     paths: str[] = ["", "file", "/", "//", "a/", "a//b", "/猫/é.sole", "a\0b", "///", "a///", "//a//b", "a\0b/c"]
     basenames: str[] = ["", "file", "", "", "", "b", "é.sole", "a\0b", "", "", "b", "c"]
-    directories: str[] = ["", "", "/", "//", "a", "a", "/猫", "", "///", "a", "//a", "a\0b"]
-    absolute: bool[] = [false, false, true, true, false, false, true, false, true, false, true, false]
+    directories: str[] = ["", "", "/", "//", "a/", "a//", "/猫/", "", "///", "a///", "//a//", "a\0b/"]
     for i in range(core.len(paths)):
-        if os.path.basename(paths[i]) != basenames[i]:
+        parts: str[] = os.path.split(paths[i])
+        if parts[1] != basenames[i]:
             return 6
-        if os.path.dirname(paths[i]) != directories[i] || os.path.isabs(paths[i]) != absolute[i]:
+        if parts[0] != directories[i]:
             return 7
-    if os.path.join("", "") != "" || os.path.join("", "file") != "file" || os.path.join("a", "") != "a/":
+    if os.path.replace_suffix("file.sole", ".sole", ".o") != "file.o":
         return 8
-    if os.path.join("a/", "b") != "a/b" || os.path.join("a//", "b") != "a//b" || os.path.join("a", "b") != "a/b":
+    if os.path.replace_suffix(".sole", ".sole", ".o") != ".sole.o":
         return 9
-    if os.path.join("a", "/b") != "/b" || os.path.join("a", "//b") != "//b" || os.path.join("猫", "é") != "猫/é":
+    if os.path.replace_suffix("猫", "", ".o") != "猫.o":
         return 10
-    if os.path.join("a\0b", "c") != "a\0b/c":
+    if os.path.replace_suffix("a\0b", ".sole", ".o") != "a\0b.o":
         return 11
     if core.len(functions.runtime_declarations("")) != 0 || core.len(functions.runtime_declarations("\n; comment\n")) != 0:
         return 12

@@ -1,4 +1,4 @@
 import core
-import statistics as math
+import strings as math
 def main() -> void:
     core.print(math)

@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.12
+version=0.0.13
 archive="sole-$version-linux-x86_64"
 mkdir "$temporary/downloads" "$temporary/tools"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
@@ -59,6 +59,8 @@ test -f "$temporary/installed/share/sole/compiler/raw/c.sole"
 test -f "$temporary/installed/share/sole/compiler/raw/llvm.sole"
 test -f "$temporary/installed/share/sole/lib/pure/strings.sole"
 test -f "$temporary/installed/share/sole/lib/pure/string_array.sole"
+test ! -e "$temporary/installed/share/sole/lib/pure/bisect.sole"
+test ! -e "$temporary/installed/share/sole/lib/pure/statistics.sole"
 for primitive in str int uint float array; do
     test ! -e "$temporary/installed/share/sole/compiler/primitives/$primitive.sole"
 done
@@ -84,9 +86,9 @@ import string_array
 def main() -> int32:
     if ¢.sqrt(16.0) != 4.0 || ¢.abs(-9) != 9:
         return 1
-    if not env.has("SOLE_INSTALLED_BINDINGS_TEST"):
+    if env.get("SOLE_INSTALLED_BINDINGS_TEST", "") != "1":
         return 2
-    if not strings.ends_with(strings.repeat("ha", 3), "haha"):
+    if not strings.ends_with(strings.replace("ha-ha", "-", ""), "haha"):
         return 3
     if ¢.abs(-12) != 12:
         return 4

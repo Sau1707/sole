@@ -102,11 +102,31 @@ reject 'def broken([)]'
 reject 'def main() -> int32:
     return missing_name'
 grep -Fq "unknown variable 'missing_name'" "$temporary/error"
+grep -Fq "$temporary/bad.sole:2:" "$temporary/error"
 reject 'def main() -> int32:
     return "wrong"'
 grep -Fq 'expected int32, got str' "$temporary/error"
 reject 'import absent_check_dependency'
 grep -Fq "cannot find module 'absent_check_dependency'" "$temporary/error"
+
+mkdir "$temporary/猫"
+cat > "$temporary/猫/dependency.sole" <<'EOF'
+def broken() -> int32:
+    return missing_name
+EOF
+cat > "$temporary/猫/main.sole" <<'EOF'
+import dependency
+
+def main() -> int32:
+    return dependency.broken()
+EOF
+ln -s "$temporary/猫/main.sole" "$temporary/entry.sole"
+for command in check build; do
+    status=0
+    "$compiler" "$command" "$temporary/entry.sole" -o "$temporary/program" > "$temporary/error" 2>&1 || status=$?
+    test "$status" -eq 1
+    grep -Fq "$temporary/猫/dependency.sole:2: unknown variable 'missing_name'" "$temporary/error"
+done
 
 for arguments in 'syntax' 'syntax --grammar' 'format' 'format --check'; do
     status=0

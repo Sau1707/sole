@@ -2,6 +2,6 @@ import strings
 
 
 def main() -> int32:
-    if not strings.contains("Sole", "ol"):
+    if strings.find("Sole", "ol") < 0:
         return 1
     return 0

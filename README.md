@@ -37,7 +37,7 @@ def main() -> int32:
 ### Minimal language core
 
 - `int8`–`int64`, `uint8`–`uint64`, `float32`, `float64`, `bool`, `ptr`, and `void`.
-- Functions, imports, and typed external C declarations.
+- Functions, module imports (`import module [as alias]`, not `from … import …`), and typed external C declarations.
 - Data-only structs, fixed-size arrays, strings, and dynamic arrays.
 - Explicitly typed variables, arithmetic, `if`, `while`, `for … in range(…)`,
   `break`, `continue`, and `return`.
@@ -86,15 +86,14 @@ import strings
 import string_array
 ```
 
-Use `strings.contains(text, needle)`, `strings.repeat(text, count)`, or
-`string_array.index_of(items, value)` instead of methods. `strings` also provides
-`starts_with`, `ends_with`, `find`, `replace`, and `partition`.
+Use `strings.find(text, needle) >= 0` or `string_array.index_of(items, value)`
+instead of methods. `strings` provides `starts_with`, `ends_with`, `find`,
+`replace`, and `partition`.
 Matching is byte-based; `find` and `index_of` return `-1` when absent. An empty
 needle matches at offset zero. Replacement is non-overlapping and an empty pattern
 leaves the text unchanged. Partitioning returns `[before, separator, after]`, or
-`[text, "", ""]` for an absent or empty separator. Repetition returns an empty
-string for nonpositive counts. Numeric and ASCII convenience methods have been
-removed; use explicit arithmetic, ordinary functions, or the typed C API.
+`[text, "", ""]` for an absent or empty separator. Numeric and ASCII convenience
+methods have been removed; use explicit arithmetic, ordinary functions, or the typed C API.
 
 ### Reading the compiler
 
@@ -156,5 +155,5 @@ sh scripts/bootstrap-ci.sh
 SOLE_COMPILER="$PWD/.build/sole" sh compiler/tests/suite.sh
 ```
 
-Bootstrap compares the second and third compiler builds byte-for-byte. It also
-supports older seeds that implicitly load the now-removed primitive method files.
+Bootstrap compares the second and third compiler builds byte-for-byte. Use a recent
+released compiler as the seed; legacy source and runtime-layout shims are not supported.

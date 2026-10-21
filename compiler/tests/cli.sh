@@ -52,7 +52,7 @@ bounded() {
     return "$result"
 }
 
-bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.12' || fail version
+bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.13' || fail version
 SOLE_CC=/no/such/linker bounded "$compile_timeout" "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     bounded "$compile_timeout" "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
@@ -71,6 +71,12 @@ for options in '--target wasm' '--export main' '--emit missing' '-O9'; do
     if bounded "$compile_timeout" "$compiler" check "$hello" $options > "$temporary/compile.log" 2>&1; then
         fail "invalid options accepted: $options"
     fi
+done
+for options in '--target native' '--output output'; do
+    status=0
+    bounded "$compile_timeout" "$compiler" check "$hello" $options > "$temporary/compile.log" 2>&1 || status=$?
+    [ "$status" -eq 1 ] || fail "removed option accepted: $options (status $status)"
+    grep -Fq "unknown option: ${options%% *}" "$temporary/compile.log" || fail 'removed option diagnostic'
 done
 if bounded "$compile_timeout" "$compiler" check "$temporary/missing.sole" > "$temporary/compile.log" 2>&1; then fail 'missing source accepted'; fi
 printf 'def main() -> int32:\n    return missing\n' > "$temporary/bad.sole"

@@ -6,7 +6,7 @@ struct Label:
     text: str
 
 def contains(label: Label, needle: str) -> bool:
-    return strings.contains(label.text, needle)
+    return strings.find(label.text, needle) >= 0
 
 
 def text(calls: int64[]) -> str:
@@ -28,12 +28,12 @@ def main() -> int32:
         return 5
     if strings.find(value, "猫") != 3 || strings.find(value, "\0") != 2 || strings.find(value, "a") != -1:
         return 6
-    if not strings.contains(value, "") || not strings.contains(value, "\0猫") || strings.contains(value, "a"):
+    if strings.find(value, "") < 0 || strings.find(value, "\0猫") < 0 || strings.find(value, "a") >= 0:
         return 7
     parts: str[] = strings.partition(value, "\0")
     if core.len(parts) != 3 || parts[0] != "é" || parts[1] != "\0" || parts[2] != "猫":
         return 8
-    if strings.repeat(strings.replace(value, "\0", "/"), 2) != "é/猫é/猫":
+    if strings.replace(value, "\0", "/") != "é/猫":
         return 9
     if not strings.ends_with("é" + "猫", "猫") || not contains(Label(value), "猫"):
         return 10

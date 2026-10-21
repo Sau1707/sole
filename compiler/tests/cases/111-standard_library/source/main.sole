@@ -1,11 +1,11 @@
 import core
 import strings
-import bisect
+import string_array
 
 def main() -> int32:
-    values: int64[] = [0, 1, 2, 3, 4, 5, 6]
-    core.print(bisect.bisect_left(values, 6))
-    core.print(strings.contains("Hello, Sole!", "Sole"))
-    core.print(strings.repeat("ha", 3))
+    values: str[] = ["0", "1", "2", "3", "4", "5", "6"]
+    core.print(string_array.index_of(values, "6"))
+    core.print(strings.find("Hello, Sole!", "Sole") >= 0)
+    core.print(strings.replace("ha-ha-ha", "-", ""))
     core.print(uint8(97))
     return 0

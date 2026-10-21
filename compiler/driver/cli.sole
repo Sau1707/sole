@@ -1,7 +1,8 @@
 import core
+import env
 import files
+import os.path
 import process
-import driver.linker
 import runtime.system as system
 import driver.pipeline as pipeline
 import codegen.llvm.target as target
@@ -28,10 +29,10 @@ def cleanup(temporary: str) -> void:
 def main() -> int32:
     """Parse command-line options and dispatch compilation, linking, or execution."""
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.12 (self-hosted)")
+        core.print("sole 0.0.13 (self-hosted)")
         return 0
     if core.arg_count() < 3:
-        core.print("Usage: sole build|check|run file.sole [-o output] [--target native] [--emit binary|llvm|object] [--link library] [-O0..3]")
+        core.print("Usage: sole build|check|run file.sole [-o output] [--emit binary|llvm|object] [--link library] [-O0..3]")
         return 1
 
     # Read the command, source path, and compilation options.
@@ -52,11 +53,8 @@ def main() -> int32:
             if i + 1 >= core.arg_count():
                 diagnostics.die("missing value for " + option)
             value: str = core.arg(i + 1)
-            if option == "-o" || option == "--output":
+            if option == "-o":
                 output = value
-            elif option == "--target":
-                if value != "native":
-                    diagnostics.die("unknown target: " + value)
             elif option == "--emit":
                 if value != "binary" && value != "llvm" && value != "object":
                     diagnostics.die("unknown emission: " + value)
@@ -89,7 +87,7 @@ def main() -> int32:
     elif emission == "object":
         suffix = ".o"
     if output == "":
-        output = driver.linker.default_output(filename, suffix)
+        output = os.path.replace_suffix(filename, ".sole", suffix)
     protection_error: str = output_error(output, compiled.inputs)
     if protection_error != "":
         diagnostics.die(protection_error)
@@ -126,7 +124,7 @@ def main() -> int32:
             core.append(link_arguments, "-l" + libraries[l])
         core.append(link_arguments, "-o")
         core.append(link_arguments, program_path)
-        linked: process.Result = process.run(driver.linker.native_linker(), link_arguments)
+        linked: process.Result = process.run(env.get("SOLE_CC", "cc"), link_arguments)
         if linked.error != "" || linked.signal != 0 || linked.exit_code != 0:
             cleanup(temporary)
             diagnostics.die("linking failed")

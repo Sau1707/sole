@@ -3,14 +3,6 @@ import runtime.linux as linux
 import runtime.system as system
 
 
-def atomic_write_file(path: ptr, data: ptr, length: int64) -> ptr:
-    """Expose the Sole atomic-write implementation to the fault-injection harness."""
-    message: str = system.atomic_write_file(path, data, length)
-    if message == "":
-        return ptr(0)
-    return core.cstr(message)
-
-
 def output_path(path: ptr) -> ptr:
     """Expose output resolution to the native integration harness."""
     return core.cstr(system.output_path(core.from_cstr(path)))

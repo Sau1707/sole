@@ -14,61 +14,61 @@ cat > "$temporary/package/models.sole" <<'EOF'
 struct Point:
     value: int64
 
-
 struct Box:
     value: int64
 
 def read(box: Box) -> int64:
     return box.value
 
-
 def add(value: int64, other: int64) -> int64:
     return value + other
 EOF
 
 cat > "$temporary/bridge.sole" <<'EOF'
-from package.models import Point, add
+import package.models as models
 
-
-def make(value: int64) -> Point:
-    return Point(add(value, 1))
+def make(value: int64) -> models.Point:
+    return models.Point(models.add(value, 1))
 EOF
 
 cat > "$temporary/main.sole" <<'EOF'
+import core
+import core as helpers
+import bridge
+import string_array
+import package.models
 import package.models as models
-from package.models import Point as P, Box, read
-from package.models import add as sum
-from package.models import add as other_sum
-from core import len as size
-from core import len
-from bridge import make
-from wrappers.system import sole_rt_f64_bits as bits
-from bisect import bisect_left as insertion, bisect_right
-
+import package.models as other
+import runtime.system as system
 
 struct Labels:
     sum: int64
 
-
-def identity(point: P) -> P:
+def identity(point: models.Point) -> models.Point:
     return point
 
-
 def main() -> int32:
-    point: P = identity(make(4))
-    box: Box = Box(point.value)
+    point: models.Point = identity(bridge.make(4))
+    box: other.Box = models.Box(point.value)
     labels: Labels = Labels(3)
     labels.sum = labels.sum + 1
     numbers: int64[] = [1, 2, 3]
-    if sum(read(box), labels.sum) != 9 || size(numbers) != 3 || len(numbers) != 3:
+    if models.add(models.read(box), labels.sum) != 9 || core.len(numbers) != 3 || helpers.len(numbers) != 3:
         return 1
-    if other_sum(1, 2) != models.add(1, 2) || models.read(box) != 5:
+    if other.add(1, 2) != package.models.add(1, 2) || models.read(box) != 5:
         return 2
-    if bits(0.0) != 0:
+    if system.f64_bits(0.0) != 0:
+        return 3
+    if string_array.index_of(["a", "b", "c"], "b") != 1 || not string_array.contains(["a", "b"], "b"):
+        return 4
+    add: int64 = 2
+    if models.add(add, 1) != 3:
+        return 5
+    text: str = "from package.models import Point"
+    fromage: int32 = 0
+    if text != "from package.models import Point":
         return 6
-    if insertion(numbers, 2) != 1 || bisect_right(numbers, 2) != 2:
-        return 7
-    return 0
+    return fromage
 EOF
 
 "$compiler" check "$temporary/main.sole"
@@ -80,34 +80,31 @@ done
 reject() {
     message=$1
     cat > "$temporary/reject.sole"
-    status=0
-    "$compiler" check "$temporary/reject.sole" > "$temporary/error" 2>&1 || status=$?
-    if [ "$status" -ne 1 ] || ! grep -Fq "$message" "$temporary/error"; then
-        cat "$temporary/error" >&2
-        echo "FAIL: expected import rejection: $message (status $status)" >&2
-        exit 1
-    fi
+    for command in check build; do
+        status=0
+        "$compiler" "$command" "$temporary/reject.sole" -o "$temporary/program" > "$temporary/error" 2>&1 || status=$?
+        if [ "$status" -ne 1 ] || ! grep -Fq "$message" "$temporary/error"; then
+            cat "$temporary/error" >&2
+            echo "FAIL: expected $command rejection: $message (status $status)" >&2
+            exit 1
+        fi
+    done
 }
 
 reject "has no declaration 'missing'" <<'EOF'
-from package.models import missing
+import package.models as models
 def main() -> int32:
-    return 0
+    return int32(models.missing())
 EOF
-grep -Fq "$temporary/reject.sole:1:" "$temporary/error"
+grep -Fq "$temporary/reject.sole:3:" "$temporary/error"
 
 reject "cannot find module 'absent'" <<'EOF'
-from absent import Point
+import absent
 EOF
-
-reject "duplicate import 'P'" <<'EOF'
-from package.models import Point as P, Box as P
-EOF
-
-reject "duplicate import 'Point'" <<'EOF'
-from package.models import Point
-from package.models import Point
-EOF
+for module in wrappers.system system; do
+    printf 'import %s\n' "$module" | reject "cannot find module '$module'"
+    grep -Fq "$temporary/reject.sole:1:" "$temporary/error"
+done
 
 reject "duplicate import 'package.models'" <<'EOF'
 import package.models
@@ -121,61 +118,40 @@ for alias in first last; do
     grep -Fq "$temporary/reject.sole:3:" "$temporary/error"
 done
 
-reject 'import conflicts with a declaration: Point' <<'EOF'
-from package.models import Point
+reject 'module namespace conflicts with a declaration: Point' <<'EOF'
+import package.models as Point
 struct Point:
     value: int64
 EOF
 
-reject 'import conflicts with a declaration: add' <<'EOF'
-def add() -> int32:
-    return 0
-from package.models import add
-EOF
-
-for imports in 'import package.models as Point
-from package.models import Point' 'from package.models import Point as package
-import package.models'; do
-    printf '%s\n' "$imports" | reject 'import conflicts with a module namespace:'
-done
-
-for body in '    Point: int64 = 1' '    Point = 1' '    Point = Point + 1' '    for Point in range(2):
+for body in '    models: int64 = 1' '    for models in range(2):
         pass'; do
-    printf 'from package.models import Point\ndef main() -> int32:\n%s\n    return 0\n' "$body" |
-        reject 'imported name cannot be rebound or shadowed: Point'
+    printf 'import package.models as models\ndef main() -> int32:\n%s\n    return 0\n' "$body" |
+        reject 'module namespace cannot be rebound: models'
 done
 
-reject 'imported name cannot be rebound or shadowed: Point' <<'EOF'
-from package.models import Point
-def main(Point: int64) -> int32:
-    return 0
+reject 'module namespace cannot be rebound: models' <<'EOF'
+import package.models as models
+def score(models: int64) -> int64:
+    return models
 EOF
 
-reject 'imported name cannot be rebound or shadowed: Point' <<'EOF'
-from package.models import Point
-def score(Point: int64) -> int64:
-    return Point
+reject 'a module namespace is not a value' <<'EOF'
+import package.models as models
+def main() -> int32:
+    models = 1
+    return 0
 EOF
 
 reject 'imports are only allowed at module scope' <<'EOF'
 def main() -> int32:
-    from package.models import Point
+    import package.models
     return 0
-EOF
-
-reject 'imported name cannot be rebound or shadowed: Point' <<'EOF'
-from package.models import Point
-def read(Point: int64) -> int64:
-    return 0
-EOF
-
-reject 'expected an import name or alias' <<'EOF'
-from package.models import Point as def
 EOF
 
 for name in __sole_ __sole_hidden; do
     for source in "def $name() -> int32:
-    return 0" "import package.models as $name" "from package.models import Point as $name"; do
+    return 0" "import package.models as $name" "import $name"; do
         printf '%s\n' "$source" | reject "names beginning with '__sole_' are reserved"
     done
 done
@@ -189,47 +165,54 @@ EOF
 "$compiler" check "$temporary/prefix.sole"
 
 reject "has no declaration 'Point'" <<'EOF'
-from bridge import Point
-EOF
-
-reject "has no declaration 'Point'" <<'EOF'
 import bridge
 def main() -> int32:
     point: bridge.Point = bridge.Point(1)
     return 0
 EOF
 
-reject 'unknown variable' <<'EOF'
-from package.models import Point
+reject "unknown function 'add'" <<'EOF'
+import package.models
 def main() -> int32:
-    value: int64 = package.models.add(1, 2)
-    return 0
+    return int32(add(1, 2))
 EOF
 
-for statement in 'from' 'from package.models' 'from package.models import' \
-    'from package.models import Point,' 'from package.models import Point as' \
+for statement in 'from' 'from package.models' 'from package.models import Point' \
+    'from package.models import Point as P' 'from package.models import Point, Box' \
     'from package.models import *' 'from .package.models import Point' \
-    'from package.models import (Point)' 'from package.models import Point.Box'; do
-    printf '%s\n' "$statement" > "$temporary/main.sole"
-    reject 'sole: error:' < "$temporary/main.sole"
+    'from absent import Point'; do
+    printf '%s\n' "$statement" | reject 'named imports are not supported'
+    grep -Fq "$temporary/reject.sole:1:" "$temporary/error"
+done
+reject 'named imports are not supported' <<'EOF'
+def main() -> int32:
+    from package.models import Point
+    return 0
+EOF
+grep -Fq "$temporary/reject.sole:2:" "$temporary/error"
+
+for statement in 'import' 'import package.models as' 'import package.models as def' \
+    'import package.models,' 'import *' 'import .package.models' \
+    'import (package.models)' 'import package.models, bridge'; do
+    printf '%s\n' "$statement" | reject 'sole: error:'
 done
 
 cat > "$temporary/cycle.sole" <<'EOF'
-from cycle import value as other
+import cycle as other
 def value() -> int32:
     return 0
 EOF
 reject 'circular import' <<'EOF'
-from cycle import value
+import cycle
 EOF
 
 cat > "$temporary/broken.sole" <<'EOF'
-from package.models import Point
+import package.models as models
 def broken() -> int32:
     return missing
 EOF
 reject 'broken.sole:3:' <<'EOF'
-from broken import broken
+import broken
 EOF
 
-echo 'Passed named import tests.'
+echo 'Passed module imports, aliases, qualified names, and named-import rejection checks.'

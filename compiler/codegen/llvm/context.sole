@@ -26,7 +26,6 @@ struct State:
     depth: int32[]
     ended: bool[]
     result: str
-    filename: str
     loop_depth: int64[]
     function_name: str
 

@@ -31,7 +31,7 @@ def main() -> int32:
     require(not intrinsics.builtin_name("malloc"), "libc calls are not intrinsics")
     require(not intrinsics.builtin_name("exit"), "exit is an ordinary library function")
     require(not intrinsics.builtin_name("LLVMContextCreate"), "LLVM APIs are not intrinsics")
-    require(not intrinsics.builtin_name("sole_rt_f64_bits"), "runtime helpers are not intrinsics")
+    require(not intrinsics.builtin_name("f64_bits"), "runtime helpers are not intrinsics")
     require(not intrinsics.builtin_name(""), "empty name is not an intrinsic")
     core.print("Passed backend-independent primitive checks.")
     return 0

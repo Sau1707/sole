@@ -2,9 +2,9 @@ import core
 import files
 import env
 def main() -> void:
-    files.write("@DATA_ROOT@/0/first.txt", "data")
-    core.print(files.read("@DATA_ROOT@/0/first.txt"))
-    core.print(files.rename("@DATA_ROOT@/0/first.txt", "@DATA_ROOT@/0/second.txt"))
-    core.print(files.remove("@DATA_ROOT@/0/second.txt"))
+    core.write_file("@DATA_ROOT@/0/first.txt", "data")
+    core.print(core.read_file("@DATA_ROOT@/0/first.txt"))
+    core.print(files.is_file("@DATA_ROOT@/0/first.txt"))
+    core.print(files.same_file("@DATA_ROOT@/0/first.txt", "@DATA_ROOT@/0/./first.txt"))
     core.print(env.get("SOLE_MODULE_TEST", "missing"))
-    core.print(env.has("SOLE_MODULE_TEST"))
+    core.print(env.get("SOLE_MODULE_TEST", "missing") != "missing")
