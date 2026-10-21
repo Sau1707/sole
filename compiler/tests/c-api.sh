@@ -39,7 +39,6 @@ def main() -> int32:
     ¢.free(data)
     return result
 EOF
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole"
 "$compiler" check "$temporary/main.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/main.sole" "$optimize" -o "$temporary/program"
@@ -77,7 +76,7 @@ reject 'def main() -> void:
 reject 'def main() -> void:
     ¢.free()' 'wrong number of arguments'
 reject 'def main() -> void:
-    ¢.malloc(size=8)' 'named arguments are only supported for record constructors'
+    ¢.malloc(size=8)' 'named arguments are not supported'
 reject 'def main() -> void:
     ¢' "expected a C API name after '¢.'"
 reject 'def main() -> void:

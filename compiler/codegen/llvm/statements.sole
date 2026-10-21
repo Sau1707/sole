@@ -4,12 +4,9 @@ import diagnostics.report as report
 import codegen.llvm.locals as locals
 import syntax.parser.tokens as tokens
 import codegen.llvm.context as context
-import codegen.llvm.types as llvm_types
 import codegen.llvm.literals as literals
-import semantic.types.query as type_query
 import semantic.resolve.symbols as symbols
 import codegen.llvm.expressions as expressions
-import codegen.llvm.operators as llvm_operators
 import semantic.resolve.declarations as declarations
 
 
@@ -107,35 +104,6 @@ def compile_for(state: context.State) -> void:
     ir.block_label(state, end_label)
 
 
-def has_augmented_assignment(state: context.State) -> bool:
-    """TODO: Document this function."""
-    position: int64 = state.tokens.position[0]
-    while state.tokens.kind[position] != 0 && state.tokens.kind[position] != 4:
-        if state.tokens.text[position] == "+=" && state.tokens.kind[position] != 3 && state.tokens.kind[position] != 8:
-            return true
-        position = position + 1
-    return false
-
-
-def compile_augmented_assignment(state: context.State) -> void:
-    """TODO: Document this function."""
-    name: str = tokens.identifier(state)
-    if not tokens.accept(state, "+="):
-        report.fail_at(state, "+= requires a numeric local identifier")
-    local: int64 = symbols.local_index(state, name)
-    if local < 0:
-        report.fail_at(state, "unknown variable '" + name + "'")
-    typ: str = state.types[local]
-    if not type_query.integer_type(typ) && not type_query.float_type(typ):
-        report.fail_at(state, "+= requires a numeric local identifier")
-    pointer: str = state.pointers[local]
-    left: context.Value = context.Value(typ, ir.instruction(state, "load " + llvm_types.llvm_type(state, typ) + ", ptr " + pointer), pointer)
-    right: context.Value = literals.coerce(state, expressions.expression(state, 0, typ), typ)
-    result: context.Value = literals.coerce(state, llvm_operators.binary_ir(state, "+", left, right, typ), typ)
-    ir.emit(state, "store " + ir.typed(state, result) + ", ptr " + pointer)
-    tokens.expect(state, "<newline>")
-
-
 def statement(state: context.State) -> void:
     """Parse and lower control flow, declarations, assignments, and calls."""
     if tokens.accept(state, "if"):
@@ -182,8 +150,6 @@ def statement(state: context.State) -> void:
         tokens.expect(state, "<newline>")
     elif tokens.accept(state, "pass"):
         tokens.expect(state, "<newline>")
-    elif has_augmented_assignment(state):
-        compile_augmented_assignment(state)
     elif state.tokens.kind[state.tokens.position[0]] == 1 && state.tokens.text[state.tokens.position[0] + 1] == ":":
         name: str = tokens.identifier(state)
         tokens.expect(state, ":")

@@ -42,23 +42,23 @@ def identity(value: int32) -> int32:
 
 
 def main() -> int32:
-    trace: Trace[] = [Trace(digits=0)]
-    pair: Pair = Pair(second=mark(trace, 2), first=mark(trace, 1))
-    if trace[0].digits != 21 || pair.first != 1 || pair.second != 2:
+    trace: Trace[] = [Trace(0)]
+    pair: Pair = Pair(mark(trace, 1), mark(trace, 2))
+    if trace[0].digits != 12 || pair.first != 1 || pair.second != 2:
         return 1
-    mixed: Pair = Pair(mark(trace, 3), second=mark(trace, 4))
-    if trace[0].digits != 2134 || mixed.first != 3 || mixed.second != 4:
+    mixed: Pair = Pair(mark(trace, 3), mark(trace, 4))
+    if trace[0].digits != 1234 || mixed.first != 3 || mixed.second != 4:
         return 2
-    box: Box = Box(data=[7, 8], pair=Pair(second=6, first=5))
+    box: Box = Box(Pair(5, 6), [7, 8])
     if sum(box) != 11 || box.data[0] != 7 || box.data[1] != 8:
         return 3
-    numbers: Numbers = Numbers(dynamic=[0, 255], fixed=[-32768, 32767], real=1.5, byte=255, small=-128)
+    numbers: Numbers = Numbers(-128, 255, 1.5, [-32768, 32767], [0, 255])
     if numbers.small != -128 || numbers.byte != 255 || numbers.real != 1.5:
         return 4
     if numbers.fixed[0] != -32768 || numbers.fixed[1] != 32767 || numbers.dynamic[1] != 255:
         return 5
-    imported: models.Pair = models.Pair(second=10, first=9)
-    reference: models.Box = models.Box(items=[11, 12], small=255)
+    imported: models.Pair = models.Pair(9, 10)
+    reference: models.Box = models.Box(255, [11, 12])
     if imported.first != 9 || imported.second != 10 || reference.small != 255 || reference.items[1] != 12:
         return 6
     positional: Pair = Pair(13, 14)
@@ -66,10 +66,10 @@ def main() -> int32:
     if identity(positional.first) != 13 || positional.second != 14:
         return 7
     nested_trace: Trace[] = [Trace(0)]
-    nested_box: Box = Box(data=[int16(mark(nested_trace, 1)), int16(mark(nested_trace, 2))], pair=Pair(mark(nested_trace, 3), mark(nested_trace, 4)))
-    if nested_trace[0].digits != 1234 || sum(nested_box) != 7:
+    nested_box: Box = Box(Pair(mark(nested_trace, 1), mark(nested_trace, 2)), [int16(mark(nested_trace, 3)), int16(mark(nested_trace, 4))])
+    if nested_trace[0].digits != 1234 || sum(nested_box) != 3 || nested_box.data[0] != 3 || nested_box.data[1] != 4:
         return 8
-    labels: models.Labels = models.Labels(models=2, identity=1)
+    labels: models.Labels = models.Labels(1, 2)
     if labels.identity != 1 || labels.models != 2:
         return 9
     core.print("constructors passed")

@@ -80,7 +80,7 @@
     { "match": "->", "name": "keyword.operator.sole keyword.operator.python" },
     { "match": "==|!=|<=|>=|[<>](?![<>])", "name": "keyword.operator.sole keyword.operator.comparison.python" },
     { "match": "<<|>>|[&|^~]", "name": "keyword.operator.sole keyword.operator.bitwise.python" },
-    { "match": "\\+=|=", "name": "keyword.operator.sole keyword.operator.assignment.python" },
+    { "match": "=", "name": "keyword.operator.sole keyword.operator.assignment.python" },
     { "match": "[-+*/%]", "name": "keyword.operator.sole keyword.operator.arithmetic.python" },
     { "match": "[()]", "name": "punctuation.section.parens.sole" },
     { "match": "[\\[\\]]", "name": "punctuation.section.brackets.sole" },

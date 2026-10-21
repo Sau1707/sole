@@ -26,13 +26,13 @@ def main() -> int32:
     total: int64 = 0
     limit: int64 = 3
     for i in range(bound(log, -2), bound(log, limit)):
-        total += i
+        total = total + i
         limit = 0
         i = 100
     if total != 0 || core.len(log) != 2 || log[0] != -2 || log[1] != 3:
         return 1
     for i in range(bound(log, 3)):
-        total += i
+        total = total + i
     if total != 3 || core.len(log) != 3:
         return 2
     for i in range(-5):
@@ -44,7 +44,7 @@ def main() -> int32:
     for i in range(-3, -3):
         return 5
     for i in range(-3, -1):
-        total += i
+        total = total + i
     if total != -2:
         return 6
     count: int64 = 0
@@ -54,30 +54,30 @@ def main() -> int32:
                 continue
             if inner == 3:
                 break
-            count += 1
+            count = count + 1
         if outer == 1:
             continue
         if outer == 2:
             break
-        count += 10
+        count = count + 10
     if count != 16:
         return 7
     turn: int64 = 0
     while turn < 2:
-        turn += 1
+        turn = turn + 1
         for inner in range(3):
             if inner == 1:
                 continue
-            count += 1
+            count = count + 1
         continue
     for outer in range(2):
         turn = 0
         while turn < 3:
-            turn += 1
+            turn = turn + 1
             if turn == 1:
                 continue
             break
-        count += turn
+        count = count + turn
         continue
     if count != 24:
         return 8
@@ -93,15 +93,15 @@ def main() -> int32:
     for comma in range(2, 2,):
         return 14
     i: int64 = 7
-    i += 2
+    i = i + 2
     small: int8 = 127
-    small += 1
+    small = small + 1
     unsigned: uint64 = 18446744073709551615
-    unsigned += 1
+    unsigned = unsigned + 1
     real32: float32 = 1.5
-    real32 += 2
+    real32 = real32 + 2
     real64: float64 = 2.25
-    real64 += 0.5
+    real64 = real64 + 0.5
     if i != 9 || small != -128 || unsigned != 0 || real32 != 3.5 || real64 != 2.75:
         return 11
     text: str = "+="
@@ -110,7 +110,6 @@ def main() -> int32:
     return 0
 EOF
 
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/loops.sole"
 "$compiler" check "$temporary/loops.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/loops.sole" "$optimize" -o "$temporary/program"
@@ -198,7 +197,7 @@ def main() -> int32:
         pass
     return 0
 EOF
-reject '+= requires a numeric local identifier' <<'EOF'
+reject 'expected an expression' <<'EOF'
 struct Box:
     value: int64
 
@@ -208,25 +207,25 @@ def main() -> int32:
     box.value += 2
     return 0
 EOF
-reject '+= requires a numeric local identifier' <<'EOF'
+reject 'expected an expression' <<'EOF'
 def main() -> int32:
     values: int64[] = [1]
     values[0] += 2
     return 0
 EOF
-reject 'expected an identifier' <<'EOF'
+reject 'expected an expression' <<'EOF'
 def main() -> int32:
     value: int64 = 1
     (value) += 2
     return 0
 EOF
-reject '+= requires a numeric local identifier' <<'EOF'
+reject 'expected an expression' <<'EOF'
 def main() -> int32:
     value: int64 = 1
     value + value += 2
     return 0
 EOF
-reject '+= requires a numeric local identifier' <<'EOF'
+reject 'expected an expression' <<'EOF'
 def main() -> int32:
     value: str = "a"
     value += "b"
@@ -235,22 +234,20 @@ EOF
 reject 'expected int64, got bool' <<'EOF'
 def main() -> int32:
     value: int64 = 1
-    value += true
+    value = value + true
     return 0
 EOF
 reject 'expected float32, got float64' <<'EOF'
 def main() -> int32:
     value: float32 = 1
     other: float64 = 2
-    value += other
+    value = value + other
     return 0
 EOF
-reject '+= requires a numeric local identifier' <<'EOF'
-struct Box:
-    value: int64
+reject 'expected an expression' <<'EOF'
 def main() -> int32:
-    box: Box = Box(1)
-    box.value += 1
+    value: int64 = 1
+    value += 1
     return 0
 EOF
-echo 'Passed range loops and numeric local += checks.'
+echo 'Passed range loops, explicit assignments, and += rejection checks.'

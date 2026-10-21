@@ -42,7 +42,6 @@ def main() -> int32:
     core.print(b)
     return 0
 EOF
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/bytes.sole"
 "$compiler" check "$temporary/bytes.sole"
 printf '65\n' > "$temporary/expected"
 for optimize in -O0 -O2; do
@@ -66,7 +65,7 @@ reject() {
     grep -Fq "$diagnostic" "$temporary/error"
 }
 
-for command in syntax check build; do
+for command in check build; do
     for literal in "b''" 'b""' "b'ab'" "b'é'" "b'🙂'" "b'\n\t'"; do
         reject "$command" "$literal" 'byte literal must contain exactly one byte at line 2'
     done
@@ -88,16 +87,8 @@ for command in check build; do
     reject "$command" 'b "A"' "unknown variable 'b'"
 done
 
-# Literal contents must not be consumed as grammar punctuation.
-printf 'program = "(", NEWLINE, EOF;\n' > "$temporary/punctuation.ebnf"
-printf "b'('\n" > "$temporary/punctuation.sole"
-status=0
-"$compiler" syntax --grammar "$temporary/punctuation.ebnf" "$temporary/punctuation.sole" > "$temporary/error" 2>&1 || status=$?
-test "$status" -eq 1
-grep -Fq 'error' "$temporary/error"
-
 cp "$temporary/bytes.sole" "$temporary/original.sole"
 "$compiler" format --check "$temporary/bytes.sole"
 "$compiler" format "$temporary/bytes.sole"
 cmp "$temporary/original.sole" "$temporary/bytes.sole"
-echo 'Passed byte literal execution, validation, syntax, and formatting checks.'
+echo 'Passed byte literal execution, validation, and formatting checks.'

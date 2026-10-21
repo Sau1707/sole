@@ -12,7 +12,6 @@ cp "$root/compiler/tests/source-cases/constructors/records.sole" "$temporary/rec
 
 cp "$root/compiler/tests/source-cases/constructors/main.sole" "$temporary/main.sole"
 
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole"
 "$compiler" check "$temporary/main.sole"
 printf 'constructors passed\n' > "$temporary/expected"
 for optimize in -O0 -O2; do
@@ -50,15 +49,17 @@ EOF
     done
 }
 
-reject 'pair: Pair = Pair(first=1, first=2, second=3)' "duplicate constructor field 'first'"
-reject 'pair: Pair = Pair(1, first=2, second=3)' "duplicate constructor field 'first'"
-reject 'pair: Pair = Pair(unknown=1, second=2)' "unknown constructor field 'unknown'"
-reject 'pair: Pair = Pair(second=2)' "missing constructor field 'first'"
-reject 'pair: Pair = Pair()' "missing constructor field 'first'"
-reject 'pair: Pair = Pair(1)' "missing constructor field 'second'"
+reject 'pair: Pair = Pair(first=1, first=2, second=3)' 'named arguments are not supported'
+reject 'pair: Pair = Pair(1, first=2, second=3)' 'named arguments are not supported'
+reject 'pair: Pair = Pair(unknown=1, second=2)' 'named arguments are not supported'
+reject 'pair: Pair = Pair(second=2)' 'named arguments are not supported'
+reject 'pair: Pair = Pair()' 'wrong number of constructor fields'
+reject 'pair: Pair = Pair(1)' 'wrong number of constructor fields'
 reject 'pair: Pair = Pair(1, 2, 3)' 'wrong number of constructor fields'
-reject 'pair: Pair = Pair(first=1, 2)' 'positional argument cannot follow named constructor arguments'
-reject 'value: int32 = identity(value=1)' 'named arguments are only supported for record constructors'
-reject 'pair: Pair = Pair(second=2, first="wrong")' 'expected int32, got str'
+reject 'pair: Pair = Pair(first=1, 2)' 'named arguments are not supported'
+reject 'value: int32 = identity(value=1)' 'named arguments are not supported'
+reject 'pair: Pair = Pair("wrong", 2)' 'expected int32, got str'
+reject 'pair: Pair = Pair(1, "wrong")' 'expected int32, got str'
+reject 'pair: Pair = Pair(first="wrong", second=2)' 'named arguments are not supported'
 
-echo 'Passed named constructor execution and validation checks.'
+echo 'Passed positional constructor order, typing, arity, and named-argument rejection checks.'

@@ -226,7 +226,7 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, c_index: in
             if i + 2 >= core.len(tokens.kind) || tokens.text[i + 1] != "." || tokens.kind[i + 2] != 1 || token_helpers.reserved_keyword(tokens.text[i + 2]):
                 diagnostics.module_error(module, i, "expected a C API name after '¢.'")
             after: str = tokens.text[i + 3]
-            if previous == "def" || previous == "struct" || previous == "for" || after == ":" || after == "=" || after == "+=":
+            if previous == "def" || previous == "struct" || previous == "for" || after == ":" || after == "=":
                 diagnostics.module_error(module, i, "C API names cannot be declared or rebound")
             api: module_model.ModuleInfo = modules[c_index]
             member: str = tokens.text[i + 2]
@@ -238,11 +238,8 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, c_index: in
             line_start = false
             continue
         following: str = tokens.text[i + 1]
-        label: bool = false
-        if following == "=" && (previous == "(" || previous == ","):
-            label = true
         range_syntax: bool = text == "range" && previous == "in"
-        if kind == 1 && not label && not range_syntax:
+        if kind == 1 && not range_syntax:
             if string_array.contains(roots, text) && (following == ":" || previous == "def" || previous == "struct" || previous == "for"):
                 diagnostics.module_error(module, i, "module namespace cannot be rebound: " + text)
             if previous != ".":
@@ -283,7 +280,7 @@ def rewrite_module(modules: module_model.ModuleInfo[], index: int64, c_index: in
                     binding_index: int64 = named_import_index(module, text)
                     if binding_index >= 0 && not field:
                         declaration: bool = following == ":" && (line_start || previous == "(" || previous == ",")
-                        assignment: bool = (following == "=" || following == "+=") && previous != ":" && previous != "->"
+                        assignment: bool = following == "=" && previous != ":" && previous != "->"
                         if declaration || assignment || previous == "for" || previous == "def":
                             diagnostics.module_error(module, i, "imported name cannot be rebound or shadowed: " + text)
                         binding: module_model.NamedImport = module.named_imports[binding_index]

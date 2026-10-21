@@ -160,14 +160,12 @@ test('control flow, booleans, calls, and operators', () => {
   ]);
 });
 
-test('named struct constructors', () => {
-  check('pair = Pair(second=2, first=1)', [
+test('positional struct constructors', () => {
+  check('pair = Pair(first, second)', [
     ['Pair', 'entity.name.function.sole'],
     ['second', 'variable.other.readwrite.sole'],
     ['first', 'variable.other.readwrite.sole'],
     ['=', 'keyword.operator.assignment.python'],
-    ['2', 'constant.numeric.sole'],
-    ['1', 'constant.numeric.sole'],
   ]);
 });
 
@@ -196,16 +194,17 @@ test('range loops', () => {
   check('# enum union match case for in +=', [['enum union match case for in +=', 'comment.line.number-sign.sole']]);
 });
 
-test('plus assignment is one assignment token rather than arithmetic plus', () => {
+test('plus and assignment remain separate tokens', () => {
   for (const line of ['total += 1', 'total+=1']) {
-    check(line, [['+=', 'keyword.operator.assignment.python']]);
+    check(line, [['+', 'keyword.operator.arithmetic.python'], ['=', 'keyword.operator.assignment.python']]);
     const start = line.indexOf('+=');
     const { tokens } = grammar.tokenizeLine(line);
     const matching = tokens.filter(token => token.startIndex < start + 2 && token.endIndex > start);
-    assert.equal(matching.length, 1);
+    assert.equal(matching.length, 2);
     assert.equal(matching[0].startIndex, start);
-    assert.equal(matching[0].endIndex, start + 2);
-    assert.ok(!matching[0].scopes.includes('keyword.operator.arithmetic.python'));
+    assert.equal(matching[0].endIndex, start + 1);
+    assert.equal(matching[1].startIndex, start + 1);
+    assert.equal(matching[1].endIndex, start + 2);
   }
   check('total = left + right', [
     ['=', 'keyword.operator.assignment.python'],
@@ -396,7 +395,7 @@ test('language registration and indentation rules', async () => {
     assert.ok(indent.test(line), line);
   }
   for (const line of ['value: int32 = 0', '# if true:', 'print("hello:")', 'extern def read() -> int32',
-    '    Number(value: int64)', '    Empty()', 'Pair(second=2, first=1)', 'total += 1',
+    '    Number(value: int64)', '    Empty()', 'Pair(1, 2)', 'total = total + 1',
     '# match item:', '"case Kind.Number:"', 'format:', 'matches:']) {
     assert.ok(!indent.test(line), line);
   }

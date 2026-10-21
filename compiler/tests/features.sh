@@ -11,7 +11,6 @@ export SOLE_HOME="$root" SOLE_LIB="$root/lib"
 
 cp "$root/compiler/tests/source-cases/features/main.sole" "$temporary/main.sole"
 
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole"
 "$compiler" check "$temporary/main.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/main.sole" "$optimize" -o "$temporary/program"
@@ -30,4 +29,4 @@ for name in integer real; do
     done
 done
 
-echo 'Passed combined struct, shared array, range, and += checks.'
+echo 'Passed combined struct, shared array, range, and assignment checks.'

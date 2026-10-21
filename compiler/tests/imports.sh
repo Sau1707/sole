@@ -56,8 +56,8 @@ def identity(point: P) -> P:
 
 def main() -> int32:
     point: P = identity(make(4))
-    box: Box = Box(value=point.value)
-    labels: Labels = Labels(sum=3)
+    box: Box = Box(point.value)
+    labels: Labels = Labels(3)
     labels.sum = labels.sum + 1
     numbers: int64[] = [1, 2, 3]
     if sum(read(box), labels.sum) != 9 || size(numbers) != 3 || len(numbers) != 3:
@@ -71,7 +71,6 @@ def main() -> int32:
     return 0
 EOF
 
-"$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole" "$temporary/bridge.sole"
 "$compiler" check "$temporary/main.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/main.sole" "$optimize" -o "$temporary/program"
@@ -140,7 +139,7 @@ import package.models'; do
     printf '%s\n' "$imports" | reject 'import conflicts with a module namespace:'
 done
 
-for body in '    Point: int64 = 1' '    Point = 1' '    Point += 1' '    for Point in range(2):
+for body in '    Point: int64 = 1' '    Point = 1' '    Point = Point + 1' '    for Point in range(2):
         pass'; do
     printf 'from package.models import Point\ndef main() -> int32:\n%s\n    return 0\n' "$body" |
         reject 'imported name cannot be rebound or shadowed: Point'
@@ -212,10 +211,6 @@ for statement in 'from' 'from package.models' 'from package.models import' \
     'from package.models import *' 'from .package.models import Point' \
     'from package.models import (Point)' 'from package.models import Point.Box'; do
     printf '%s\n' "$statement" > "$temporary/main.sole"
-    if "$compiler" syntax --grammar "$root/compiler/syntax/parser/sole.ebnf" "$temporary/main.sole" > "$temporary/error" 2>&1; then
-        echo "FAIL: grammar accepted $statement" >&2
-        exit 1
-    fi
     reject 'sole: error:' < "$temporary/main.sole"
 done
 

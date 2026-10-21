@@ -137,7 +137,7 @@ def lex(text: str) -> lexical_tokens.Tokens:
             punct: str = core.slice(text, i, i + 1)
             if i + 1 < core.len(text):
                 pair: str = core.slice(text, i, i + 2)
-                if pair == "->" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "<<" || pair == ">>" || pair == "&&" || pair == "||" || pair == "+=":
+                if pair == "->" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "<<" || pair == ">>" || pair == "&&" || pair == "||":
                     punct = pair
             if punct == "(" || punct == "[":
                 nesting = nesting + 1

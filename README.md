@@ -46,6 +46,14 @@ Classes, methods, implicit `self`, enums, tagged unions, pattern matching, and
 lambdas are not supported. This is an intentional breaking reduction of the
 language, not an alternative class syntax.
 
+Functions and struct constructors take positional arguments only. Constructor
+arguments follow field declaration order and are evaluated left to right:
+use `Pair(1, 2)`, not `Pair(first=1, second=2)`. Named arguments and augmented
+assignments such as `+=` are not supported; write `total = total + value`.
+When migrating reordered named calls with side effects, evaluate arguments into
+temporaries in their original order before passing them in field order. Parenthesize
+a compound right-hand side when expanding `+=`, as in `x = x + (a + b)`.
+
 Structs and fixed arrays have value semantics. Dynamic arrays share storage;
 use an explicit array parameter when a function needs to mutate shared data:
 
@@ -100,10 +108,14 @@ Start with `compiler/driver/pipeline.sole`, which coordinates:
 6. `compiler/codegen/llvm/target.sole`: LLVM verification, optimization, and output.
 
 The compiler currently lowers function bodies directly from tokens; it does not
-have a separate AST or typed IR. `compiler/syntax/parser/sole.ebnf` describes the
-syntax used by the standalone `syntax` command. LLVM performs optimization and
-machine-code generation. Runtime support stays in `compiler/runtime/`; ordinary
-library code stays in `lib/`.
+have a separate AST or typed IR. `sole check file.sole` uses the same compilation
+pipeline as `build`, including name/type checks and LLVM IR verification, without
+linking or running the program. Imports must resolve, but no linker is needed.
+The former `syntax` command and `--grammar` option have been removed; there is no
+separate EBNF interpreter or syntax-only validation path.
+
+LLVM performs optimization and machine-code generation. Runtime support stays in
+`compiler/runtime/`; ordinary library code stays in `lib/`.
 
 ### Built-in C API
 

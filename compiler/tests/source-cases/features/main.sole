@@ -5,7 +5,7 @@ struct Span:
 
 def record(calls: int64[], value: int64) -> Span:
     calls[0] = calls[0] + 1
-    return Span(second=value, first=1)
+    return Span(1, value)
 
 
 def main() -> int32:
@@ -14,15 +14,15 @@ def main() -> int32:
     for i in range(0, 5):
         span: Span = record(calls, i)
         if span.second == 0:
-            total += 10
+            total = total + 10
         elif span.second != 1:
             if span.second == 4:
                 break
-            total += span.first + span.second
+            total = total + (span.first + span.second)
     if calls[0] != 5 || total != 17:
         return 1
     i: int64 = 3
-    span: Span = Span(first=i, second=total)
+    span: Span = Span(i, total)
     if span.first != 3 || span.second != 17:
         return 2
     return 0

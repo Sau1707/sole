@@ -33,7 +33,6 @@ def main() -> int32:
         return 1
     return 0
 EOF
-"$compiler" syntax "$temporary/main.sole"
 "$compiler" check "$temporary/main.sole"
 for optimize in -O0 -O2; do
     "$compiler" build "$temporary/main.sole" "$optimize" -o "$temporary/program"

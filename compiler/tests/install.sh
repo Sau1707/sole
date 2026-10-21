@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.10
+version=0.0.11
 archive="sole-$version-linux-x86_64"
 mkdir "$temporary/downloads" "$temporary/tools"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then
@@ -20,9 +20,8 @@ else
         cp -R "$compiler_prefix/lib/sole/." "$temporary/$archive/lib/sole/"
     fi
     cp -R "$root/lib" "$temporary/$archive/share/sole/"
-    mkdir -p "$temporary/$archive/share/sole/compiler/syntax/parser"
+    mkdir -p "$temporary/$archive/share/sole/compiler"
     cp -R "$root/compiler/raw" "$root/compiler/runtime" "$temporary/$archive/share/sole/compiler/"
-    cp "$root/compiler/syntax/parser/sole.ebnf" "$temporary/$archive/share/sole/compiler/syntax/parser/"
     printf 'bundled-library-fixture\n' > "$temporary/$archive/lib/sole/test-library"
     tar -C "$temporary" -czf "$temporary/downloads/$archive.tar.gz" "$archive"
 fi
@@ -55,7 +54,7 @@ test ! -e "$temporary/installed/share/sole/lib/runtime"
 for resource in core.ll native.ll io.sole linux.sole system.sole; do
     test -f "$temporary/installed/share/sole/compiler/runtime/$resource"
 done
-test -f "$temporary/installed/share/sole/compiler/syntax/parser/sole.ebnf"
+test ! -e "$temporary/installed/share/sole/compiler/syntax"
 test -f "$temporary/installed/share/sole/compiler/raw/c.sole"
 test -f "$temporary/installed/share/sole/compiler/raw/llvm.sole"
 test -f "$temporary/installed/share/sole/lib/pure/strings.sole"
@@ -71,7 +70,7 @@ else
 fi
 mv "$temporary/installed" "$temporary/relocated"
 test "$("$temporary/relocated/bin/sole" --version)" = "sole $version (self-hosted)"
-"$temporary/relocated/bin/sole" syntax "$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole"
+"$temporary/relocated/bin/sole" check "$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole"
 "$temporary/relocated/bin/sole" build "$root/compiler/tests/cases/001-compile_without_python_on_path/source/hello.sole" -o "$temporary/hello"
 "$temporary/hello" > "$temporary/hello.log"
 

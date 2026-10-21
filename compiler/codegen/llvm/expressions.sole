@@ -1,5 +1,4 @@
 import core
-import string_array
 import codegen.llvm.ir as ir
 import semantic.model as model
 import codegen.llvm.casts as casts
@@ -21,7 +20,7 @@ def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
     tokens.expect(state, "(")
     while tokens.peek(state) != ")":
         if state.tokens.kind[state.tokens.position[0]] == 1 && state.tokens.text[state.tokens.position[0] + 1] == "=":
-            report.fail_at(state, "named arguments are only supported for record constructors")
+            report.fail_at(state, "named arguments are not supported; use positional arguments")
         expected: str = ""
         if core.len(values) < core.len(types):
             expected = types[core.len(values)]
@@ -30,46 +29,6 @@ def parse_arguments(state: context.State, types: str[]) -> context.Value[]:
         if not tokens.accept(state, ","):
             break
     tokens.expect(state, ")")
-    return values
-
-
-def parse_constructor_arguments(state: context.State, record: model.RecordInfo) -> context.Value[]:
-    """TODO: Document this function."""
-    values: context.Value[] = []
-    assigned: bool[] = []
-    for i in range(core.len(record.names)):
-        core.append(values, context.Value("void", "", ""))
-        core.append(assigned, false)
-    tokens.expect(state, "(")
-    positional: int64 = 0
-    named: bool = false
-    while tokens.peek(state) != ")":
-        field_index: int64 = positional
-        if state.tokens.kind[state.tokens.position[0]] == 1 && state.tokens.text[state.tokens.position[0] + 1] == "=":
-            named = true
-            field_name: str = tokens.identifier(state)
-            tokens.expect(state, "=")
-            field_index = string_array.index_of(record.names, field_name)
-            if field_index < 0:
-                report.fail_at(state, "unknown constructor field '" + field_name + "' for " + record.name)
-        else:
-            if named:
-                report.fail_at(state, "positional argument cannot follow named constructor arguments")
-            if field_index >= core.len(record.names):
-                report.fail_at(state, "wrong number of constructor fields for " + record.name)
-            positional = positional + 1
-        if assigned[field_index]:
-            report.fail_at(state, "duplicate constructor field '" + record.names[field_index] + "'")
-        expected: str = record.types[field_index]
-        item: context.Value = expression(state, 0, expected)
-        values[field_index] = literals.coerce(state, item, expected)
-        assigned[field_index] = true
-        if not tokens.accept(state, ","):
-            break
-    tokens.expect(state, ")")
-    for i in range(core.len(record.names)):
-        if not assigned[i]:
-            report.fail_at(state, "missing constructor field '" + record.names[i] + "' for " + record.name)
     return values
 
 
@@ -198,7 +157,9 @@ def named_call(state: context.State, name: str) -> context.Value:
     ri: int64 = symbols.record_index(state, name)
     if ri >= 0:
         record: model.RecordInfo = state.records[ri]
-        arguments: context.Value[] = parse_constructor_arguments(state, record)
+        arguments: context.Value[] = parse_arguments(state, record.types)
+        if core.len(arguments) != core.len(record.types):
+            report.fail_at(state, "wrong number of constructor fields for " + name)
         aggregate: str = "poison"
         for i in range(core.len(arguments)):
             aggregate = ir.instruction(state, "insertvalue %" + name + " " + aggregate + ", " + ir.typed(state, arguments[i]) + ", " + str(i))

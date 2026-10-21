@@ -2,7 +2,6 @@ import core
 import files
 import process
 import driver.format
-import driver.syntax
 import driver.linker
 import runtime.system as system
 import driver.pipeline as pipeline
@@ -30,16 +29,13 @@ def cleanup(temporary: str) -> void:
 def main() -> int32:
     """Parse command-line options and dispatch compilation, linking, or execution."""
     if core.arg_count() == 2 && core.arg(1) == "--version":
-        core.print("sole 0.0.10 (self-hosted)")
+        core.print("sole 0.0.11 (self-hosted)")
         return 0
     if core.arg_count() >= 2 && core.arg(1) == "format":
         return driver.format.main()
-    if core.arg_count() >= 2 && core.arg(1) == "syntax":
-        return driver.syntax.main()
     if core.arg_count() < 3:
         core.print("Usage: sole build|check|run file.sole [-o output] [--target native] [--emit binary|llvm|object] [--link library] [-O0..3]")
         core.print("       sole format [--check] file.sole ...")
-        core.print("       sole syntax [--grammar GRAMMAR.ebnf] file.sole ...")
         return 1
 
     # Read the command, source path, and compilation options.

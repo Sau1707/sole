@@ -52,7 +52,7 @@ bounded() {
     return "$result"
 }
 
-bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.10' || fail version
+bounded "$compile_timeout" "$compiler" --version | grep -q 'sole 0.0.11' || fail version
 SOLE_CC=/no/such/linker bounded "$compile_timeout" "$compiler" check "$hello" > "$temporary/compile.log" 2>&1 || fail 'check requires a linker'
 for emit in llvm object; do
     bounded "$compile_timeout" "$compiler" build "$hello" --emit "$emit" -o "$temporary/hello.$emit" > "$temporary/compile.log" 2>&1 || fail "$emit emission"
