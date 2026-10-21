@@ -158,9 +158,3 @@ SOLE_COMPILER="$PWD/.build/sole" sh compiler/tests/suite.sh
 
 Bootstrap compares the second and third compiler builds byte-for-byte. It also
 supports older seeds that implicitly load the now-removed primitive method files.
-
-### Formatting
-
-Run `sole format file.sole` to format a file, or `sole format --check file.sole` to check without modifying it.
-
-The formatter inserts `"""TODO: Document this function."""` in functions that lack a docstring. Existing docstrings and bodyless `extern` declarations are preserved. Every standalone `#` comment must have a blank line before it; inline comments and comment-like text inside strings are unchanged.

@@ -87,8 +87,4 @@ for command in check build; do
     reject "$command" 'b "A"' "unknown variable 'b'"
 done
 
-cp "$temporary/bytes.sole" "$temporary/original.sole"
-"$compiler" format --check "$temporary/bytes.sole"
-"$compiler" format "$temporary/bytes.sole"
-cmp "$temporary/original.sole" "$temporary/bytes.sole"
-echo 'Passed byte literal execution, validation, and formatting checks.'
+echo 'Passed byte literal execution and validation checks.'

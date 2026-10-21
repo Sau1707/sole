@@ -96,6 +96,9 @@ reject 'def main() -> int32:
         pass'
 
 reject 'pass'
+reject '"""unterminated'
+reject 'def broken('
+reject 'def broken([)]'
 reject 'def main() -> int32:
     return missing_name'
 grep -Fq "unknown variable 'missing_name'" "$temporary/error"
@@ -105,11 +108,11 @@ grep -Fq 'expected int32, got str' "$temporary/error"
 reject 'import absent_check_dependency'
 grep -Fq "cannot find module 'absent_check_dependency'" "$temporary/error"
 
-for arguments in 'syntax' 'syntax --grammar'; do
+for arguments in 'syntax' 'syntax --grammar' 'format' 'format --check'; do
     status=0
     "$compiler" $arguments "$temporary/features.sole" > "$temporary/error" 2>&1 || status=$?
     test "$status" -eq 1
-    grep -Fq 'unknown command: syntax' "$temporary/error"
+    grep -Fq "unknown command: ${arguments%% *}" "$temporary/error"
 done
 status=0
 "$compiler" check "$temporary/features.sole" --grammar missing.ebnf > "$temporary/error" 2>&1 || status=$?

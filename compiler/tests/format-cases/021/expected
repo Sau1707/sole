@@ -1,8 +1,0 @@
-import core
-from core import len
-from package.models import Point as P, Box
-
-
-def main() -> int32:
-    """TODO: Document this function."""
-    return 0

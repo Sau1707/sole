@@ -1,9 +1,0 @@
-extern def first() -> void
-
-
-extern def second() -> void
-
-
-def main() -> void:
-    """TODO: Document this function."""
-    pass

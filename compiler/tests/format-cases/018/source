@@ -1,8 +1,0 @@
-import core
-def main() -> str:
-    return """text
-def fake():
-
-
-
-end"""

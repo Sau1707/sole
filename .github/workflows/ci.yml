@@ -37,7 +37,7 @@ jobs:
           version=$(.build/sole --version | awk '{print $2}')
           sh scripts/package-release.sh "$version"
           echo "SOLE_TEST_RELEASE=dist/sole-$version-linux-x86_64.tar.gz" >> "$GITHUB_ENV"
-      - name: Test compiler checks, installation, and formatter
+      - name: Test compiler checks and installation
         run: |
           sha256sum -c .build/bootstrap-proof.txt
           export SOLE_COMPILER="$PWD/.build/sole"
@@ -93,4 +93,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
             --title "Sole ${GITHUB_REF_NAME#v}" \
-            --notes 'Breaking compiler simplification: removes the standalone syntax command, --grammar option, EBNF interpreter, named constructor arguments, and +=. Use sole check for the same source validation and LLVM verification used by build, without linking or execution. Struct constructors now use the ordinary positional-argument parser; arguments follow field declaration order and evaluate left to right. Replace x += value with x = x + value, preserving grouping for compound right-hand sides. When migrating reordered named calls with side effects, evaluate arguments into temporaries in their original order before passing them in field order. Includes updated tests, editor highlighting, packaging, and deterministic self-hosting verification. Linux x86-64 with glibc 2.39 or newer; LLVM and its non-glibc dependencies are bundled for the compiler. Verify SHA256SUMS before installing. Third-party notices are in share/sole/licenses/.'
+            --notes 'Breaking compiler simplification: removes the formatter, sole format command, make format target, and formatting-only fixtures. The compiler now focuses on build, check, and run. Replaces the exit intrinsic with an ordinary core.exit function using the existing typed C binding; core.exit(status) remains available, while intrinsic exit declarations are rejected. Removes 297 compiler-source lines while retaining diagnostics, safety checks, and shared filesystem runtime helpers. Includes exit behavior, arity, and type regression coverage, 270 fixture runs, and deterministic self-hosting verification. Linux x86-64 with glibc 2.39 or newer; LLVM and its non-glibc dependencies are bundled for the compiler. Verify SHA256SUMS before installing. Third-party notices are in share/sole/licenses/.'

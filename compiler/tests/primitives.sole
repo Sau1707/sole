@@ -25,10 +25,11 @@ def main() -> int32:
     require(not definition.numeric(registry.lookup("ptr")), "pointers are not numeric")
     require(not definition.numeric(registry.lookup("str")), "strings are not numeric")
     require(not definition.numeric(registry.lookup("void")), "void is not numeric")
-    names = ["print", "len", "append", "slice", "join", "cstr", "from_cstr", "address", "arg_count", "arg", "read_file", "write_file", "exit"]
+    names = ["print", "len", "append", "slice", "join", "cstr", "from_cstr", "address", "arg_count", "arg", "read_file", "write_file"]
     for i in range(core.len(names)):
         require(intrinsics.builtin_name(names[i]), names[i] + " is an intrinsic")
     require(not intrinsics.builtin_name("malloc"), "libc calls are not intrinsics")
+    require(not intrinsics.builtin_name("exit"), "exit is an ordinary library function")
     require(not intrinsics.builtin_name("LLVMContextCreate"), "LLVM APIs are not intrinsics")
     require(not intrinsics.builtin_name("sole_rt_f64_bits"), "runtime helpers are not intrinsics")
     require(not intrinsics.builtin_name(""), "empty name is not an intrinsic")

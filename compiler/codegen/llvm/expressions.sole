@@ -50,11 +50,8 @@ def call_builtin(state: context.State, name: str) -> context.Value:
 
     # Check ordinary intrinsic argument types and counts.
     types: str[] = []
-    if name == "arg" || name == "exit":
-        if name == "arg":
-            core.append(types, "int64")
-        else:
-            core.append(types, "int32")
+    if name == "arg":
+        core.append(types, "int64")
     elif name == "slice":
         types = ["str", "int64", "int64"]
     elif name == "read_file" || name == "cstr":
@@ -116,9 +113,6 @@ def call_builtin(state: context.State, name: str) -> context.Value:
         argument: str = ir.instruction(state, "call ptr @_sole.arg(i64 " + value.value + ")")
         arg_len: str = ir.instruction(state, "call i64 @_sole.cstrlen(ptr " + argument + ")")
         return ir.make_string(state, argument, arg_len)
-    elif name == "exit":
-        ir.emit(state, "call void @exit(i32 " + value.value + ")")
-        return context.Value("void", "", "")
 
     # Convert file paths to C strings before calling native I/O helpers.
     path: str = ir.c_string(state, value)

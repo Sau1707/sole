@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 temporary=$(mktemp -d "$temp_root/sole-install-test-XXXXXX")
 trap 'rm -rf -- "$temporary"' EXIT HUP INT TERM
 
-version=0.0.11
+version=0.0.12
 archive="sole-$version-linux-x86_64"
 mkdir "$temporary/downloads" "$temporary/tools"
 if [ -n "${SOLE_TEST_RELEASE:-}" ]; then

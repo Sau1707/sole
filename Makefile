@@ -1,7 +1,7 @@
-.PHONY: install up down format
+.PHONY: help install up down
 
-format:
-	find compiler lib -path compiler/tests -prune -o -type f -name '*.sole' -exec "$(HOME)/.local/bin/sole" format {} +
+help:
+	@echo "Use make install, make up, or make down."
 
 install:
 	SOLE_VERSION=latest sh install.sh "$(HOME)/.local"

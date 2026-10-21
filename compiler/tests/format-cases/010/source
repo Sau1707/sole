@@ -1,7 +1,0 @@
-import core
-
-
-# Entry point.
-# More detail.
-def main() -> void:
-    pass

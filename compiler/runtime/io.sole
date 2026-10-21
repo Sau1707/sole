@@ -1,6 +1,5 @@
 intrinsic cstr
 intrinsic address
-intrinsic exit
 
 
 def fail(message: ptr) -> void:
@@ -8,7 +7,7 @@ def fail(message: ptr) -> void:
     ¢.write(2, cstr("sole: "), 6)
     ¢.write(2, message, ¢.strlen(message))
     ¢.write(2, cstr("\n"), 1)
-    exit(1)
+    ¢.exit(1)
 
 
 def fail_errno() -> void:

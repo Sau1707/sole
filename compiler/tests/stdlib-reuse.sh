@@ -19,16 +19,9 @@ for optimize in -O0 -O2; do
     SOLE_CC="linker's tool" "$temporary/helpers" "linker's tool"
 done
 
-for name in '' a .sol name.SOLE name.sole/; do
-    status=0
-    "$compiler" format "$name" > "$temporary/log" 2>&1 || status=$?
-    test "$status" -eq 1
-    grep -Fxq "error: expected a .sole file: $name" "$temporary/log"
-done
 mkdir "$temporary/source"
 for name in .sole 猫.sole; do
     printf 'import core\n\n\ndef main() -> void:\n    """Example."""\n    pass\n' > "$temporary/source/$name"
-    "$compiler" format --check "$temporary/source/$name"
     "$compiler" check "$temporary/source/$name"
 done
 echo 'Passed standard-library reuse boundary checks.'

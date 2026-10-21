@@ -10,4 +10,7 @@ intrinsic arg_count
 intrinsic arg
 intrinsic read_file
 intrinsic write_file
-intrinsic exit
+
+
+def exit(status: int32) -> void:
+    ¢.exit(status)

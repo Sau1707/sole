@@ -1,0 +1,6 @@
+import core
+
+
+def main() -> int32:
+    core.exit(int64(0))
+    return 0

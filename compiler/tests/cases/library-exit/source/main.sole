@@ -1,0 +1,8 @@
+import core
+
+
+def main() -> int32:
+    core.print("before exit")
+    core.exit(23)
+    core.print("must not execute")
+    return 0
